@@ -1,0 +1,19 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Build all packages",
+      "type": "shell",
+      "command": "pnpm -r run build",
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "Test all packages",
+      "type": "shell",
+      "command": "pnpm -r run test",
+      "group": "test",
+      "problemMatcher": []
+    }
+  ]
+}

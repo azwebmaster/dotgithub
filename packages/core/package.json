@@ -1,0 +1,27 @@
+{
+  "name": "@dotgithub/core",
+  "version": "0.1.0",
+  "description": "Core package for @dotgithub monorepo.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "bun run tsc",
+    "test": "vitest run"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "vitest": "latest",
+    "jsii": "latest",
+    "@types/node": "latest"
+  },
+  "jsii": {
+    "outdir": "dist",
+    "targets": {
+      "python": {}
+    }
+  },
+  "engines": {
+    "bun": ">=1.2.19"
+  }
+}
