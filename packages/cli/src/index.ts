@@ -1,6 +1,6 @@
 
 import { Command } from 'commander';
-import { generateTypesFromActionYml } from '@dotgithub/core';
+import { generateActionFiles } from '@dotgithub/core';
 
 export function helloCli(): string {
   return 'Hello from @dotgithub/cli!';
@@ -9,15 +9,18 @@ export function helloCli(): string {
 const program = new Command();
 
 program
-  .command('add <orgRepo>')
-  .description('Generate TypeScript types from a GitHub Action action.yml')
-  .option('-r, --ref <ref>', 'Git ref (branch, tag, or sha)')
+  .command('add <orgRepoRef>')
+  .description('Generate TypeScript types from a GitHub Action and save to output directory')
+  .requiredOption('--output <outputDir>', 'Output directory for generated TypeScript file')
   .option('-t, --token <token>', 'GitHub token (overrides env GITHUB_TOKEN)')
-  .action(async (orgRepo, options) => {
+  .action(async (orgRepoRef, options) => {
     try {
-      const result = await generateTypesFromActionYml(orgRepo, options.ref, options.token);
-      // Print raw output
-      console.log(JSON.stringify(result));
+      const result = await generateActionFiles({
+        orgRepoRef,
+        outputDir: options.output,
+        token: options.token
+      });
+      console.log(`Generated ${result.filePath} with action: ${result.actionName}`);
     } catch (err) {
       console.error(err instanceof Error ? err.message : err);
       process.exit(1);
