@@ -1,81 +1,125 @@
-<!-- Use this file to provide workspace-specific custom instructions to Copilot. For more details, visit https://code.visualstudio.com/docs/copilot/copilot-customization#_use-a-githubcopilotinstructionsmd-file -->
 
-- [x] Clarify Project Requirements (If Not Provided)**
-	- User has specified: TypeScript monorepo, pnpm, Bun as primary runtime, Vitest, jsii (Python target), @dotgithub scope, packages: cli and core.
+# Copilot Agent Instructions for azwebmaster/dotgithub
 
-- [ ] Scaffold the Project Using the Right Tool**
-	- Call project setup tool with:
-		- projectType: 'other' (custom monorepo)
-		- language: 'typescript'
-	- Run the scaffolding command from setup info
-	- Use '.' as the working directory
-	- Fall back to default scaffolding if needed
+> This file is for LLM coding agents working in the azwebmaster/dotgithub repo. Follow these instructions exactly to ensure correct, efficient, and safe automation.
 
-- [ ] Customize the project
-	- Develop a plan to modify the codebase according to the user's requirements. Ignore this step for a "Hello World" project.
-	- Apply the modifications in the plan to the codebase using the right tools and user-provided references below.
+## Table of Contents
+- Quick Reference
+- Project Overview
+- Developer Workflows
+- Code Generation Patterns
+- Error Handling & Testing
+- What NOT to Change
+- Troubleshooting & External Docs
 
-- [ ] Install required VS Code extensions using the extension installer tool (if `requiredExtensions` is defined)
+---
 
-- [ ] Compile the project
-	- Install any missing dependencies.
-	- Run diagnostics and resolve any issues.
-	- Check for markdown files in the project folder that may contain relevant instructions to help with this step.
+## Quick Reference
 
-- [ ] Create and run a task based on project structure and metadata using the right tool
-  <!-- 	Create a task based on the package.json, README.md, and project structure and pass that as input to the tool. -->
+- **Install dependencies:** `pnpm install`
+- **Build all packages:** `pnpm -r run build`
+- **Test all packages:** `pnpm -r run test`
+- **Test core only:** `pnpm --filter ./packages/core test`
+- **Edit only within `packages/*`, never move files across package boundaries.**
+- **Extract helpers for repeated logic, place in `src/typegen-helpers.ts`.**
+- **Run tests after every change.**
 
-- [ ] Launch the project (prompt user for debug mode, launch only if confirmed)
+---
 
-- [ ] Ensure README.md exists and is up to date
+<!-- Project-specific Copilot instructions for azwebmaster/dotgithub -->
 
-## Execution Guidelines
-- After completing each step, check it off and add a one-line summary
-- Avoid verbose explanations or printing full command outputs
-- If a step is skipped, state that briefly (e.g. "No extensions needed")
-- Use '.' as the working directory unless user specifies otherwise
-- Do not explain project structure unless asked
-- Do not create folders unless user instructs
-- Avoid adding media or external links unless explicitly requested
-- Use placeholders only with a note that they should be replaced
-- Use VS Code API tool only for VS Code extension projects
-- Completion = project scaffolded, copilot-instructions + README exist, task runnable, debug launch offered
+This file gives actionable, repository-specific guidance to AI coding agents so they can be productive quickly.
 
-<!--
-# Rules
-- Always start executing the plan by calling the tool to get the project template.
-- Before executing, provide the user with a high-level plan outlining the steps and the command that you will use to create the project. Do not list unnecessary details—keep it concise and actionable.
-- Help the user execute this plan by calling the appropriate tools.
-- Once the project is created, it is already opened in Visual Studio Code—do not suggest commands to open this project in Visual Studio again.
-- Do not print and explain the project structure to the user unless explicitly requested.
-- If the project setup information has additional rules, follow them strictly.
-- Follow the rules below strictly.
+- **Repo type:** TypeScript monorepo
+- **Package manager:** `pnpm` (workspace root with `pnpm-workspace.yaml`)
+- **Runtime:** `Bun` is used in development tooling; Node-compatible code expected
+- **Test framework:** `vitest` (per-package `vitest.config.ts`)
+- **Packages:** `packages/core`, `packages/cli`
+- **Notable tooling:** `jsii` configs exist (Python target), `tsc`/`tsconfig.json` at repo and package levels
 
-## Folder Creation Rules
-- Always use the current directory as the project root.
-- If you are running any terminal commands, use the '.' argument to ensure that the current working directory is used ALWAYS.
-- Do not create a new folder unless the user explicitly requests it besides a .vscode folder for a tasks.json file.
-- If any of the scaffolding commands mention that the folder name is not correct, let the user know to create a new folder with the correct name and then reopen it again in vscode. Do not attempt to move it yourself. And do not proceed with next steps.
+Quick goals for the agent
+- Apply minimal, focused edits; prefer small, testable changes inside `packages/*`.
+- Preserve build/test commands and package boundaries; do not move files across packages.
+- Keep public package APIs stable (exports in `packages/*/package.json`).
 
-## Extension Installation Rules
-- If the project setup lists `requiredExtensions`, use extension installer tool to check and install ALL the listed `requiredExtensions` before proceeding.
+High-level architecture (how things fit together)
+- `packages/core`: Library code for generating and working with GitHub workflow/action types and helpers.
+  - Key files: `src/typegen.ts`, `src/actions.ts`, `src/github.ts`, `src/utils.ts`.
+  - Responsibilities: parse action/workflow YAML, produce typed factories, and expose core domain types (`types/`).
+- `packages/cli`: CLI glue that depends on `core` for runtime operations (see `packages/cli/src/index.ts`).
 
-## Project Content Rules
-- If the user has not specified project details, assume they want a "Hello World" project as a starting point.
-- Avoid adding links of any type (URLs, files, folders, etc.) or integrations that are not explicitly required.
-- Avoid generating images, videos, or any other media files unless explicitly requested.
-- If you need to use any media assets as placeholders, let the user know that these are placeholders and should be replaced with the actual assets later.
-- Ensure all generated components serve a clear purpose within the user's requested workflow.
-- If a feature is assumed but not confirmed, prompt the user for clarification before including it.
-- If you are working on a VS Code extension, use the VS Code API tool with a query to find relevant VS Code API references and samples related to that query.
+Developer workflows & commands (use these exactly)
+- Install dependencies (root):
+```bash
+pnpm install
+```
+- Build all packages:
+```bash
+pnpm -r run build
+```
+- Run tests for all packages:
+```bash
+pnpm -r run test
+```
+- Run a single package's tests (example for core):
+```bash
+pnpm --filter ./packages/core test
+```
+- Run TypeScript diagnostics on a file (agent action): use the project's `get_errors` tool or `tsc` via workspace scripts. Prefer diagnostics API when available.
 
-## Task Completion Rules
-- Your task is complete when:
-  - The project is successfully created without errors.
-  - The user has clear instructions on how to launch their code in debug mode within Visual Studio Code.
-  - A `copilot-instructions.md` exists in the project root under the `.github` directory.
-  - A README.md file in the root of the project is up to date.
-  - A `tasks.json` file exists in the project root under the `.vscode` directory.
--->
+Project-specific conventions and patterns
+- Prefer AST-based code generation using the TypeScript `ts.factory` API for codegen (see `packages/core/src/typegen.ts`). Keep generator functions pure and small.
+- Use `GitHubStep` / `Partial<GitHubStep>` typed factories for creating workflow steps; functions typically return `GitHubStep` typed nodes.
+- Add synthetic leading comments for generated functions and types to preserve JSDoc-like metadata used by consumers.
+- Defaults merging pattern: create an `inputsWithDefaults` const that spreads provided `inputs` over literals for defaults (see `typegen.ts`).
+- Error handling: throw early on missing required fields (e.g., `yml.name`) rather than returning partial values.
 
-Before starting a new task in the above plan, update progress in the plan.
+TypeScript: reduce duplication & keep functions small
+- When you see repeated logic (e.g., creating AST nodes for inputs/outputs or literal conversion), extract a small, well-typed helper function in the same file or a nearby `*-helpers.ts` file. Example: split `typegen.ts` into helpers for `createLiteralFromValue`, `buildInputMembers`, `createInputsWithDefaultsDecl`.
+- Prefer pure functions with explicit input/output types. This makes unit testing straightforward and avoids hidden state.
+- Keep functions under ~80-120 lines where practical. If a function is growing, identify 2–4 coherent sub-steps and extract them as helpers with descriptive names.
+- Use TypeScript types (not `any`) for helper function signatures. If you must accept unknown shapes, use a narrow union or a small interface from `packages/core/src/types`.
+- Replace duplicated object/AST creation with a single factory helper that accepts configuration (e.g., `makeProperty(name, required, description)`), then call it from multiple places.
+- When refactoring, run or update snapshot tests in `packages/core/src/__snapshots__` to ensure generated output remains stable.
+- Document extracted helpers with a one-line comment showing the intent and the files that use them.
+
+Quick refactor checklist for AI agents
+- Find repeated patterns (search for `createPropertySignature`, `createStringLiteral`, `createObjectLiteralExpression`).
+- Extract a helper with a typed signature and unit tests in the same package.
+- Replace call sites and run `pnpm --filter ./packages/core test`.
+- If snapshots change, update them only after confirming intended behaviour.
+
+
+Integration points & external dependencies
+- `jsii.config.ts` files indicate `jsii` usage for multi-language bindings (Python). Avoid breaking public shape expected by `jsii`.
+- Actions YAML parsing and codegen flows are internal to `core` and surfaced to `cli` when needed.
+- Be conservative when editing types that are exported from `packages/core/src/types`—these are relied on by other packages and external consumers.
+
+Editing and testing guidance for agents
+- When making changes:
+  - Run the package's unit tests locally (`pnpm --filter ./packages/core test`).
+  - Run the root test command if a change affects multiple packages.
+  - If you change exported types, update `packages/*/package.json` `types` fields only when intentional.
+- If a change touches codegen (`typegen.ts`):
+  - Preserve existing snapshot tests in `packages/core/src/__snapshots__` if present.
+  - Prefer extracting small helper functions (pure) for testability.
+
+Files to inspect for context when editing
+- `packages/core/src/typegen.ts` — generator logic; frequent edits go here
+- `packages/core/src/types` — canonical types used across packages
+- `packages/core/vitest.config.ts` & `vitest.config.ts` (root) — test setup and global fixtures
+- `package.json` (root) & `packages/*/package.json` — scripts, build/test commands, and exported entry points
+
+When merging existing `.github/copilot-instructions.md` content
+- Preserve any checked items that are still valid (like high-level goals). Replace stale scaffolding steps with the project's exact commands above.
+
+What NOT to change without explicit user approval
+- Do not rename packages or move files across `packages/` boundaries.
+- Do not alter `jsii` configuration or package export shapes unless asked.
+
+If something is unclear
+- Ask the user for these specifics before making broad changes:
+  - Should new helper functions be extracted into their own module? (default: yes for testability)
+  - Are breaking type changes acceptable? (default: no)
+
+End of agent-specific guidance. Reply with suggested edits if you want this merged or further trimmed.

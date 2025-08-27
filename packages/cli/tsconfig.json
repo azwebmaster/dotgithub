@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "src",
+    "baseUrl": "./src",
+    "paths": {
+      "@dotgithub/core": ["../../core/dist"]
+    },
+    "moduleResolution": "node",
+  "noEmit": false,
+  "allowImportingTsExtensions": false
+  },
+  "include": ["src/**/*.ts"]
+}

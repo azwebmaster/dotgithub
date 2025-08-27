@@ -3,11 +3,28 @@
   "module": "index.ts",
   "type": "module",
   "private": true,
+  "scripts": {
+    "test": "vitest run"
+  },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "@types/js-yaml": "^4.0.9",
+    "json-schema-to-typescript": "^15.0.4",
+    "node-fetch": "^2.7.0",
+  "vitest": "^3.2.4",
+  "typescript": "^5.0.0",
+  "jsii": "latest",
+  "@types/node": "latest"
   },
   "peerDependencies": {
     "typescript": "^5"
   },
-  "packageManager": "pnpm@10.10.0+sha512.d615db246fe70f25dcfea6d8d73dee782ce23e2245e3c4f6f888249fb568149318637dca73c2c5c8ef2a4ca0d5657fb9567188bfab47f566d1ee6ce987815c39"
+  "packageManager": "pnpm@10.10.0+sha512.d615db246fe70f25dcfea6d8d73dee782ce23e2245e3c4f6f888249fb568149318637dca73c2c5c8ef2a4ca0d5657fb9567188bfab47f566d1ee6ce987815c39",
+  "dependencies": {
+    "@changesets/cli": "^2.29.5",
+    "commander": "^14.0.0",
+    "js-yaml": "^4.1.0",
+    "octokit": "^5.0.3",
+    "simple-git": "^3.28.0"
+  }
 }

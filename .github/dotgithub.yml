@@ -1,0 +1,20 @@
+
+actions:
+  actions/checkout:
+    ref: v4
+  actions/setup-node:
+    ref: v3
+  actions/cache:
+    ref: v3
+  actions/upload-artifact:
+    ref: v3
+  actions/download-artifact:
+    ref: v3
+  actions/github-script:
+    ref: v6
+  actions/labeler:
+    ref: v4
+
+workflows:
+  docs: ./docs/.github.yml
+  code: ./.github.yml

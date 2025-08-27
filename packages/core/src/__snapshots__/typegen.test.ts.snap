@@ -1,0 +1,40 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`generateTypesFromYml > generates correct types and function 1`] = `
+"export type CreateUserInputs = {
+        /* This is a name | default: "John Doe" */ name: string;
+        /* This is the address */ address?: string;
+};
+export type CreateUserOutputs = {
+        /* ID of user */ id: string;
+};
+/*
+  Creates a user
+  https://github.com/actions/create-user/tree/sha1
+*/
+export function createUser(inputs: CreateUserInputs, step?: Partial<GitHubStep<CreateUserInputs>>, ref?: string): GitHubStep {
+    const inputsWithDefaults = {
+    name: "John Doe",
+    ...inputs
+    };
+    return createStep("actions/create-user", inputsWithDefaults, step, ref ?? "sha1");
+}
+"
+`;
+
+exports[`generateTypesFromYml > handles missing outputs 1`] = `
+"export type SimpleInputs = {
+    foo: string;
+};
+/*
+  A simple action
+  https://github.com/actions/my-action/tree/main
+*/
+export function simple(inputs: SimpleInputs, step?: Partial<GitHubStep<SimpleInputs>>, ref?: string): GitHubStep {
+    const inputsWithDefaults = {
+    ...inputs
+    };
+    return createStep("actions/my-action", inputsWithDefaults, step, ref ?? "main");
+}
+"
+`;

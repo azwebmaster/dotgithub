@@ -1,20 +1,17 @@
 {
   "name": "@dotgithub/cli",
   "version": "0.1.0",
+  "type": "module",
   "description": "CLI package for @dotgithub monorepo.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "bun run tsc",
-    "test": "vitest run"
+    "build": "bun run tsc"
   },
-  "dependencies": {},
-  "devDependencies": {
-    "typescript": "^5.0.0",
-    "vitest": "latest",
-    "jsii": "latest",
-    "@types/node": "latest"
+  "dependencies": {
+    "@dotgithub/core": "workspace:*"
   },
+  "devDependencies": {},
   "jsii": {
     "outdir": "dist",
     "targets": {

@@ -1,8 +1,7 @@
-import { defineConfig } from 'jsii/config';
 
-export default defineConfig({
+module.exports = {
   outdir: 'dist',
   targets: {
     python: {},
   },
-});
+};
