@@ -2,7 +2,7 @@
 export interface GitHubActionInput {
   description?: string;
   required?: boolean | string;
-  default?: string;
+  default?: string | number | boolean;
 }
 
 
