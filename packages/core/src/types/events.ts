@@ -28,6 +28,8 @@ export type GitHubWorkflowEvent = {
   release?: ReleaseWorkflowEvent;
   watch?: WatchWorkflowEvent;
   workflow_run?: WorkflowRunWorkflowEvent;
+  workflow_dispatch?: WorkflowDispatchWorkflowEvent;
+  schedule?: ScheduleWorkflowEvent[];
 };
 // Types for GitHub Actions workflow events
 
@@ -66,153 +68,67 @@ export type GitHubWorkflowEventName =
   | "workflow_run";
 
 // Add event-specific types here as needed
-export enum BranchProtectionRuleActivityType {
-  Created = "created",
-  Edited = "edited",
-  Deleted = "deleted",
-}
+export type BranchProtectionRuleActivityType = "created" | "edited" | "deleted";
 
 export type BranchProtectionRuleWorkflowEvent = {
   types: BranchProtectionRuleActivityType[];
 };
 
-export enum CheckRunActivityType {
-  Created = "created",
-  Rerequested = "rerequested",
-  Completed = "completed",
-  RequestedAction = "requested_action",
-}
+export type CheckRunActivityType = "created" | "rerequested" | "completed" | "requested_action";
 
 export type CheckRunWorkflowEvent = {
   types: CheckRunActivityType[];
 };
 
-export enum CheckSuiteActivityType {
-  Completed = "completed",
-}
+export type CheckSuiteActivityType = "completed";
 
 export type CheckSuiteWorkflowEvent = {
   types: CheckSuiteActivityType[];
 };
 
-export enum DiscussionActivityType {
-  Created = "created",
-  Edited = "edited",
-  Deleted = "deleted",
-  Transferred = "transferred",
-  Pinned = "pinned",
-  Unpinned = "unpinned",
-  Labeled = "labeled",
-  Unlabeled = "unlabeled",
-  Locked = "locked",
-  Unlocked = "unlocked",
-  CategoryChanged = "category_changed",
-  Answered = "answered",
-  Unanswered = "unanswered",
-}
+export type DiscussionActivityType = "created" | "edited" | "deleted" | "transferred" | "pinned" | "unpinned" | "labeled" | "unlabeled" | "locked" | "unlocked" | "category_changed" | "answered" | "unanswered";
 
 export type DiscussionWorkflowEvent = {
   types: DiscussionActivityType[];
 };
 
-export enum DiscussionCommentActivityType {
-  Created = "created",
-  Edited = "edited",
-  Deleted = "deleted",
-}
+export type DiscussionCommentActivityType = "created" | "edited" | "deleted";
 
 export type DiscussionCommentWorkflowEvent = {
   types: DiscussionCommentActivityType[];
 };
 
-export enum IssueCommentActivityType {
-  Created = "created",
-  Edited = "edited",
-  Deleted = "deleted",
-}
+export type IssueCommentActivityType = "created" | "edited" | "deleted";
 
 export type IssueCommentWorkflowEvent = {
   types: IssueCommentActivityType[];
 };
 
-export enum IssuesActivityType {
-  Opened = "opened",
-  Edited = "edited",
-  Deleted = "deleted",
-  Transferred = "transferred",
-  Pinned = "pinned",
-  Unpinned = "unpinned",
-  Closed = "closed",
-  Reopened = "reopened",
-  Assigned = "assigned",
-  Unassigned = "unassigned",
-  Labeled = "labeled",
-  Unlabeled = "unlabeled",
-  Locked = "locked",
-  Unlocked = "unlocked",
-  Milestoned = "milestoned",
-  Demilestoned = "demilestoned",
-  Typed = "typed",
-  Untyped = "untyped",
-}
+export type IssuesActivityType = "opened" | "edited" | "deleted" | "transferred" | "pinned" | "unpinned" | "closed" | "reopened" | "assigned" | "unassigned" | "labeled" | "unlabeled" | "locked" | "unlocked" | "milestoned" | "demilestoned" | "typed" | "untyped";
 
 export type IssuesWorkflowEvent = {
   types: IssuesActivityType[];
 };
 
-export enum LabelActivityType {
-  Created = "created",
-  Edited = "edited",
-  Deleted = "deleted",
-}
+export type LabelActivityType = "created" | "edited" | "deleted";
 
 export type LabelWorkflowEvent = {
   types: LabelActivityType[];
 };
 
-export enum MergeGroupActivityType {
-  ChecksRequested = "checks_requested",
-}
+export type MergeGroupActivityType = "checks_requested";
 
 export type MergeGroupWorkflowEvent = {
   types: MergeGroupActivityType[];
 };
 
-export enum MilestoneActivityType {
-  Created = "created",
-  Closed = "closed",
-  Opened = "opened",
-  Edited = "edited",
-  Deleted = "deleted",
-}
+export type MilestoneActivityType = "created" | "closed" | "opened" | "edited" | "deleted";
 
 export type MilestoneWorkflowEvent = {
   types: MilestoneActivityType[];
 };
 
-export enum PullRequestActivityType {
-  Assigned = "assigned",
-  Unassigned = "unassigned",
-  Labeled = "labeled",
-  Unlabeled = "unlabeled",
-  Opened = "opened",
-  Edited = "edited",
-  Closed = "closed",
-  Reopened = "reopened",
-  Synchronize = "synchronize",
-  ConvertedToDraft = "converted_to_draft",
-  Locked = "locked",
-  Unlocked = "unlocked",
-  Enqueued = "enqueued",
-  Dequeued = "dequeued",
-  Milestoned = "milestoned",
-  Demilestoned = "demilestoned",
-  ReadyForReview = "ready_for_review",
-  ReviewRequested = "review_requested",
-  ReviewRequestRemoved = "review_request_removed",
-  AutoMergeEnabled = "auto_merge_enabled",
-  AutoMergeDisabled = "auto_merge_disabled",
-}
+export type PullRequestActivityType = "assigned" | "unassigned" | "labeled" | "unlabeled" | "opened" | "edited" | "closed" | "reopened" | "synchronize" | "converted_to_draft" | "locked" | "unlocked" | "enqueued" | "dequeued" | "milestoned" | "demilestoned" | "ready_for_review" | "review_requested" | "review_request_removed" | "auto_merge_enabled" | "auto_merge_disabled";
 
 // Pull request event type with all possible properties
 export type PullRequestWorkflowEvent = {
@@ -223,63 +139,54 @@ export type PullRequestWorkflowEvent = {
   "paths-ignore"?: string[];
 };
 
-export enum PullRequestReviewActivityType {
-  Submitted = "submitted",
-  Edited = "edited",
-  Dismissed = "dismissed",
-}
+export type PullRequestReviewActivityType = "submitted" | "edited" | "dismissed";
 
 export type PullRequestReviewWorkflowEvent = {
   types: PullRequestReviewActivityType[];
 };
 
-export enum PullRequestReviewCommentActivityType {
-  Created = "created",
-  Edited = "edited",
-  Deleted = "deleted",
-}
+export type PullRequestReviewCommentActivityType = "created" | "edited" | "deleted";
 
 export type PullRequestReviewCommentWorkflowEvent = {
   types: PullRequestReviewCommentActivityType[];
 };
 
-export enum RegistryPackageActivityType {
-  Published = "published",
-  Updated = "updated",
-}
+export type RegistryPackageActivityType = "published" | "updated";
 
 export type RegistryPackageWorkflowEvent = {
   types: RegistryPackageActivityType[];
 };
 
-export enum ReleaseActivityType {
-  Published = "published",
-  Unpublished = "unpublished",
-  Created = "created",
-  Edited = "edited",
-  Deleted = "deleted",
-  Prereleased = "prereleased",
-  Released = "released",
-}
+export type ReleaseActivityType = "published" | "unpublished" | "created" | "edited" | "deleted" | "prereleased" | "released";
 
 export type ReleaseWorkflowEvent = {
   types: ReleaseActivityType[];
 };
 
-export enum WatchActivityType {
-  Started = "started",
-}
+export type WatchActivityType = "started";
 
 export type WatchWorkflowEvent = {
   types: WatchActivityType[];
 };
 
-export enum WorkflowRunActivityType {
-  Completed = "completed",
-  Requested = "requested",
-  InProgress = "in_progress",
-}
+export type WorkflowRunActivityType = "completed" | "requested" | "in_progress";
 
 export type WorkflowRunWorkflowEvent = {
   types: WorkflowRunActivityType[];
+};
+
+export type WorkflowDispatchWorkflowEvent = {
+  inputs?: { [key: string]: WorkflowDispatchInput };
+};
+
+export type WorkflowDispatchInput = {
+  description?: string;
+  required?: boolean;
+  default?: string;
+  type?: "boolean" | "choice" | "environment" | "string";
+  options?: string[];
+};
+
+export type ScheduleWorkflowEvent = {
+  cron: string;
 };

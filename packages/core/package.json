@@ -7,7 +7,9 @@
   "scripts": {
     "build": "bun run tsc"
   },
-  "dependencies": {},
+  "dependencies": {
+    "prettier": "^3.0.0"
+  },
   "devDependencies": {},
   "jsii": {
     "outdir": "dist",

@@ -52,19 +52,20 @@ runs:
     });
 
     const generatedContent = fs.readFileSync(result.filePath, 'utf8');
-    console.log('Generated TypeScript:');
-    console.log(generatedContent);
 
     // Verify structure matches the expected format from the issue
-    expect(generatedContent).toContain('import { GitHubStep, createStep } from \'@dotgithub/core\'');
+    expect(generatedContent).toContain('import { createStep } from "@dotgithub/core";');
+    expect(generatedContent).toContain('import type { GitHubStep, GitHubStepBase } from "@dotgithub/core";');
     expect(generatedContent).toContain('export type MyActionInputs = {');
-    expect(generatedContent).toContain('/* Property 1 */ prop1: string;');
-    expect(generatedContent).toContain('/* Property 2 | default: "p2" */ prop-2?: string;');
+    expect(generatedContent).toContain('/** Property 1 */\n  prop1: string;');
+    expect(generatedContent).toContain('/** Property 2 | default: "p2" */\n  "prop-2"?: string;');
     expect(generatedContent).toContain('export type MyActionOutputs = {');
-    expect(generatedContent).toContain('/* Output 1 */ output1: string;');
+    expect(generatedContent).toContain('/** Output 1 */\n  output1: string;');
     expect(generatedContent).toContain('Action description');
     expect(generatedContent).toContain('https://github.com/actions/my-action/tree/v4');
-    expect(generatedContent).toContain('export function myAction(inputs: MyActionInputs');
-    expect(generatedContent).toContain('createStep("actions/my-action"');
+    expect(generatedContent).toContain('export function myAction(');
+    expect(generatedContent).toContain('return createStep(');
+    expect(generatedContent).toContain('"actions/my-action",');
+    expect(generatedContent).toContain('{ ...step, with: inputs }');
   });
 });

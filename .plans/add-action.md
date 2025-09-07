@@ -3,7 +3,7 @@
 Create a CLI command to get a GitHub action from github.com, generate TypeScript code.
 
 ```shell
-dotgithub add actions/my-action@v4 --output .github/src/actions/
+dotgithub add actions/my-action@v4 [--path <code-path>]
 ```
 
 Acceptance Criteria:

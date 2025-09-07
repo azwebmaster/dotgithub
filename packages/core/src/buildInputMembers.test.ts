@@ -10,9 +10,9 @@ describe('buildInputMembers', () => {
       noComment: { required: true },
     };
     const result = buildInputMembers(inputs);
-    expect(result).toContain('/* desc | default: "bar" */ foo: string;');
-    expect(result).toContain('/* baz desc */ baz?: string;');
-    expect(result).toContain('/* default: 42 */ qux: string;');
+    expect(result).toContain('/** desc | default: "bar" */\n    foo: string;');
+    expect(result).toContain('/** baz desc */\n    baz?: string;');
+    expect(result).toContain('/** default: 42 */\n    qux: string;');
     expect(result).toContain('noComment: string;');
   });
 

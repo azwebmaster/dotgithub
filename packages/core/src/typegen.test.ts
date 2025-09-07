@@ -9,9 +9,9 @@ describe('buildInputMembers', () => {
       noComment: { required: true },
     };
     const result = buildInputMembers(inputs);
-    expect(result).toContain('/* desc | default: "bar" */ foo: string;');
-    expect(result).toContain('/* baz desc */ baz?: string;');
-    expect(result).toContain('/* default: "42" */ qux: string;');
+    expect(result).toContain('/** desc | default: "bar" */\n    foo: string;');
+    expect(result).toContain('/** baz desc */\n    baz?: string;');
+    expect(result).toContain('/** default: "42" */\n    qux: string;');
     expect(result).toContain('noComment: string;');
   });
 
@@ -53,7 +53,7 @@ describe('generateTypesFromYml', () => {
     expect(code).toContain('export type CreateUserOutputs');
     expect(code).toContain('id: string;');
     expect(code).toContain('export function createUser(');
-    expect(code).toContain('name: "John Doe"');
+    expect(code).toContain('default: "John Doe"');
     expect(code).toContain('https://github.com/actions/create-user/tree/sha1');
     expect(code).toContain('Creates a user');
     expect(code).toMatchSnapshot();
@@ -75,5 +75,31 @@ describe('generateTypesFromYml', () => {
 
   it('throws if name is missing', () => {
     expect(() => generateTypesFromYml({} as any)).toThrow();
+  });
+
+  it('makes inputs optional when no inputs are required', () => {
+    const ymlOptionalInputs: GitHubActionYml = {
+      name: 'optional-test',
+      description: 'Test with optional inputs',
+      inputs: {
+        foo: { required: false },
+        bar: { required: 'false' },
+      },
+    };
+    const code = generateTypesFromYml(ymlOptionalInputs);
+    expect(code).toContain('export function optionalTest(inputs?: OptionalTestInputs,');
+  });
+
+  it('makes inputs required when any input is required', () => {
+    const ymlRequiredInputs: GitHubActionYml = {
+      name: 'required-test',
+      description: 'Test with required inputs',
+      inputs: {
+        foo: { required: false },
+        bar: { required: true },
+      },
+    };
+    const code = generateTypesFromYml(ymlRequiredInputs);
+    expect(code).toContain('export function requiredTest(inputs: RequiredTestInputs,');
   });
 });

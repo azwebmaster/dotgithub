@@ -54,13 +54,14 @@ runs:
     });
 
     expect(result.actionName).toBe('myaction');
-    expect(result.filePath).toBe(path.join(tmpDir, 'myaction.ts'));
+    expect(result.filePath).toBe(path.join(tmpDir, 'actions', 'myaction.ts'));
     
     // Check that the TypeScript file was generated
     expect(fs.existsSync(result.filePath)).toBe(true);
     
     const generatedContent = fs.readFileSync(result.filePath, 'utf8');
-    expect(generatedContent).toContain('import { GitHubStep, createStep } from \'@dotgithub/core\'');
+    expect(generatedContent).toContain('import { createStep } from "@dotgithub/core";');
+    expect(generatedContent).toContain('import type { GitHubStep, GitHubStepBase } from "@dotgithub/core";');
     expect(generatedContent).toContain('export type MyActionInputs');
     expect(generatedContent).toContain('export type MyActionOutputs');
     expect(generatedContent).toContain('export function myAction');
@@ -68,12 +69,19 @@ runs:
     expect(generatedContent).toContain('Property 2');
     expect(generatedContent).toContain('default: "p2"');
     
-    // Check that index.ts was created
-    const indexPath = path.join(tmpDir, 'index.ts');
-    expect(fs.existsSync(indexPath)).toBe(true);
+    // Check that root index.ts was created with organization export
+    const rootIndexPath = path.join(tmpDir, 'index.ts');
+    expect(fs.existsSync(rootIndexPath)).toBe(true);
     
-    const indexContent = fs.readFileSync(indexPath, 'utf8');
-    expect(indexContent).toContain('export * from \'./myaction.js\'');
+    const rootIndexContent = fs.readFileSync(rootIndexPath, 'utf8');
+    expect(rootIndexContent).toContain('export * as actions from "./actions/index.js";');
+    
+    // Check that organization index.ts was created
+    const orgIndexPath = path.join(tmpDir, 'actions', 'index.ts');
+    expect(fs.existsSync(orgIndexPath)).toBe(true);
+    
+    const orgIndexContent = fs.readFileSync(orgIndexPath, 'utf8');
+    expect(orgIndexContent).toContain('export * from "./myaction.js";');
   });
 
   it('should not duplicate exports in index.ts when called multiple times', async () => {
@@ -101,8 +109,8 @@ runs:
       outputDir: tmpDir
     });
 
-    const indexContent = fs.readFileSync(path.join(tmpDir, 'index.ts'), 'utf8');
-    const exportLines = indexContent.split('\n').filter(line => line.includes('testaction.js'));
+    const orgIndexContent = fs.readFileSync(path.join(tmpDir, 'actions', 'index.ts'), 'utf8');
+    const exportLines = orgIndexContent.split('\n').filter(line => line.includes('testaction.js'));
     expect(exportLines).toHaveLength(1);
   });
 });

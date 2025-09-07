@@ -11,6 +11,9 @@
   "dependencies": {
     "@dotgithub/core": "workspace:*"
   },
+  "bin": {
+    "dotgithub": "dist/index.js"
+  },
   "devDependencies": {},
   "jsii": {
     "outdir": "dist",

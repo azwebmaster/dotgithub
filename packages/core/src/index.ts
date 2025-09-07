@@ -6,6 +6,7 @@ import { cloneRepo } from './git';
 import { readActionYml } from './action-yml';
 import { generateTypesFromYml } from './typegen';
 import { toProperCase } from './utils';
+import * as prettier from 'prettier';
 
 export function helloCore(): string {
   return 'Hello from @dotgithub/core!';
@@ -13,7 +14,50 @@ export function helloCore(): string {
 
 // Export types and functions that will be used by generated code
 export { createStep } from './actions';
-export type { GitHubStep } from './types/workflow';
+export type { GitHubStep, GitHubStepBase, GitHubWorkflow, GitHubJob } from './types/workflow';
+
+// Export construct classes for CDK-style workflow building
+export * from './constructs';
+
+// Export GH class and types
+export { GH } from './GH';
+export type { DotGitHubResource, DotGitHub } from './types/common';
+
+// Export workflow generation functions
+export { generateWorkflowYaml, createWorkflow, createJob } from './workflow-generator';
+export type { WorkflowGenerationOptions } from './workflow-generator';
+
+// Export template system
+export { TemplateLoader, createTemplateLoader } from './template';
+export type { TemplateConfig, TemplateVariable, TemplateContext, ProcessedTemplate } from './template';
+
+// Export template validation
+export { validateTemplate, createTemplateValidator, TemplateValidator } from './template-validator';
+export type { ValidationResult, ValidationError, ValidationWarning, ValidationOptions } from './template-validator';
+
+// Export GitHub files generation
+export {
+  generateGithubFiles,
+  generateDependabotConfig,
+  generateCodeowners,
+  generateIssueTemplate,
+  generatePullRequestTemplate,
+  generateFundingConfig,
+  generateSecurityPolicy,
+  GitHubFilesGenerators
+} from './github-files-generator';
+export type {
+  GenerateGithubFilesOptions,
+  GenerateGithubFilesResult,
+  DependabotConfig,
+  DependabotUpdate,
+  CodeownersEntry,
+  IssueTemplate,
+  PullRequestTemplate,
+  FundingConfig,
+  SecurityPolicy,
+  SupportedGitHubFile
+} from './github-files-generator';
 
 export interface GenerateTypesResult {
   yaml: any;
@@ -57,7 +101,7 @@ export async function generateTypesFromActionYml(orgRepo: string, ref?: string, 
 
 /**
  * Generates a GitHub Action TypeScript file from a GitHub repo and saves it to the output directory.
- * Also updates the index.ts file in the output directory to export the new types.
+ * Creates an organization folder structure and updates index files.
  * @param options - Configuration for file generation
  */
 export async function generateActionFiles(options: GenerateActionFilesOptions): Promise<GenerateActionFilesResult> {
@@ -74,19 +118,28 @@ export async function generateActionFiles(options: GenerateActionFilesOptions): 
   // Generate filename from action name
   const actionNameForFile = generateFilenameFromActionName(result.yaml.name);
   const fileName = `${actionNameForFile}.ts`;
-  const filePath = path.join(options.outputDir, fileName);
+  
+  // Create organization folder structure
+  const orgDir = path.join(options.outputDir, owner);
+  const filePath = path.join(orgDir, fileName);
 
-  // Ensure output directory exists
-  fs.mkdirSync(options.outputDir, { recursive: true });
+  // Ensure organization directory exists
+  fs.mkdirSync(orgDir, { recursive: true });
 
   // Add import statement to the generated types
   const typesWithImports = addImportsToGeneratedTypes(result.type);
   
+  // Format the code with prettier
+  const formattedCode = await formatWithPrettier(typesWithImports);
+  
   // Write the TypeScript file
-  fs.writeFileSync(filePath, typesWithImports, 'utf8');
+  fs.writeFileSync(filePath, formattedCode, 'utf8');
 
-  // Update or create index.ts file
-  updateIndexFile(options.outputDir, actionNameForFile);
+  // Update or create index.ts file in the org folder
+  await updateIndexFile(orgDir, actionNameForFile);
+  
+  // Update or create index.ts file in the root output directory
+  await updateRootIndexFile(options.outputDir, owner);
 
   return {
     filePath,
@@ -111,6 +164,22 @@ async function cloneRepoToTemp(owner: string, repo: string, ref: string | undefi
 
 function cleanupTempDir(tmpDir: string) {
   fs.rmSync(tmpDir, { recursive: true, force: true });
+}
+
+/**
+ * Formats TypeScript code using prettier
+ * @param code - TypeScript code to format
+ * @returns Formatted TypeScript code
+ */
+async function formatWithPrettier(code: string): Promise<string> {
+  try {
+    return await prettier.format(code, {
+      parser: 'typescript',
+    });
+  } catch (error) {
+    console.warn('Failed to format code with prettier:', error);
+    return code; // Return original code if formatting fails
+  }
 }
 
 /**
@@ -149,7 +218,7 @@ function generateFilenameFromActionName(actionName: string): string {
  * @returns TypeScript code with import statements
  */
 function addImportsToGeneratedTypes(generatedTypes: string): string {
-  const imports = `import { GitHubStep, createStep } from '@dotgithub/core';\n\n`;
+  const imports = `import { createStep } from '@dotgithub/core';\nimport type { GitHubStep, GitHubStepBase } from '@dotgithub/core';\n\n`;
   return imports + generatedTypes;
 }
 
@@ -158,17 +227,43 @@ function addImportsToGeneratedTypes(generatedTypes: string): string {
  * @param outputDir - Output directory path
  * @param actionNameForFile - The filename (without extension) to export
  */
-function updateIndexFile(outputDir: string, actionNameForFile: string): void {
+async function updateIndexFile(outputDir: string, actionNameForFile: string): Promise<void> {
   const indexPath = path.join(outputDir, 'index.ts');
   const exportStatement = `export * from './${actionNameForFile}.js';\n`;
   
   if (fs.existsSync(indexPath)) {
     const existingContent = fs.readFileSync(indexPath, 'utf8');
-    // Check if the export already exists to avoid duplicates
-    if (!existingContent.includes(`export * from './${actionNameForFile}.js'`)) {
-      fs.appendFileSync(indexPath, exportStatement);
+    // Check if the export already exists to avoid duplicates (check for the file reference regardless of quotes)
+    if (!existingContent.includes(`./${actionNameForFile}.js`)) {
+      const newContent = existingContent + exportStatement;
+      const formattedContent = await formatWithPrettier(newContent);
+      fs.writeFileSync(indexPath, formattedContent, 'utf8');
     }
   } else {
-    fs.writeFileSync(indexPath, exportStatement, 'utf8');
+    const formattedContent = await formatWithPrettier(exportStatement);
+    fs.writeFileSync(indexPath, formattedContent, 'utf8');
+  }
+}
+
+/**
+ * Updates or creates root index.ts file to export from organization folders
+ * @param outputDir - Root output directory path
+ * @param orgName - Organization name (folder name)
+ */
+async function updateRootIndexFile(outputDir: string, orgName: string): Promise<void> {
+  const indexPath = path.join(outputDir, 'index.ts');
+  const exportStatement = `export * as ${orgName} from './${orgName}/index.js';\n`;
+  
+  if (fs.existsSync(indexPath)) {
+    const existingContent = fs.readFileSync(indexPath, 'utf8');
+    // Check if the export already exists to avoid duplicates (check for the org reference regardless of quotes)
+    if (!existingContent.includes(`export * as ${orgName} from`)) {
+      const newContent = existingContent + exportStatement;
+      const formattedContent = await formatWithPrettier(newContent);
+      fs.writeFileSync(indexPath, formattedContent, 'utf8');
+    }
+  } else {
+    const formattedContent = await formatWithPrettier(exportStatement);
+    fs.writeFileSync(indexPath, formattedContent, 'utf8');
   }
 }

@@ -1,17 +1,30 @@
+import type { GitHubWorkflow, GitHubWorkflows } from "./workflow";
 
-export interface GitHubActionInput {
+export type DotGitHubRootResources = DotGitHubResources & { workflows: GitHubWorkflows };
+export type DotGitHubResources = Record<string, DotGitHubResource>;
+
+export type DotGitHubResource = {
+  /* File content, if a file */
+  content?: unknown;
+  /* Child resources, if a directory */
+  children?: DotGitHubResources;
+}
+
+export type DotGitHub = DotGitHubRootResources;
+
+export type GitHubActionInput ={
   description?: string;
   required?: boolean | string;
   default?: string | number | boolean;
 }
 
 
-export interface GitHubActionOutput {
+export type GitHubActionOutput = {
   description?: string;
 }
 
 
-export interface GitHubActionYml {
+export type GitHubActionYml = {
   name?: string;
   description?: string;
   author?: string;

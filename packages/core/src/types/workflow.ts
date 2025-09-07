@@ -12,6 +12,8 @@ export type GitHubJobServices = { [serviceId: string]: GitHubJobService };
 export type GitHubJobWith = { [key: string]: any };
 export type GitHubStepWith = { [key: string]: any };
 
+export type GitHubWorkflows = Record<string, GitHubWorkflow>;
+
 export type GitHubWorkflow = {
   name?: string;
   "run-name"?: string;
@@ -144,14 +146,17 @@ export type GitHubJobService = {
   options?: string;
 };
 
-export type GitHubStep<T> = {
+export type GitHubStep<T> = GitHubStepBase & {
+  with?: T;
+}
+
+export type GitHubStepBase = {
   id?: string;
   if?: string;
   name?: string;
   uses?: string;
   run?: string;
   shell?: string;
-  with?: T;
   env?: GitHubEnv;
   "continue-on-error"?: boolean;
   "timeout-minutes"?: number;

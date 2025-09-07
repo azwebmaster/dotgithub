@@ -1,15 +1,25 @@
 
 import type { GitHubActionInput, GitHubActionOutput, GitHubActionYml } from './types';
+import type { GitHubStepBase } from './types/workflow';
 import { toProperCase } from './utils';
 
 
 
 // Helpers to keep generation logic small and testable
 function createLiteralFromValue(v: unknown): string {
+  // GitHub Actions inputs are always strings, so convert everything to string literals
+  if (v === null || v === undefined) return `""`; 
   if (typeof v === 'string') return `"${v.replace(/"/g, '\"')}"`;
-  if (typeof v === 'number') return String(v);
-  if (typeof v === 'boolean') return v ? 'true' : 'false';
-  return `"${String(v ?? '')}"`;
+  return `"${String(v)}"`; // Convert numbers, booleans, etc. to string literals
+}
+
+function needsQuoting(propertyName: string): boolean {
+  // Check if property name contains special characters that require quoting
+  return !/^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(propertyName);
+}
+
+function quotePropertyName(propertyName: string): string {
+  return needsQuoting(propertyName) ? `"${propertyName}"` : propertyName;
 }
 
 
@@ -20,9 +30,9 @@ export function buildInputMembers(inputs?: GitHubActionInputs): string {
       let commentParts: string[] = [];
       if (val.description) commentParts.push(val.description);
       if (val.default !== undefined) commentParts.push(`default: ${JSON.stringify(val.default)}`);
-      const desc = commentParts.length > 0 ? `    /* ${commentParts.join(' | ')} */ ` : '';
+      const desc = commentParts.length > 0 ? `/** ${commentParts.join(' | ')} */\n    ` : '';
       const required = val.required === true || val.required === 'true';
-      return `${desc}${key}${required ? '' : '?'}: string;`;
+      return `${desc}${quotePropertyName(key)}${required ? '' : '?'}: string;`;
     })
     .join('\n    ');
 }
@@ -34,26 +44,19 @@ function buildOutputMembers(outputs?: GitHubActionOutputs): string {
   if (!outputs) return '';
   return Object.entries(outputs)
     .map(([key, val]) => {
-      const desc = val.description ? `    /* ${val.description} */ ` : '';
-      return `${desc}${key}: string;`;
+      const desc = val.description ? `/** ${val.description} */\n    ` : '';
+      return `${desc}${quotePropertyName(key)}: string;`;
     })
     .join('\n    ');
 }
 
 
-function createInputsWithDefaultsDecl(inputs?: GitHubActionInputs): string {
-  const props: string[] = [];
-  if (inputs) {
-    for (const [key, val] of Object.entries(inputs)) {
-      if (val.default !== undefined) {
-        props.push(`    ${key}: ${createLiteralFromValue(val.default)}`);
-      }
-    }
-  }
-  props.push('    ...inputs');
-  return `    const inputsWithDefaults = {\n${props.join(',\n')}\n    };`;
-}
 
+
+function hasRequiredInputs(inputs?: GitHubActionInputs): boolean {
+  if (!inputs) return false;
+  return Object.values(inputs).some(input => input.required === true || input.required === 'true');
+}
 
 function createFactoryFunction(
   ActionName: string,
@@ -62,7 +65,9 @@ function createFactoryFunction(
   ref: string,
   inputs?: GitHubActionInputs
 ): string {
-  return `export function ${actionNameCamel}(inputs: ${ActionName}Inputs, step?: Partial<GitHubStep<${ActionName}Inputs>>, ref?: string): GitHubStep {\n${createInputsWithDefaultsDecl(inputs)}\n    return createStep("${repo}", inputsWithDefaults, step, ref ?? "${ref}");\n}`;
+  const inputsRequired = hasRequiredInputs(inputs);
+  const inputsParam = inputsRequired ? `inputs: ${ActionName}Inputs` : `inputs?: ${ActionName}Inputs`;
+  return `export function ${actionNameCamel}(${inputsParam}, step?: Partial<GitHubStepBase>, ref?: string): GitHubStep<${ActionName}Inputs> {\n    return createStep("${repo}", { ...step, with: inputs }, ref ?? "${ref}");\n}`;
 }
 
 
