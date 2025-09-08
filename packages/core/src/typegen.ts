@@ -82,6 +82,7 @@ function createFactoryFunction(
  * @param yml - The parsed GitHub Action YAML definition.
  * @param repo - The GitHub repository in the format `owner/repo` (default: `'actions/my-action'`).
  * @param ref - The git reference (branch, tag, or SHA) to use (default: `'main'`).
+ * @param versionRef - The user-friendly version reference to use in generated code (defaults to ref if not provided).
  * @returns A string containing the generated TypeScript code.
  *
  * @throws If the YAML definition is missing a `name` property.
@@ -89,13 +90,17 @@ function createFactoryFunction(
 export function generateTypesFromYml(
   yml: GitHubActionYml,
   repo: string = 'actions/my-action',
-  ref: string = 'main'
+  ref: string = 'main',
+  versionRef?: string
 ): string {
   if (!yml || !yml.name) throw new Error('Action YAML must have a name');
 
   const actionName = yml.name.replace(/[^a-zA-Z0-9]/g, ' ');
   const ActionName = toProperCase(actionName.replace(/\s+/g, ' '));
   const actionNameCamel = ActionName.charAt(0).toLowerCase() + ActionName.slice(1);
+
+  // Use versionRef for user-visible parts, fallback to ref if not provided
+  const displayRef = versionRef || ref;
 
   // Inputs type
   const inputMembers = buildInputMembers(yml.inputs as any);
@@ -108,9 +113,9 @@ export function generateTypesFromYml(
     outputsType = `export type ${ActionName}Outputs = {\n    ${outputMembers}\n};`;
   }
 
-  // Attach comment with description + repo link
+  // Attach comment with description + repo link using displayRef
   const descriptionComment = yml.description
-    ? `/*\n  ${yml.description}\n  https://github.com/${repo}/tree/${ref}\n*/\n`
+    ? `/*\n  ${yml.description}\n  https://github.com/${repo}/tree/${displayRef}\n*/\n`
     : '';
 
   const func = descriptionComment + createFactoryFunction(ActionName, actionNameCamel, repo, ref, yml.inputs as any);

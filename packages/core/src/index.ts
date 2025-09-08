@@ -1,12 +1,14 @@
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { getDefaultBranch } from './github';
+import { getDefaultBranch, getRefSha } from './github';
 import { cloneRepo } from './git';
 import { readActionYml } from './action-yml';
 import { generateTypesFromYml } from './typegen';
 import { toProperCase } from './utils';
 import * as prettier from 'prettier';
+import { addActionToConfig, readConfig, writeConfig, getResolvedOutputPath } from './config';
+import type { DotGithubAction } from './config';
 
 export function helloCore(): string {
   return 'Hello from @dotgithub/core!';
@@ -59,6 +61,24 @@ export type {
   SupportedGitHubFile
 } from './github-files-generator';
 
+// Export configuration functionality
+export {
+  readConfig,
+  writeConfig,
+  addActionToConfig,
+  removeActionFromConfig,
+  getActionsFromConfig,
+  getActionsFromConfigWithResolvedPaths,
+  getResolvedOutputPath,
+  updateOutputDir,
+  getConfigPath,
+  createDefaultConfig
+} from './config';
+export type {
+  DotGithubConfig,
+  DotGithubAction
+} from './config';
+
 export interface GenerateTypesResult {
   yaml: any;
   type: string;
@@ -68,6 +88,7 @@ export interface GenerateActionFilesOptions {
   orgRepoRef: string;
   outputDir: string;
   token?: string;
+  useSha?: boolean;
 }
 
 export interface GenerateActionFilesResult {
@@ -76,25 +97,45 @@ export interface GenerateActionFilesResult {
   generatedTypes: string;
 }
 
+export interface RemoveActionFilesOptions {
+  orgRepoRef: string;
+  keepFiles?: boolean;
+}
+
+export interface RemoveActionFilesResult {
+  removed: boolean;
+  actionName: string;
+  removedFiles: string[];
+}
+
 /**
  * Clones a GitHub repo, checks out a ref, reads action.yml, and generates a TypeScript type.
  * @param orgRepo e.g. 'actions/checkout'
  * @param ref tag/sha/branch (optional, defaults to default branch)
  * @param token GitHub token (optional, overrides env GITHUB_TOKEN)
+ * @param versionRef user-friendly version reference to use in generated code
  */
-export async function generateTypesFromActionYml(orgRepo: string, ref?: string, token?: string): Promise<GenerateTypesResult> {
+export async function generateTypesFromActionYml(orgRepo: string, ref?: string, token?: string, versionRef?: string): Promise<GenerateTypesResult> {
   const [owner, repo] = orgRepo.split('/');
   if (!owner || !repo) throw new Error('orgRepo must be in the form org/repo');
   token = token || process.env.GITHUB_TOKEN;
 
+  // Use versionRef for cloning if provided, otherwise use ref
+  let cloneRefToUse = versionRef || ref;
+  if (!cloneRefToUse) {
+    const defaultBranch = await getDefaultBranch(owner, repo, token);
+    cloneRefToUse = defaultBranch;
+    if (!ref) ref = defaultBranch;
+  }
+  
   if (!ref) {
-    ref = await getDefaultBranch(owner, repo, token);
+    ref = cloneRefToUse;
   }
 
   const tmpDir = createTempDir();
-  await cloneRepoToTemp(owner, repo, ref, token, tmpDir);
+  await cloneRepoToTemp(owner, repo, cloneRefToUse, token, tmpDir);
   const yml = readActionYml(tmpDir);
-  const type = generateTypesFromYml(yml, orgRepo, ref);
+  const type = generateTypesFromYml(yml, orgRepo, ref, versionRef);
   cleanupTempDir(tmpDir);
   return { yaml: yml, type };
 }
@@ -102,6 +143,7 @@ export async function generateTypesFromActionYml(orgRepo: string, ref?: string, 
 /**
  * Generates a GitHub Action TypeScript file from a GitHub repo and saves it to the output directory.
  * Creates an organization folder structure and updates index files.
+ * Tracks the action in the dotgithub.json config file.
  * @param options - Configuration for file generation
  */
 export async function generateActionFiles(options: GenerateActionFilesOptions): Promise<GenerateActionFilesResult> {
@@ -112,15 +154,40 @@ export async function generateActionFiles(options: GenerateActionFilesOptions): 
   const token = options.token || process.env.GITHUB_TOKEN;
   const resolvedRef = ref || await getDefaultBranch(owner, repo, token);
 
+  // Resolve to SHA by default unless useSha is explicitly false
+  const useSha = options.useSha !== false;
+  const finalRef = useSha ? await getRefSha(owner, repo, resolvedRef, token) : resolvedRef;
+
+  // Use output directory from config if not specified
+  const config = readConfig();
+  const outputDir = options.outputDir || config.outputDir;
+
+  // Check if this action already exists in config (only one per org/repo allowed)
+  const existingAction = config.actions.find(action => action.orgRepo === orgRepo);
+  if (existingAction) {
+    // Remove the existing action's files before adding the new one
+    try {
+      const existingPath = getResolvedOutputPath(existingAction);
+      if (fs.existsSync(existingPath)) {
+        fs.unlinkSync(existingPath);
+      }
+    } catch (error) {
+      console.warn(`Warning: Could not remove existing action files: ${error instanceof Error ? error.message : error}`);
+    }
+  }
+
   // Generate the TypeScript types
-  const result = await generateTypesFromActionYml(orgRepo, resolvedRef, token);
+  // When useSha is false, both createStep and comments should use resolvedRef
+  const refForCreateStep = useSha ? finalRef : resolvedRef;
+  const refForComments = resolvedRef;
+  const result = await generateTypesFromActionYml(orgRepo, refForCreateStep, token, refForComments);
   
   // Generate filename from action name
   const actionNameForFile = generateFilenameFromActionName(result.yaml.name);
   const fileName = `${actionNameForFile}.ts`;
   
   // Create organization folder structure
-  const orgDir = path.join(options.outputDir, owner);
+  const orgDir = path.join(outputDir, owner);
   const filePath = path.join(orgDir, fileName);
 
   // Ensure organization directory exists
@@ -139,12 +206,78 @@ export async function generateActionFiles(options: GenerateActionFilesOptions): 
   await updateIndexFile(orgDir, actionNameForFile);
   
   // Update or create index.ts file in the root output directory
-  await updateRootIndexFile(options.outputDir, owner);
+  await updateRootIndexFile(outputDir, owner);
+
+  // Track this action in the config file
+  addActionToConfig({
+    orgRepo,
+    ref: useSha ? finalRef : resolvedRef,  // Use SHA when useSha=true, versionRef when useSha=false
+    versionRef: resolvedRef,
+    displayName: result.yaml.name,
+    outputPath: filePath
+  });
 
   return {
     filePath,
     actionName: actionNameForFile,
     generatedTypes: typesWithImports
+  };
+}
+
+/**
+ * Removes a GitHub Action from tracking and optionally deletes generated files.
+ * @param options - Configuration for removal
+ */
+export async function removeActionFiles(options: RemoveActionFilesOptions): Promise<RemoveActionFilesResult> {
+  const { orgRepo } = parseOrgRepoRef(options.orgRepoRef);
+  const [owner, repo] = orgRepo.split('/');
+  if (!owner || !repo) throw new Error('orgRepoRef must be in the form org/repo');
+
+  const config = readConfig();
+  let removedAction: DotGithubAction | undefined;
+  let removedFiles: string[] = [];
+
+  // Find the action in config (should only be one per org/repo)
+  const actionIndex = config.actions.findIndex(action => action.orgRepo === orgRepo);
+  
+  if (actionIndex >= 0) {
+    removedAction = config.actions[actionIndex];
+    config.actions.splice(actionIndex, 1);
+  }
+
+  if (!removedAction) {
+    return {
+      removed: false,
+      actionName: orgRepo,
+      removedFiles: []
+    };
+  }
+
+  // Remove files if not keeping them
+  if (!options.keepFiles) {
+    try {
+      const resolvedPath = getResolvedOutputPath(removedAction);
+      if (fs.existsSync(resolvedPath)) {
+        fs.unlinkSync(resolvedPath);
+        removedFiles.push(resolvedPath);
+      }
+
+      // Update index files
+      const outputDir = path.dirname(path.dirname(resolvedPath)); // Go up from org/file.ts to root
+      const orgDir = path.dirname(resolvedPath); // org directory
+      await updateIndexFilesAfterRemoval(outputDir, path.basename(orgDir));
+    } catch (error) {
+      console.warn(`Warning: Could not remove some files: ${error instanceof Error ? error.message : error}`);
+    }
+  }
+
+  // Save updated config
+  writeConfig(config);
+
+  return {
+    removed: true,
+    actionName: removedAction.displayName,
+    removedFiles
   };
 }
 
@@ -265,5 +398,50 @@ async function updateRootIndexFile(outputDir: string, orgName: string): Promise<
   } else {
     const formattedContent = await formatWithPrettier(exportStatement);
     fs.writeFileSync(indexPath, formattedContent, 'utf8');
+  }
+}
+
+
+/**
+ * Updates index files after removing an action
+ * @param outputDir - Root output directory path
+ * @param orgName - Organization name (folder name)
+ */
+async function updateIndexFilesAfterRemoval(outputDir: string, orgName: string): Promise<void> {
+  const orgDir = path.join(outputDir, orgName);
+  
+  // Check if org directory still has any TypeScript files
+  if (fs.existsSync(orgDir)) {
+    const tsFiles = fs.readdirSync(orgDir).filter(file => 
+      file.endsWith('.ts') && file !== 'index.ts'
+    );
+    
+    if (tsFiles.length === 0) {
+      // No more action files, remove the org directory and its index
+      fs.rmSync(orgDir, { recursive: true, force: true });
+      
+      // Update root index.ts to remove this org export
+      const rootIndexPath = path.join(outputDir, 'index.ts');
+      if (fs.existsSync(rootIndexPath)) {
+        const content = fs.readFileSync(rootIndexPath, 'utf8');
+        const lines = content.split('\n');
+        const filteredLines = lines.filter(line => 
+          !line.includes(`export * as ${orgName} from`)
+        );
+        const newContent = filteredLines.join('\n');
+        const formattedContent = await formatWithPrettier(newContent);
+        fs.writeFileSync(rootIndexPath, formattedContent, 'utf8');
+      }
+    } else {
+      // Still has files, rebuild the org index.ts
+      const orgIndexPath = path.join(orgDir, 'index.ts');
+      const exportStatements = tsFiles.map(file => {
+        const baseName = path.basename(file, '.ts');
+        return `export * from './${baseName}.js';`;
+      }).join('\n') + '\n';
+      
+      const formattedContent = await formatWithPrettier(exportStatements);
+      fs.writeFileSync(orgIndexPath, formattedContent, 'utf8');
+    }
   }
 }

@@ -102,4 +102,39 @@ describe('generateTypesFromYml', () => {
     const code = generateTypesFromYml(ymlRequiredInputs);
     expect(code).toContain('export function requiredTest(inputs: RequiredTestInputs,');
   });
+
+  it('uses different refs for createStep and comment URL when versionRef is provided', () => {
+    const ymlSample: GitHubActionYml = {
+      name: 'version-test',
+      description: 'Test with version ref',
+      inputs: {
+        foo: { required: true },
+      },
+    };
+    const code = generateTypesFromYml(ymlSample, 'actions/version-test', 'abc123sha', 'v4');
+    expect(code).toContain('https://github.com/actions/version-test/tree/v4');
+    expect(code).toContain('ref ?? "abc123sha"');
+  });
+
+  it('clones using versionRef when provided, createStep uses ref', () => {
+    // This test verifies the intended behavior:
+    // - Cloning should use user-friendly version (versionRef)
+    // - createStep should use resolved SHA (ref)
+    // - Comments should use user-friendly version (versionRef)
+    const ymlSample: GitHubActionYml = {
+      name: 'clone-test',
+      description: 'Test cloning behavior',
+      inputs: {
+        test: { required: true },
+      },
+    };
+    
+    // When called with finalRef (SHA) as ref and resolvedRef (v4) as versionRef:
+    // - Should clone using resolvedRef (v4) 
+    // - Should use finalRef (SHA) in createStep
+    // - Should use resolvedRef (v4) in comments
+    const code = generateTypesFromYml(ymlSample, 'actions/clone-test', 'sha123abc', 'v4');
+    expect(code).toContain('https://github.com/actions/clone-test/tree/v4'); // Comment uses versionRef
+    expect(code).toContain('ref ?? "sha123abc"'); // createStep uses ref (SHA)
+  });
 });

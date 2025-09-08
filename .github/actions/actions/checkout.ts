@@ -78,5 +78,9 @@ export function checkout(
   step?: Partial<GitHubStepBase>,
   ref?: string,
 ): GitHubStep<CheckoutInputs> {
-  return createStep("actions/checkout", { ...step, with: inputs }, ref ?? "v5");
+  return createStep(
+    "actions/checkout",
+    { ...step, with: inputs },
+    ref ?? "08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+  );
 }
