@@ -10,16 +10,9 @@ export function createAddCommand(): Command {
     .option('--no-sha', 'Use the original ref instead of resolving to SHA')
     .action(async (orgRepoRef, options) => {
       try {
-        // Get default output directory from config if not specified
-        let outputDir = options.output;
-        if (!outputDir) {
-          const config = readConfig();
-          outputDir = config.outputDir;
-        }
-
         const result = await generateActionFiles({
           orgRepoRef,
-          outputDir,
+          outputDir: options.output,
           token: options.token,
           useSha: options.sha !== false  // Default to true unless --no-sha is explicitly used
         });

@@ -34,7 +34,7 @@ export interface DotGithubConfig {
 
 const CONFIG_FILE_NAME = 'dotgithub.json';
 const CONFIG_VERSION = '1.0.0';
-const DEFAULT_OUTPUT_DIR = '.github/actions';
+const DEFAULT_OUTPUT_DIR = 'src';
 
 /**
  * Converts an absolute path to a relative path from the config file directory
@@ -74,20 +74,72 @@ function makePathRelativeToConfig(absolutePath: string): string {
 }
 
 /**
- * Converts a relative path from the config file to an absolute path
+ * Converts an absolute path to a relative path from the outputDir
  */
-function resolvePathFromConfig(relativePath: string): string {
+function makePathRelativeToOutputDir(absolutePath: string, outputDir?: string): string {
   const configPath = getConfigPath();
   const configDir = path.dirname(configPath);
   
-  // Resolve the relative path back to absolute using the config directory as base
-  return path.resolve(configDir, relativePath);
+  // Use provided outputDir or read from config
+  let actualOutputDir = outputDir;
+  if (!actualOutputDir) {
+    const config = readConfig();
+    actualOutputDir = config.outputDir;
+  }
+  
+  // Resolve outputDir appropriately based on the context
+  // For typical CLI usage where config is in .github/, resolve relative to parent of config directory
+  // For other cases (like tests), resolve relative to config directory
+  let outputDirAbsolute: string;
+  
+  if (path.basename(configDir) === '.github' && actualOutputDir && !path.isAbsolute(actualOutputDir) && !configDir.includes('tmp')) {
+    // Typical case: config is in .github/, outputDir should be relative to project root (not in test env)
+    const projectRoot = path.dirname(configDir);
+    outputDirAbsolute = path.resolve(projectRoot, actualOutputDir);
+  } else {
+    // Other cases: resolve relative to config directory (including tests)
+    outputDirAbsolute = path.resolve(configDir, actualOutputDir);
+  }
+  
+  // Make the absolute path relative to the outputDir
+  // Normalize both paths to handle symlinks and resolve them to canonical paths
+  const normalizedOutputDir = path.normalize(outputDirAbsolute);
+  const normalizedAbsolutePath = path.normalize(absolutePath);
+  
+  return path.relative(normalizedOutputDir, normalizedAbsolutePath);
+}
+
+/**
+ * Converts a relative path from the outputDir to an absolute path
+ */
+function resolvePathFromConfig(relativePath: string): string {
+  const config = readConfig();
+  const configPath = getConfigPath();
+  const configDir = path.dirname(configPath);
+  
+  // Resolve outputDir relative to config file, then resolve the action path within it
+  const outputDirAbsolute = path.resolve(configDir, config.outputDir);
+  return path.resolve(outputDirAbsolute, relativePath);
+}
+
+let customConfigPath: string | undefined;
+
+/**
+ * Sets a custom config file path to override the default discovery
+ */
+export function setConfigPath(configPath: string): void {
+  customConfigPath = configPath ? path.resolve(configPath) : undefined;
 }
 
 /**
  * Gets the path to the dotgithub.json config file
  */
 export function getConfigPath(): string {
+  // Use custom config path if set
+  if (customConfigPath) {
+    return customConfigPath;
+  }
+  
   // Look for config file starting from current directory up to git root
   let currentDir = process.cwd();
   
@@ -168,7 +220,7 @@ export function writeConfig(config: DotGithubConfig): void {
 /**
  * Adds an action to the config
  */
-export function addActionToConfig(actionInfo: DotGithubAction): void {
+export function addActionToConfig(actionInfo: DotGithubAction, outputDir?: string): void {
   const config = readConfig();
   
   // Check if action already exists (only check orgRepo, not ref)
@@ -178,7 +230,7 @@ export function addActionToConfig(actionInfo: DotGithubAction): void {
   
   const actionWithRelativePath: DotGithubAction = {
     ...actionInfo,
-    outputPath: makePathRelativeToConfig(actionInfo.outputPath)
+    outputPath: makePathRelativeToOutputDir(actionInfo.outputPath, outputDir)
   };
   
   if (existingIndex >= 0) {

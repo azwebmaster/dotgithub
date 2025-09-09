@@ -54,7 +54,7 @@ runs:
     });
 
     expect(result.actionName).toBe('myaction');
-    expect(result.filePath).toBe(path.join(tmpDir, 'actions', 'myaction.ts'));
+    expect(result.filePath).toBe(path.join(tmpDir, 'actions', 'my-action', 'myaction.ts'));
     
     // Check that the TypeScript file was generated
     expect(fs.existsSync(result.filePath)).toBe(true);
@@ -81,7 +81,14 @@ runs:
     expect(fs.existsSync(orgIndexPath)).toBe(true);
     
     const orgIndexContent = fs.readFileSync(orgIndexPath, 'utf8');
-    expect(orgIndexContent).toContain('export * from "./myaction.js";');
+    expect(orgIndexContent).toContain('export * as "my-action" from "./my-action/index.js";');
+    
+    // Check that action index.ts was created
+    const actionIndexPath = path.join(tmpDir, 'actions', 'my-action', 'index.ts');
+    expect(fs.existsSync(actionIndexPath)).toBe(true);
+    
+    const actionIndexContent = fs.readFileSync(actionIndexPath, 'utf8');
+    expect(actionIndexContent).toContain('export * from "./myaction.js";');
   });
 
   it('should not duplicate exports in index.ts when called multiple times', async () => {
@@ -110,7 +117,7 @@ runs:
     });
 
     const orgIndexContent = fs.readFileSync(path.join(tmpDir, 'actions', 'index.ts'), 'utf8');
-    const exportLines = orgIndexContent.split('\n').filter(line => line.includes('testaction.js'));
+    const exportLines = orgIndexContent.split('\n').filter(line => line.includes('"test-action"'));
     expect(exportLines).toHaveLength(1);
   });
 });

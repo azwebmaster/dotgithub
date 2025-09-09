@@ -12,7 +12,8 @@ import {
   getResolvedOutputPath,
   updateOutputDir,
   createDefaultConfig,
-  getConfigPath
+  getConfigPath,
+  setConfigPath
 } from './config';
 
 describe('config', () => {
@@ -31,12 +32,18 @@ describe('config', () => {
     
     // Create .github directory
     fs.mkdirSync(path.join(tempDir, '.github'), { recursive: true });
+    
+    // Force the config to use the temp directory by setting the config path explicitly
+    setConfigPath(path.join(tempDir, '.github', 'dotgithub.json'));
   });
 
   afterEach(() => {
     // Restore original working directory and environment
     process.chdir(originalCwd);
     process.env = originalEnv;
+    
+    // Reset config path to use default discovery
+    setConfigPath('');
     
     // Clean up temp directory
     if (fs.existsSync(tempDir)) {
@@ -49,7 +56,7 @@ describe('config', () => {
       const config = createDefaultConfig();
       
       expect(config.version).toBe('1.0.0');
-      expect(config.outputDir).toBe('.github/actions');
+      expect(config.outputDir).toBe('src');
       expect(config.actions).toEqual([]);
       expect(config.options!.tokenSource).toBe('env');
       expect(config.options!.formatting!.prettier).toBe(true);
@@ -69,7 +76,7 @@ describe('config', () => {
       const config = readConfig();
       
       expect(config.version).toBe('1.0.0');
-      expect(config.outputDir).toBe('.github/actions');
+      expect(config.outputDir).toBe('src');
       expect(config.actions).toEqual([]);
     });
 
@@ -98,10 +105,14 @@ describe('config', () => {
 
   describe('addActionToConfig', () => {
     it('adds new action to empty config', () => {
-      // Create a test output file path within the temp directory
-      const absoluteOutputPath = path.join(tempDir, 'actions', 'checkout.ts');
+      // Create a test output file path within the config dir's outputDir
       const configDir = path.join(tempDir, '.github');
-      const expectedRelativePath = path.relative(configDir, absoluteOutputPath);
+      const outputDir = path.join(configDir, 'src'); // outputDir 'src' relative to config file
+      const absoluteOutputPath = path.join(outputDir, 'actions', 'checkout', 'checkout.ts');
+      const expectedRelativePath = path.relative(outputDir, absoluteOutputPath); // Should be 'actions/checkout/checkout.ts'
+      
+      // Ensure the config file exists in the temp directory by calling readConfig() which will create it
+      readConfig();
       
       addActionToConfig({
         orgRepo: 'actions/checkout',
@@ -109,7 +120,7 @@ describe('config', () => {
         versionRef: 'v4',
         displayName: 'Checkout',
         outputPath: absoluteOutputPath
-      });
+      }, 'src');
 
       const actions = getActionsFromConfig();
       expect(actions).toHaveLength(1);
@@ -119,7 +130,7 @@ describe('config', () => {
       expect(actions[0]!.displayName).toBe('Checkout');
       
       
-      // The stored outputPath should be relative to the config file
+      // The stored outputPath should be relative to the outputDir
       expect(actions[0]!.outputPath).toBe(expectedRelativePath);
       
       // The resolved path should point to the same file as the original absolute path
@@ -130,10 +141,14 @@ describe('config', () => {
     });
 
     it('updates existing action with same orgRepo and ref', () => {
-      const initialOutputPath = path.join(tempDir, 'actions', 'checkout.ts');
-      const updatedOutputPath = path.join(tempDir, 'actions', 'checkout-v4.ts');
       const configDir = path.join(tempDir, '.github');
-      const expectedRelativePath = path.relative(configDir, updatedOutputPath);
+      const outputDir = path.join(configDir, 'src'); // outputDir 'src' relative to config file
+      const initialOutputPath = path.join(outputDir, 'actions', 'checkout', 'checkout.ts');
+      const updatedOutputPath = path.join(outputDir, 'actions', 'checkout', 'checkout.ts');
+      const expectedRelativePath = path.relative(outputDir, updatedOutputPath);
+      
+      // Ensure the config file exists in the temp directory
+      readConfig();
       
       // Add initial action
       addActionToConfig({
@@ -142,7 +157,7 @@ describe('config', () => {
         versionRef: 'v4',
         displayName: 'Checkout',
         outputPath: initialOutputPath
-      });
+      }, 'src');
 
       // Update same action
       addActionToConfig({
@@ -151,7 +166,7 @@ describe('config', () => {
         versionRef: 'v4',
         displayName: 'Checkout v4',
         outputPath: updatedOutputPath
-      });
+      }, 'src');
 
       const actions = getActionsFromConfig();
       expect(actions).toHaveLength(1);
@@ -164,11 +179,15 @@ describe('config', () => {
     });
 
     it('adds multiple actions and sorts them by orgRepo', () => {
-      const setupNodePath = path.join(tempDir, 'actions', 'setup-node.ts');
-      const checkoutPath = path.join(tempDir, 'actions', 'checkout.ts');
       const configDir = path.join(tempDir, '.github');
-      const expectedCheckoutPath = path.relative(configDir, checkoutPath);
-      const expectedSetupNodePath = path.relative(configDir, setupNodePath);
+      const outputDir = path.join(configDir, 'src'); // outputDir 'src' relative to config file
+      const setupNodePath = path.join(outputDir, 'actions', 'setup-node', 'setup-node.ts');
+      const checkoutPath = path.join(outputDir, 'actions', 'checkout', 'checkout.ts');
+      const expectedCheckoutPath = path.relative(outputDir, checkoutPath);
+      const expectedSetupNodePath = path.relative(outputDir, setupNodePath);
+      
+      // Ensure the config file exists in the temp directory
+      readConfig();
       
       addActionToConfig({
         orgRepo: 'actions/setup-node',
@@ -176,7 +195,7 @@ describe('config', () => {
         versionRef: 'v3',
         displayName: 'Setup Node',
         outputPath: setupNodePath
-      });
+      }, 'src');
 
       addActionToConfig({
         orgRepo: 'actions/checkout',
@@ -184,7 +203,7 @@ describe('config', () => {
         versionRef: 'v4',
         displayName: 'Checkout',
         outputPath: checkoutPath
-      });
+      }, 'src');
 
       const actions = getActionsFromConfig();
       expect(actions).toHaveLength(2);
@@ -200,12 +219,14 @@ describe('config', () => {
   describe('removeActionFromConfig', () => {
     beforeEach(() => {
       // Add test actions - only one per orgRepo since we now enforce this
+      const configDir = path.join(tempDir, '.github');
+      const outputDir = path.join(configDir, 'src'); // outputDir 'src' relative to config file
       addActionToConfig({
         orgRepo: 'actions/checkout',
         ref: 'abc123def456',
         versionRef: 'v4',
         displayName: 'Checkout',
-        outputPath: path.join(tempDir, 'actions', 'checkout.ts')
+        outputPath: path.join(outputDir, 'actions', 'checkout', 'checkout.ts')
       });
 
       addActionToConfig({
@@ -213,7 +234,7 @@ describe('config', () => {
         ref: 'def456ghi789',
         versionRef: 'v3',
         displayName: 'Setup Node',
-        outputPath: path.join(tempDir, 'actions', 'setup-node.ts')
+        outputPath: path.join(outputDir, 'actions', 'setup-node', 'setup-node.ts')
       });
 
       addActionToConfig({
@@ -221,8 +242,8 @@ describe('config', () => {
         ref: 'ghi789abc123',
         versionRef: 'v3',
         displayName: 'Cache',
-        outputPath: path.join(tempDir, 'actions', 'cache.ts')
-      });
+        outputPath: path.join(outputDir, 'actions', 'cache', 'cache.ts')
+      }, 'src');
     });
 
     it('removes action by orgRepo', () => {
@@ -267,9 +288,13 @@ describe('config', () => {
     });
 
     it('returns all actions', () => {
-      const absolutePath = path.join(tempDir, 'actions', 'checkout.ts');
       const configDir = path.join(tempDir, '.github');
-      const expectedRelativePath = path.relative(configDir, absolutePath);
+      const outputDir = path.join(configDir, 'src'); // outputDir 'src' relative to config file
+      const absolutePath = path.join(outputDir, 'actions', 'checkout', 'checkout.ts');
+      const expectedRelativePath = path.relative(outputDir, absolutePath);
+      
+      // Ensure the config file exists in the temp directory
+      readConfig();
       
       addActionToConfig({
         orgRepo: 'actions/checkout',
@@ -277,7 +302,7 @@ describe('config', () => {
         versionRef: 'v4',
         displayName: 'Checkout',
         outputPath: absolutePath
-      });
+      }, 'src');
 
       const actions = getActionsFromConfig();
       expect(actions).toHaveLength(1);
@@ -333,9 +358,13 @@ describe('config', () => {
 
   describe('path resolution functions', () => {
     it('getActionsFromConfigWithResolvedPaths returns resolved absolute paths', () => {
-      const absolutePath = path.join(tempDir, 'actions', 'checkout.ts');
       const configDir = path.join(tempDir, '.github');
-      const expectedRelativePath = path.relative(configDir, absolutePath);
+      const outputDir = path.join(configDir, 'src'); // outputDir 'src' relative to config file
+      const absolutePath = path.join(outputDir, 'actions', 'checkout', 'checkout.ts');
+      const expectedRelativePath = path.relative(outputDir, absolutePath);
+      
+      // Ensure the config file exists in the temp directory
+      readConfig();
       
       addActionToConfig({
         orgRepo: 'actions/checkout',
@@ -343,7 +372,7 @@ describe('config', () => {
         versionRef: 'v4',
         displayName: 'Checkout',
         outputPath: absolutePath
-      });
+      }, 'src');
 
       const actionsWithResolvedPaths = getActionsFromConfigWithResolvedPaths();
       expect(actionsWithResolvedPaths).toHaveLength(1);
@@ -354,9 +383,13 @@ describe('config', () => {
     });
 
     it('getResolvedOutputPath returns absolute path from relative stored path', () => {
-      const absolutePath = path.join(tempDir, 'actions', 'setup-node.ts');
       const configDir = path.join(tempDir, '.github');
-      const expectedRelativePath = path.relative(configDir, absolutePath);
+      const outputDir = path.join(configDir, 'src'); // outputDir 'src' relative to config file
+      const absolutePath = path.join(outputDir, 'actions', 'setup-node', 'setup-node.ts');
+      const expectedRelativePath = path.relative(outputDir, absolutePath);
+      
+      // Ensure the config file exists in the temp directory
+      readConfig();
       
       addActionToConfig({
         orgRepo: 'actions/setup-node',
@@ -364,7 +397,7 @@ describe('config', () => {
         versionRef: 'v3',
         displayName: 'Setup Node',
         outputPath: absolutePath
-      });
+      }, 'src');
 
       const actions = getActionsFromConfig();
       const resolvedPath = getResolvedOutputPath(actions[0]!);
@@ -377,8 +410,10 @@ describe('config', () => {
 
   describe('addActionToConfig - duplicate prevention', () => {
     it('should update existing action instead of creating duplicate when same orgRepo is used', () => {
-      const absolutePath1 = path.join(tempDir, 'actions', 'checkout-v4.ts');
-      const absolutePath2 = path.join(tempDir, 'actions', 'checkout-v5.ts');
+      const configDir = path.join(tempDir, '.github');
+      const outputDir = path.join(configDir, 'src'); // outputDir 'src' relative to config file
+      const absolutePath1 = path.join(outputDir, 'actions', 'checkout', 'checkout.ts');
+      const absolutePath2 = path.join(outputDir, 'actions', 'checkout', 'checkout.ts');
       
       // Add first version of the action
       addActionToConfig({
@@ -387,7 +422,7 @@ describe('config', () => {
         versionRef: 'v4',
         displayName: 'Checkout v4',
         outputPath: absolutePath1
-      });
+      }, 'src');
 
       let actions = getActionsFromConfig();
       expect(actions).toHaveLength(1);
@@ -402,7 +437,7 @@ describe('config', () => {
         versionRef: 'v5',
         displayName: 'Checkout v5',
         outputPath: absolutePath2
-      });
+      }, 'src');
 
       actions = getActionsFromConfig();
       expect(actions).toHaveLength(1); // Should still only have one entry
@@ -410,6 +445,16 @@ describe('config', () => {
       expect(actions[0]!.ref).toBe('v5'); // Should be updated
       expect(actions[0]!.versionRef).toBe('v5'); // Should be updated
       expect(actions[0]!.displayName).toBe('Checkout v5'); // Should be updated
+    });
+  });
+
+  describe('setConfigPath', () => {
+    it('overrides config path discovery', () => {
+      const customConfigPath = path.join(tempDir, 'custom-config.json');
+      setConfigPath(customConfigPath);
+      
+      const configPath = getConfigPath();
+      expect(configPath).toBe(path.resolve(customConfigPath));
     });
   });
 });

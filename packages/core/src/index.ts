@@ -5,9 +5,8 @@ import { getDefaultBranch, getRefSha } from './github';
 import { cloneRepo } from './git';
 import { readActionYml } from './action-yml';
 import { generateTypesFromYml } from './typegen';
-import { toProperCase } from './utils';
 import * as prettier from 'prettier';
-import { addActionToConfig, readConfig, writeConfig, getResolvedOutputPath } from './config';
+import { addActionToConfig, readConfig, writeConfig, getResolvedOutputPath, getConfigPath } from './config';
 import type { DotGithubAction } from './config';
 
 export function helloCore(): string {
@@ -72,6 +71,7 @@ export {
   getResolvedOutputPath,
   updateOutputDir,
   getConfigPath,
+  setConfigPath,
   createDefaultConfig
 } from './config';
 export type {
@@ -150,7 +150,7 @@ export async function generateActionFiles(options: GenerateActionFilesOptions): 
   const { orgRepo, ref } = parseOrgRepoRef(options.orgRepoRef);
   const [owner, repo] = orgRepo.split('/');
   if (!owner || !repo) throw new Error('orgRepo must be in the form org/repo');
-  
+
   const token = options.token || process.env.GITHUB_TOKEN;
   const resolvedRef = ref || await getDefaultBranch(owner, repo, token);
 
@@ -159,8 +159,9 @@ export async function generateActionFiles(options: GenerateActionFilesOptions): 
   const finalRef = useSha ? await getRefSha(owner, repo, resolvedRef, token) : resolvedRef;
 
   // Use output directory from config if not specified
+  const configPath = path.dirname(getConfigPath());
   const config = readConfig();
-  const outputDir = options.outputDir || config.outputDir;
+  const outputDir = options.outputDir || path.resolve(configPath, config.outputDir);
 
   // Check if this action already exists in config (only one per org/repo allowed)
   const existingAction = config.actions.find(action => action.orgRepo === orgRepo);
@@ -186,12 +187,12 @@ export async function generateActionFiles(options: GenerateActionFilesOptions): 
   const actionNameForFile = generateFilenameFromActionName(result.yaml.name);
   const fileName = `${actionNameForFile}.ts`;
   
-  // Create organization folder structure
-  const orgDir = path.join(outputDir, owner);
-  const filePath = path.join(orgDir, fileName);
+  const rootActionDir = path.join(outputDir, 'actions');
+  const actionDir = path.join(rootActionDir, owner);
+  const filePath = path.join(actionDir, fileName);
 
-  // Ensure organization directory exists
-  fs.mkdirSync(orgDir, { recursive: true });
+  // Ensure action directory exists
+  fs.mkdirSync(actionDir, { recursive: true });
 
   // Add import statement to the generated types
   const typesWithImports = addImportsToGeneratedTypes(result.type);
@@ -199,14 +200,15 @@ export async function generateActionFiles(options: GenerateActionFilesOptions): 
   // Format the code with prettier
   const formattedCode = await formatWithPrettier(typesWithImports);
   
+  console.log(`Writing generated types for ${orgRepo}@${finalRef} to ${filePath}`);
   // Write the TypeScript file
   fs.writeFileSync(filePath, formattedCode, 'utf8');
 
   // Update or create index.ts file in the org folder
-  await updateIndexFile(orgDir, actionNameForFile);
+  await updateOrgIndexFile(actionDir, actionNameForFile);
   
   // Update or create index.ts file in the root output directory
-  await updateRootIndexFile(outputDir, owner);
+  await updateRootIndexFile(rootActionDir, owner);
 
   // Track this action in the config file
   addActionToConfig({
@@ -215,7 +217,7 @@ export async function generateActionFiles(options: GenerateActionFilesOptions): 
     versionRef: resolvedRef,
     displayName: result.yaml.name,
     outputPath: filePath
-  });
+  }, outputDir);
 
   return {
     filePath,
@@ -263,8 +265,8 @@ export async function removeActionFiles(options: RemoveActionFilesOptions): Prom
       }
 
       // Update index files
-      const outputDir = path.dirname(path.dirname(resolvedPath)); // Go up from org/file.ts to root
-      const orgDir = path.dirname(resolvedPath); // org directory
+      const orgDir = path.dirname(resolvedPath); // org directory  
+      const outputDir = path.dirname(orgDir); // root directory
       await updateIndexFilesAfterRemoval(outputDir, path.basename(orgDir));
     } catch (error) {
       console.warn(`Warning: Could not remove some files: ${error instanceof Error ? error.message : error}`);
@@ -355,19 +357,20 @@ function addImportsToGeneratedTypes(generatedTypes: string): string {
   return imports + generatedTypes;
 }
 
+
 /**
- * Updates or creates index.ts file in the output directory to export the new types
- * @param outputDir - Output directory path
- * @param actionNameForFile - The filename (without extension) to export
+ * Updates or creates org index.ts file to export from action folders
+ * @param orgDir - Organization directory path
+ * @param actionName - Action name (folder name)
  */
-async function updateIndexFile(outputDir: string, actionNameForFile: string): Promise<void> {
-  const indexPath = path.join(outputDir, 'index.ts');
-  const exportStatement = `export * from './${actionNameForFile}.js';\n`;
+async function updateOrgIndexFile(orgDir: string, actionName: string): Promise<void> {
+  const indexPath = path.join(orgDir, 'index.ts');
+  const exportStatement = `export * from './${actionName}.js';\n`;
   
   if (fs.existsSync(indexPath)) {
     const existingContent = fs.readFileSync(indexPath, 'utf8');
-    // Check if the export already exists to avoid duplicates (check for the file reference regardless of quotes)
-    if (!existingContent.includes(`./${actionNameForFile}.js`)) {
+    // Check if the export already exists to avoid duplicates (check for the action reference regardless of quotes)
+    if (!existingContent.includes(`export * from './${actionName}.js'`)) {
       const newContent = existingContent + exportStatement;
       const formattedContent = await formatWithPrettier(newContent);
       fs.writeFileSync(indexPath, formattedContent, 'utf8');
@@ -410,14 +413,15 @@ async function updateRootIndexFile(outputDir: string, orgName: string): Promise<
 async function updateIndexFilesAfterRemoval(outputDir: string, orgName: string): Promise<void> {
   const orgDir = path.join(outputDir, orgName);
   
-  // Check if org directory still has any TypeScript files
+  // Check if org directory still has any action files
   if (fs.existsSync(orgDir)) {
-    const tsFiles = fs.readdirSync(orgDir).filter(file => 
-      file.endsWith('.ts') && file !== 'index.ts'
-    );
+    const actionFiles = fs.readdirSync(orgDir).filter(item => {
+      const itemPath = path.join(orgDir, item);
+      return fs.statSync(itemPath).isFile() && item.endsWith('.ts') && item !== 'index.ts';
+    });
     
-    if (tsFiles.length === 0) {
-      // No more action files, remove the org directory and its index
+    if (actionFiles.length === 0) {
+      // No more action files, remove the org directory
       fs.rmSync(orgDir, { recursive: true, force: true });
       
       // Update root index.ts to remove this org export
@@ -433,11 +437,11 @@ async function updateIndexFilesAfterRemoval(outputDir: string, orgName: string):
         fs.writeFileSync(rootIndexPath, formattedContent, 'utf8');
       }
     } else {
-      // Still has files, rebuild the org index.ts
+      // Still has action files, rebuild the org index.ts
       const orgIndexPath = path.join(orgDir, 'index.ts');
-      const exportStatements = tsFiles.map(file => {
-        const baseName = path.basename(file, '.ts');
-        return `export * from './${baseName}.js';`;
+      const exportStatements = actionFiles.map(file => {
+        const fileNameWithoutExt = path.basename(file, '.ts');
+        return `export * from './${fileNameWithoutExt}.js';`;
       }).join('\n') + '\n';
       
       const formattedContent = await formatWithPrettier(exportStatements);
