@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import * as yaml from 'js-yaml';
 import type { PluginConfig, StackConfig } from './plugins/types';
 
 export interface DotGithubAction {
@@ -37,7 +38,7 @@ export interface DotGithubConfig {
   };
 }
 
-const CONFIG_FILE_NAME = 'dotgithub.json';
+const CONFIG_FILE_NAMES = ['dotgithub.json', 'dotgithub.js', 'dotgithub.yaml', 'dotgithub.yml'];
 const CONFIG_VERSION = '1.0.0';
 const DEFAULT_OUTPUT_DIR = 'src';
 
@@ -92,19 +93,9 @@ function makePathRelativeToOutputDir(absolutePath: string, outputDir?: string): 
     actualOutputDir = config.outputDir;
   }
   
-  // Resolve outputDir appropriately based on the context
-  // For typical CLI usage where config is in .github/, resolve relative to parent of config directory
-  // For other cases (like tests), resolve relative to config directory
-  let outputDirAbsolute: string;
-  
-  if (path.basename(configDir) === '.github' && actualOutputDir && !path.isAbsolute(actualOutputDir) && !configDir.includes('tmp')) {
-    // Typical case: config is in .github/, outputDir should be relative to project root (not in test env)
-    const projectRoot = path.dirname(configDir);
-    outputDirAbsolute = path.resolve(projectRoot, actualOutputDir);
-  } else {
-    // Other cases: resolve relative to config directory (including tests)
-    outputDirAbsolute = path.resolve(configDir, actualOutputDir);
-  }
+  // Always resolve outputDir relative to the config directory
+  // This provides consistent behavior between test and production environments
+  const outputDirAbsolute = path.resolve(configDir, actualOutputDir);
   
   // Make the absolute path relative to the outputDir
   // Normalize both paths to handle symlinks and resolve them to canonical paths
@@ -117,7 +108,7 @@ function makePathRelativeToOutputDir(absolutePath: string, outputDir?: string): 
 /**
  * Converts a relative path from the outputDir to an absolute path
  */
-function resolvePathFromConfig(relativePath: string): string {
+export function resolvePathFromConfig(relativePath: string): string {
   const config = readConfig();
   const configPath = getConfigPath();
   const configDir = path.dirname(configPath);
@@ -130,6 +121,72 @@ function resolvePathFromConfig(relativePath: string): string {
 let customConfigPath: string | undefined;
 
 /**
+ * Gets the file format based on file extension
+ */
+function getConfigFormat(filePath: string): 'json' | 'js' | 'yaml' {
+  const ext = path.extname(filePath);
+  if (ext === '.js') return 'js';
+  if (ext === '.yaml' || ext === '.yml') return 'yaml';
+  return 'json';
+}
+
+/**
+ * Reads config content based on file format
+ */
+function readConfigContent(filePath: string, format: 'json' | 'js' | 'yaml'): DotGithubConfig {
+  switch (format) {
+    case 'json':
+      const jsonContent = fs.readFileSync(filePath, 'utf8');
+      return JSON.parse(jsonContent);
+    
+    case 'yaml':
+      const yamlContent = fs.readFileSync(filePath, 'utf8');
+      return yaml.load(yamlContent) as DotGithubConfig;
+    
+    case 'js':
+      // For JS files, we need to delete from require cache and then require
+      delete require.cache[require.resolve(filePath)];
+      const jsModule = require(filePath);
+      // Support both default export and module.exports
+      return jsModule.default || jsModule;
+    
+    default:
+      throw new Error(`Unsupported config format: ${format}`);
+  }
+}
+
+/**
+ * Writes config content based on file format
+ */
+function writeConfigContent(filePath: string, config: DotGithubConfig, format: 'json' | 'js' | 'yaml'): void {
+  switch (format) {
+    case 'json':
+      const jsonContent = JSON.stringify(config, null, 2) + '\n';
+      fs.writeFileSync(filePath, jsonContent, 'utf8');
+      break;
+    
+    case 'yaml':
+      const yamlContent = yaml.dump(config, {
+        indent: 2,
+        lineWidth: -1,
+        noRefs: true
+      });
+      fs.writeFileSync(filePath, yamlContent, 'utf8');
+      break;
+    
+    case 'js':
+      const jsContent = `// Generated dotgithub configuration
+module.exports = ${JSON.stringify(config, null, 2)};
+`;
+      fs.writeFileSync(filePath, jsContent, 'utf8');
+      break;
+    
+    default:
+      throw new Error(`Unsupported config format: ${format}`);
+  }
+}
+
+/**
  * Sets a custom config file path to override the default discovery
  */
 export function setConfigPath(configPath: string): void {
@@ -137,7 +194,40 @@ export function setConfigPath(configPath: string): void {
 }
 
 /**
- * Gets the path to the dotgithub.json config file
+ * Creates a config file in the specified format
+ */
+export function createConfigFile(format: 'json' | 'js' | 'yaml' | 'yml' = 'json', customPath?: string): string {
+  const currentConfigPath = getConfigPath();
+  const configDir = path.dirname(currentConfigPath);
+  
+  // Map format to file extension
+  const formatMap = {
+    'json': 'json',
+    'js': 'js', 
+    'yaml': 'yaml',
+    'yml': 'yml'
+  };
+  
+  const fileName = `dotgithub.${formatMap[format]}`;
+  const configPath = customPath || path.join(configDir, fileName);
+  
+  // Don't overwrite existing files
+  if (fs.existsSync(configPath)) {
+    throw new Error(`Config file already exists at: ${configPath}`);
+  }
+  
+  const config = createDefaultConfig();
+  const configFormat = getConfigFormat(configPath);
+  
+  // Ensure directory exists
+  fs.mkdirSync(path.dirname(configPath), { recursive: true });
+  
+  writeConfigContent(configPath, config, configFormat);
+  return configPath;
+}
+
+/**
+ * Gets the path to the dotgithub config file (supports .json, .js, .yaml, .yml)
  */
 export function getConfigPath(): string {
   // Use custom config path if set
@@ -149,21 +239,27 @@ export function getConfigPath(): string {
   let currentDir = process.cwd();
   
   while (currentDir !== path.dirname(currentDir)) {
-    const configPath = path.join(currentDir, '.github', CONFIG_FILE_NAME);
-    if (fs.existsSync(configPath)) {
-      return configPath;
+    const githubDir = path.join(currentDir, '.github');
+    
+    // Check for any supported config file format
+    for (const fileName of CONFIG_FILE_NAMES) {
+      const configPath = path.join(githubDir, fileName);
+      if (fs.existsSync(configPath)) {
+        return configPath;
+      }
     }
     
     // Check if we're at git root
     if (fs.existsSync(path.join(currentDir, '.git'))) {
-      return path.join(currentDir, '.github', CONFIG_FILE_NAME);
+      // Default to JSON format when creating new config at git root
+      return path.join(currentDir, '.github', CONFIG_FILE_NAMES[0]!);
     }
     
     currentDir = path.dirname(currentDir);
   }
   
-  // Default to current directory's .github folder
-  return path.join(process.cwd(), '.github', CONFIG_FILE_NAME);
+  // Default to current directory's .github folder with JSON format
+  return path.join(process.cwd(), '.github', CONFIG_FILE_NAMES[0]!);
 }
 
 /**
@@ -186,7 +282,7 @@ export function createDefaultConfig(): DotGithubConfig {
 }
 
 /**
- * Reads the dotgithub.json config file
+ * Reads the dotgithub config file (supports .json, .js, .yaml, .yml)
  */
 export function readConfig(): DotGithubConfig {
   const configPath = getConfigPath();
@@ -196,8 +292,8 @@ export function readConfig(): DotGithubConfig {
   }
   
   try {
-    const content = fs.readFileSync(configPath, 'utf8');
-    const config: DotGithubConfig = JSON.parse(content);
+    const format = getConfigFormat(configPath);
+    const config = readConfigContent(configPath, format);
     
     // Validate and migrate if necessary
     return validateAndMigrateConfig(config);
@@ -207,7 +303,7 @@ export function readConfig(): DotGithubConfig {
 }
 
 /**
- * Writes the dotgithub.json config file
+ * Writes the dotgithub config file (preserves existing format or defaults to JSON)
  */
 export function writeConfig(config: DotGithubConfig): void {
   const configPath = getConfigPath();
@@ -217,8 +313,8 @@ export function writeConfig(config: DotGithubConfig): void {
   fs.mkdirSync(configDir, { recursive: true });
   
   try {
-    const content = JSON.stringify(config, null, 2) + '\n';
-    fs.writeFileSync(configPath, content, 'utf8');
+    const format = getConfigFormat(configPath);
+    writeConfigContent(configPath, config, format);
   } catch (error) {
     throw new Error(`Failed to write config file at ${configPath}: ${error instanceof Error ? error.message : error}`);
   }

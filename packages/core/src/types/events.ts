@@ -10,26 +10,38 @@ export type PushWorkflowEvent = {
 
 // Union type for all event workflow event types
 export type GitHubWorkflowEvent = {
-  branch_protection_rule?: BranchProtectionRuleWorkflowEvent;
-  check_run?: CheckRunWorkflowEvent;
-  check_suite?: CheckSuiteWorkflowEvent;
-  discussion?: DiscussionWorkflowEvent;
-  discussion_comment?: DiscussionCommentWorkflowEvent;
-  issue_comment?: IssueCommentWorkflowEvent;
-  issues?: IssuesWorkflowEvent;
-  label?: LabelWorkflowEvent;
-  merge_group?: MergeGroupWorkflowEvent;
-  milestone?: MilestoneWorkflowEvent;
-  pull_request?: PullRequestWorkflowEvent;
-  pull_request_review?: PullRequestReviewWorkflowEvent;
-  pull_request_review_comment?: PullRequestReviewCommentWorkflowEvent;
-  push?: PushWorkflowEvent;
-  registry_package?: RegistryPackageWorkflowEvent;
-  release?: ReleaseWorkflowEvent;
-  watch?: WatchWorkflowEvent;
-  workflow_run?: WorkflowRunWorkflowEvent;
-  workflow_dispatch?: WorkflowDispatchWorkflowEvent;
-  schedule?: ScheduleWorkflowEvent[];
+  branch_protection_rule?: BranchProtectionRuleWorkflowEvent | null;
+  check_run?: CheckRunWorkflowEvent | null;
+  check_suite?: CheckSuiteWorkflowEvent | null;
+  create?: undefined | null;
+  delete?: undefined | null;
+  deployment?: undefined | null;
+  deployment_status?: undefined | null;
+  discussion?: DiscussionWorkflowEvent | null;
+  discussion_comment?: DiscussionCommentWorkflowEvent | null;
+  fork?: undefined | null;
+  gollum?: undefined | null;
+  issue_comment?: IssueCommentWorkflowEvent | null;
+  issues?: IssuesWorkflowEvent | null;
+  label?: LabelWorkflowEvent | null;
+  merge_group?: MergeGroupWorkflowEvent | null;
+  milestone?: MilestoneWorkflowEvent | null;
+  page_build?: undefined | null;
+  public?: undefined | null;
+  pull_request?: PullRequestWorkflowEvent | null;
+  pull_request_review?: PullRequestReviewWorkflowEvent | null;
+  pull_request_review_comment?: PullRequestReviewCommentWorkflowEvent | null;
+  pull_request_target?: PullRequestWorkflowEvent | null;
+  push?: PushWorkflowEvent | null;
+  registry_package?: RegistryPackageWorkflowEvent | null;
+  release?: ReleaseWorkflowEvent | null;
+  repository_dispatch?: RepositoryDispatchWorkflowEvent | null;
+  schedule?: ScheduleWorkflowEvent[] | null;
+  status?: undefined | null;
+  watch?: WatchWorkflowEvent | null;
+  workflow_call?: undefined | null;
+  workflow_dispatch?: WorkflowDispatchWorkflowEvent | null;
+  workflow_run?: WorkflowRunWorkflowEvent | null;
 };
 // Types for GitHub Actions workflow events
 
@@ -172,7 +184,10 @@ export type WatchWorkflowEvent = {
 export type WorkflowRunActivityType = "completed" | "requested" | "in_progress";
 
 export type WorkflowRunWorkflowEvent = {
-  types: WorkflowRunActivityType[];
+  workflows: string[];
+  types?: WorkflowRunActivityType[];
+  branches?: string[];
+  "branches-ignore"?: string[];
 };
 
 export type WorkflowDispatchWorkflowEvent = {
@@ -189,4 +204,10 @@ export type WorkflowDispatchInput = {
 
 export type ScheduleWorkflowEvent = {
   cron: string;
+};
+
+export type RepositoryDispatchWorkflowEvent = {
+  types?: string[];
+  event_type?: string;
+  client_payload?: { [key: string]: any };
 };

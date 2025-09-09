@@ -31,6 +31,7 @@
     "simple-git": "^3.28.0"
   },
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    ".github/src"
   ]
 }

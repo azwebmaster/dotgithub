@@ -1,16 +1,38 @@
 // GitHub Actions workspace entry point
-import { createStep, GitHubStack } from "@dotgithub/core";
-import { checkout } from "./actions/actions";
+import { DotGitHubPlugin, PluginContext } from "@dotgithub/core";
+import { checkout } from "./actions/actions/checkout.js";
 
-const x = new GitHubStack();
-x.addWorkflow('example-workflow', {
-  on: ['push'],
-  jobs: {
-    example_job: {
-      'runs-on': 'ubuntu-latest',
-      steps: [
-        checkout({ 'fetch-depth': '0' })
-      ]
-    }
+class LocalPlugin implements DotGitHubPlugin {
+  name = "local-plugin";
+  version = "1.0.0";
+  description = "A locally defined plugin";
+
+  apply(context: PluginContext) {
+    // General implementation goes here
+    const { stack, config } = context;
+
+    stack.addWorkflow("local-workflow", {
+      name: "Local Workflow",
+      on: {
+        push: {
+          branches: ["main"],
+        },
+      },
+      jobs: {
+        build: {
+          "runs-on": "ubuntu-latest",
+          steps: [
+            checkout(),
+            {
+              name: "Run a one-line script",
+              run: "echo Hello, world!",
+            },
+          ],
+        },
+      },
+    });
   }
-});
+}
+
+export default new LocalPlugin();
+export * as actions from "./actions/index.js";

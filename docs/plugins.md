@@ -1,4 +1,4 @@
-# Plugin System Documentation
+# Plugin Documentation
 
 The dotgithub plugin system allows you to declaratively generate GitHub workflows, configurations, and other repository files through configurable plugins and stacks.
 
@@ -289,6 +289,79 @@ Remove a plugin configuration.
 dotgithub plugin remove --name ci
 ```
 
+#### `dotgithub plugin create`
+
+Create a plugin from existing .github files in a local directory or GitHub repository.
+
+```bash
+# Create plugin from local .github directory
+dotgithub plugin create \
+  --name "my-templates" \
+  --source ".github" \
+  --output "./plugins" \
+  --description "My organization's standard GitHub templates"
+
+# Create plugin from GitHub repository
+dotgithub plugin create \
+  --name "starter-workflows" \
+  --source "actions/starter-workflows" \
+  --output "./plugins" \
+  --description "GitHub's starter workflow templates"
+
+# Create plugin with specific GitHub repo reference
+dotgithub plugin create \
+  --name "company-templates" \
+  --source "myorg/github-templates@main" \
+  --output "./plugins" \
+  --overwrite
+
+# Create plugin from local path that contains .github directory
+dotgithub plugin create \
+  --name "project-templates" \
+  --source "/path/to/my-project" \
+  --output "./plugins"
+```
+
+**Options:**
+
+- **`--name <name>`** (required): Name for the generated plugin
+- **`--source <path|repo>`** (required): Source of .github files:
+  - Local filesystem path (absolute or relative)
+  - GitHub repository in `owner/repo` format
+  - GitHub repository with ref: `owner/repo@branch-or-tag`
+- **`--output <dir>`** (optional): Output directory for plugin file (default: `./plugins`)
+- **`--description <desc>`** (optional): Description for the generated plugin
+- **`--overwrite`** (optional): Overwrite existing plugin file if it exists
+
+**Example Output:**
+```
+🔌 Creating plugin "my-templates" from .github...
+✅ Plugin created successfully!
+   Plugin file: /project/plugins/my-templates-plugin.ts
+   Files included: 8
+   📁 Files found:
+      - workflows/ci.yml
+      - workflows/release.yml
+      - dependabot.yml
+      - CODEOWNERS
+      - ISSUE_TEMPLATE/bug_report.md
+      - ISSUE_TEMPLATE/feature_request.md
+      - pull_request_template.md
+      - FUNDING.yml
+
+🔧 To use this plugin, add it to your configuration:
+   dotgithub plugin add --name "my-templates" --package "./plugins/my-templates-plugin.ts"
+```
+
+The `create` command automatically:
+- Recursively scans the `.github` directory for all files
+- Generates a TypeScript plugin class that implements `DotGitHubPlugin`
+- **Automatically detects workflow files** (`.yml`/`.yaml` in `workflows/` directory)
+- **Uses GitHubWorkflow for workflow generation** via `stack.addWorkflow()`
+- **Uses stack methods for other files** via `stack.addFileResource()` 
+- **Integrates with the stack system** - all resources are properly managed by the stack
+- Provides instructions for adding the plugin to your configuration
+
 ### Stack Management
 
 #### `dotgithub plugin stack list`
@@ -341,9 +414,274 @@ dotgithub plugin stack remove --name development
 
 ## Creating Custom Plugins
 
-### Plugin Structure
+### Creating Plugins from Existing .github Files
 
-Create a plugin by implementing the `DotGitHubPlugin` interface:
+The easiest way to create a plugin is by generating it from existing `.github` files. This is perfect for:
+
+- **Migrating existing repositories** to the dotgithub plugin system
+- **Sharing templates** across multiple projects
+- **Standardizing workflows** within an organization
+- **Reusing configurations** from open source projects
+
+#### Quick Start: Generate from Local Files
+
+If you already have a `.github` directory with workflows, templates, and configurations:
+
+```bash
+# Generate plugin from your current .github directory
+dotgithub plugin create \
+  --name "my-org-standard" \
+  --source ".github" \
+  --description "Standard GitHub configuration for my organization"
+
+# Add the plugin to your configuration
+dotgithub plugin add \
+  --name "my-org-standard" \
+  --package "./plugins/my-org-standard-plugin.ts"
+
+# Use it in a stack
+dotgithub plugin stack add \
+  --name "main" \
+  --plugins "my-org-standard"
+
+# Apply to your project
+dotgithub synth
+```
+
+#### Generate from GitHub Repository
+
+You can also create plugins from any public GitHub repository's `.github` directory:
+
+```bash
+# Use GitHub's starter workflows
+dotgithub plugin create \
+  --name "github-starters" \
+  --source "actions/starter-workflows" \
+  --description "GitHub's official starter workflow templates"
+
+# Use a specific version/branch
+dotgithub plugin create \
+  --name "company-templates" \
+  --source "mycompany/github-templates@v2.1.0" \
+  --description "Company GitHub templates v2.1.0"
+
+# Copy from another organization's repo
+dotgithub plugin create \
+  --name "best-practices" \
+  --source "microsoft/vscode@main" \
+  --description "VS Code's GitHub configuration"
+```
+
+#### Generated Plugin Structure
+
+The `create` command generates a TypeScript plugin that:
+
+1. **Implements the DotGitHubPlugin interface**
+2. **Embeds all found files as string literals**
+3. **Recreates the exact directory structure**
+4. **Handles conflicts gracefully**
+
+Example generated plugin with workflows:
+
+```typescript
+import type { DotGitHubPlugin, PluginContext } from '@dotgithub/core';
+
+/**
+ * My organization's standard GitHub templates
+ * 
+ * This plugin was auto-generated from .github files.
+ * Files included: workflows/ci.yml, workflows/release.yml, dependabot.yml
+ */
+export class MyOrgStandardPlugin implements DotGitHubPlugin {
+  readonly name = 'my-org-standard';
+  readonly version = '1.0.0';
+  readonly description = 'My organization\'s standard GitHub templates';
+
+  private readonly workflows: Record<string, string> = {
+    'ci': `name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci
+      - run: npm test`,
+    
+    'release': `name: Release
+on:
+  push:
+    branches: [main]
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Release
+        run: npm run release`
+  };
+
+  private readonly files: Record<string, string> = {
+    'dependabot.yml': `version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"`
+  };
+
+  async apply(context: PluginContext): Promise<void> {
+    const { stack } = context;
+    
+    // Add workflows to stack (pre-parsed objects)
+    stack.addWorkflow('ci', this.workflows['ci']);
+    stack.addWorkflow('release', this.workflows['release']);
+    
+    // Add YAML files as parsed objects
+    stack.addResource('dependabot.yml', { content: this.files['dependabot.yml'] });
+  }
+}
+
+// Export as default for easier importing
+export default new MyOrgStandardPlugin();
+```
+
+**Key Features:**
+- **Workflow files** (`.yml`/`.yaml` in `workflows/`) are parsed during generation and added via `stack.addWorkflow()`
+- **YAML files** (dependabot.yml, etc.) are parsed during generation and added via `stack.addResource()`
+- **Text files** (README.md, CODEOWNERS, etc.) are added as strings via `stack.addFileResource()`
+- **No runtime YAML parsing** - all YAML is parsed during plugin generation for better performance
+- **Type-safe workflow generation** through the GitHubWorkflow system
+- **Stack-based resource management** - all files go through the stack system for proper synthesis
+
+#### Customizing Generated Plugins
+
+After generation, you can edit the plugin to add:
+
+**Configuration Options:**
+```typescript
+interface MyOrgStandardConfig {
+  overwriteExisting?: boolean;
+  excludeFiles?: string[];
+  nodeVersion?: string;
+}
+
+async apply(context: PluginContext): Promise<void> {
+  const config = context.config as MyOrgStandardConfig;
+  const filesToGenerate = { ...this.files };
+  
+  // Remove excluded files
+  if (config.excludeFiles) {
+    config.excludeFiles.forEach(file => delete filesToGenerate[file]);
+  }
+  
+  // Template substitution for node version
+  if (config.nodeVersion && filesToGenerate['workflows/ci.yml']) {
+    filesToGenerate['workflows/ci.yml'] = filesToGenerate['workflows/ci.yml']
+      .replace(/node-version: '[^']*'/, `node-version: '${config.nodeVersion}'`);
+  }
+  
+  const result = generateGithubFiles({
+    outputDir: path.join(context.projectRoot, '.github'),
+    files: filesToGenerate,
+    overwrite: config.overwriteExisting || false,
+    createDirectories: true
+  });
+  
+  // ... rest of apply method
+}
+```
+
+**Dynamic Content:**
+```typescript
+async apply(context: PluginContext): Promise<void> {
+  const { projectRoot } = context;
+  const packageJson = JSON.parse(
+    fs.readFileSync(path.join(projectRoot, 'package.json'), 'utf8')
+  );
+  
+  // Customize workflow based on project structure
+  const files = { ...this.files };
+  
+  // Add TypeScript check if project uses TypeScript
+  if (fs.existsSync(path.join(projectRoot, 'tsconfig.json'))) {
+    files['workflows/ci.yml'] = files['workflows/ci.yml']
+      .replace('- run: npm test', '- run: npm run type-check\n      - run: npm test');
+  }
+  
+  // Use project name in workflow
+  if (packageJson.name) {
+    files['workflows/ci.yml'] = files['workflows/ci.yml']
+      .replace('name: CI', `name: CI - ${packageJson.name}`);
+  }
+  
+  // ... apply files
+}
+```
+
+#### Best Practices for Generated Plugins
+
+1. **Review generated content** before using in production
+2. **Test with different project structures** to ensure compatibility
+3. **Add configuration options** for common variations
+4. **Document usage** and configuration options
+5. **Version your plugins** when making changes
+6. **Consider conflicts** with existing files
+
+#### Common Use Cases
+
+**Organization Standards:**
+```bash
+# Create standard templates from your best repository
+dotgithub plugin create \
+  --name "acme-standards" \
+  --source "/path/to/best-repo/.github" \
+  --description "ACME Corp GitHub standards"
+
+# Share across all projects
+dotgithub plugin add --name "acme-standards" --package "./acme-standards-plugin.ts"
+```
+
+**Open Source Templates:**
+```bash
+# Copy proven workflows from popular repositories
+dotgithub plugin create \
+  --name "react-workflows" \
+  --source "facebook/react" \
+  --description "React project workflows"
+
+dotgithub plugin create \
+  --name "vue-workflows" \
+  --source "vuejs/core" \
+  --description "Vue.js project workflows"
+```
+
+**Migration from Manual Setup:**
+```bash
+# Convert existing manual .github setup to plugin
+dotgithub plugin create \
+  --name "legacy-migration" \
+  --source ".github" \
+  --description "Migrated from manual setup"
+
+# Now manage via plugins instead of manual files
+rm -rf .github
+dotgithub plugin add --name "legacy-migration" --package "./legacy-migration-plugin.ts"
+dotgithub synth
+```
+
+### Manual Plugin Creation
+
+For more complex scenarios, you can create plugins manually by implementing the `DotGitHubPlugin` interface:
 
 ```typescript
 // plugins/custom-security.ts
@@ -601,6 +939,82 @@ private createCustomWorkflow(stack: GitHubStack, config: any) {
 
 ## Examples
 
+### Creating and Using a Plugin from .github Files
+
+Here's a complete example of creating a plugin from existing .github files and using it in a project:
+
+```bash
+# Step 1: Create plugin from existing repository
+dotgithub plugin create \
+  --name "company-standards" \
+  --source "https://github.com/mycompany/github-templates" \
+  --output "./plugins" \
+  --description "My company's standard GitHub configuration"
+
+# Step 2: Add plugin to dotgithub configuration
+dotgithub plugin add \
+  --name "company-standards" \
+  --package "./plugins/company-standards-plugin.ts" \
+  --config '{
+    "overwriteExisting": false,
+    "nodeVersion": "20"
+  }'
+
+# Step 3: Create a stack using the plugin
+dotgithub plugin stack add \
+  --name "frontend" \
+  --plugins "company-standards" \
+  --config '{
+    "projectType": "frontend"
+  }'
+
+# Step 4: Generate .github files for your project
+dotgithub synth --stack frontend
+```
+
+**Generated dotgithub.json:**
+```json
+{
+  "version": "1.0.0",
+  "outputDir": "src",
+  "plugins": [
+    {
+      "name": "company-standards",
+      "package": "./plugins/company-standards-plugin.ts",
+      "config": {
+        "overwriteExisting": false,
+        "nodeVersion": "20"
+      },
+      "enabled": true
+    }
+  ],
+  "stacks": [
+    {
+      "name": "frontend",
+      "plugins": ["company-standards"],
+      "config": {
+        "projectType": "frontend"
+      }
+    }
+  ]
+}
+```
+
+**Output:**
+```
+🏗️  Synthesizing GitHub workflows...
+🔌 Applying plugin: company-standards
+✅ Generated 5 .github files:
+   - .github/workflows/ci.yml
+   - .github/workflows/release.yml
+   - .github/dependabot.yml
+   - .github/CODEOWNERS
+   - .github/pull_request_template.md
+
+✅ Successfully synthesized 1 stack(s)
+🎉 Synthesis complete!
+```
+
 ### Complete Project Setup
 
 ```json
@@ -806,5 +1220,45 @@ When developing plugins:
 dotgithub plugin add --name test --package ./my-plugin.js
 dotgithub synth --dry-run --verbose
 ```
+
+### Plugin Creation from .github Files
+
+Common issues when creating plugins from .github files:
+
+#### Source Path Issues
+```
+❌ Path does not exist: .github
+```
+**Solutions:**
+- Ensure the path exists and contains .github directory
+- Use absolute paths if relative paths don't work
+- For GitHub repos, verify the repository exists and has a .github directory
+
+#### GitHub Access Issues
+```
+❌ No .github directory found in myorg/myrepo
+```
+**Solutions:**
+- Verify the repository exists and is accessible
+- Ensure GITHUB_TOKEN environment variable is set for private repositories
+- Check that the specified branch/tag exists
+
+#### File Permission Issues
+```
+❌ Plugin file already exists: ./plugins/my-plugin-plugin.ts
+```
+**Solutions:**
+- Use `--overwrite` flag to replace existing plugins
+- Choose a different plugin name with `--name`
+- Remove the existing file manually
+
+#### Empty or Invalid .github Directory
+```
+❌ No files found in: .github
+```
+**Solutions:**
+- Ensure the .github directory contains files
+- Check that the directory isn't empty or contains only hidden files
+- Verify file permissions allow reading
 
 This completes the comprehensive plugin system documentation. The system provides a flexible, extensible way to generate GitHub repository configurations through declarative plugins and stacks.

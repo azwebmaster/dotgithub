@@ -5,9 +5,11 @@ import {
   addPluginToConfig, 
   removePluginFromConfig,
   addStackToConfig,
-  removeStackFromConfig
+  removeStackFromConfig,
+  generatePluginFromGithubFiles
 } from '@dotgithub/core';
 import type { PluginConfig, StackConfig } from '@dotgithub/core';
+import * as path from 'path';
 
 export function createPluginCommand(): Command {
   const pluginCommand = new Command('plugin');
@@ -87,6 +89,47 @@ export function createPluginCommand(): Command {
         
       } catch (error) {
         console.error('❌ Failed to remove plugin:', error instanceof Error ? error.message : error);
+        process.exit(1);
+      }
+    });
+
+  const pluginCreateCommand = new Command('create')
+    .description('Create a plugin from .github files')
+    .requiredOption('--name <name>', 'plugin name')
+    .requiredOption('--source <path|repo>', 'local path to .github directory or GitHub repo (org/repo@ref)')
+    .option('--output <dir>', 'output directory for plugin file', './plugins')
+    .option('--description <desc>', 'plugin description')
+    .option('--overwrite', 'overwrite existing plugin file')
+    .action(async (options) => {
+      try {
+        console.log(`🔌 Creating plugin "${options.name}" from ${options.source}...`);
+        
+        const result = await generatePluginFromGithubFiles({
+          pluginName: options.name,
+          source: options.source,
+          outputDir: options.output,
+          description: options.description,
+          overwrite: options.overwrite
+        });
+        
+        console.log(`✅ Plugin created successfully!`);
+        console.log(`   Plugin file: ${result.pluginPath}`);
+        console.log(`   Files included: ${result.filesFound.length}`);
+        
+        if (result.filesFound.length > 0) {
+          console.log(`   📁 Files found:`);
+          result.filesFound.forEach(file => {
+            console.log(`      - ${file}`);
+          });
+        }
+        
+        console.log();
+        console.log(`🔧 To use this plugin, add it to your configuration:`);
+        const relativePluginPath = path.relative(process.cwd(), result.pluginPath);
+        console.log(`   dotgithub plugin add --name "${options.name}" --package "./${relativePluginPath}"`);
+        
+      } catch (error) {
+        console.error('❌ Failed to create plugin:', error instanceof Error ? error.message : error);
         process.exit(1);
       }
     });
@@ -178,6 +221,7 @@ export function createPluginCommand(): Command {
   pluginCommand.addCommand(pluginSubCommand);
   pluginCommand.addCommand(pluginAddCommand);
   pluginCommand.addCommand(pluginRemoveCommand);
+  pluginCommand.addCommand(pluginCreateCommand);
 
   stackCommand.addCommand(stackListCommand);
   stackCommand.addCommand(stackAddCommand);

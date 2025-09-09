@@ -15,19 +15,6 @@
       "versionRef": "v5",
       "displayName": "Checkout",
       "outputPath": "actions/actions/checkout.ts"
-    },
-    {
-      "orgRepo": "actions/setup-node",
-      "ref": "a0853c24544627f65ddf259abe73b1d18a591444",
-      "versionRef": "v5",
-      "displayName": "Setup Node.js environment",
-      "outputPath": "actions/actions/setup-node-js-environment.ts"
-    },
-    {
-      "orgRepo": "actions/test-action",
-      "versionRef": "v1",
-      "displayName": "TestAction",
-      "outputPath": "actions/actions/testaction.ts"
     }
   ],
   "options": {
@@ -36,6 +23,20 @@
       "prettier": true
     }
   },
-  "plugins": [],
-  "stacks": []
+  "plugins": [
+    {
+      "name": "local",
+      "package": "./",
+      "config": {},
+      "enabled": true
+    }
+  ],
+  "stacks": [
+    {
+      "name": "default",
+      "plugins": [
+        "local"
+      ]
+    }
+  ]
 }

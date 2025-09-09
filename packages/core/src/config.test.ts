@@ -13,7 +13,8 @@ import {
   updateOutputDir,
   createDefaultConfig,
   getConfigPath,
-  setConfigPath
+  setConfigPath,
+  createConfigFile
 } from './config';
 
 describe('config', () => {
@@ -455,6 +456,190 @@ describe('config', () => {
       
       const configPath = getConfigPath();
       expect(configPath).toBe(path.resolve(customConfigPath));
+    });
+  });
+
+  describe('multiple config formats', () => {
+    beforeEach(() => {
+      // Reset config path before each test to ensure clean state
+      setConfigPath('');
+    });
+    
+    afterEach(() => {
+      // Reset config path after each test
+      setConfigPath('');
+    });
+
+    describe('getConfigPath', () => {
+      it('finds dotgithub.json first', () => {
+        const jsonPath = path.join(tempDir, '.github', 'dotgithub.json');
+        const yamlPath = path.join(tempDir, '.github', 'dotgithub.yaml');
+        const jsPath = path.join(tempDir, '.github', 'dotgithub.js');
+        
+        // Create all three files
+        fs.writeFileSync(jsonPath, '{}');
+        fs.writeFileSync(yamlPath, 'version: "1.0.0"');
+        fs.writeFileSync(jsPath, 'module.exports = {}');
+        
+        const configPath = getConfigPath();
+        expect(path.basename(configPath)).toBe('dotgithub.json');
+        expect(configPath).toContain('.github');
+      });
+
+      it('finds dotgithub.js when json does not exist', () => {
+        const yamlPath = path.join(tempDir, '.github', 'dotgithub.yaml');
+        const jsPath = path.join(tempDir, '.github', 'dotgithub.js');
+        
+        fs.writeFileSync(jsPath, 'module.exports = {}');
+        fs.writeFileSync(yamlPath, 'version: "1.0.0"');
+        
+        const configPath = getConfigPath();
+        expect(path.basename(configPath)).toBe('dotgithub.js');
+        expect(configPath).toContain('.github');
+      });
+
+      it('finds dotgithub.yaml when json and js do not exist', () => {
+        const yamlPath = path.join(tempDir, '.github', 'dotgithub.yaml');
+        const ymlPath = path.join(tempDir, '.github', 'dotgithub.yml');
+        
+        fs.writeFileSync(yamlPath, 'version: "1.0.0"');
+        fs.writeFileSync(ymlPath, 'version: "1.0.0"');
+        
+        const configPath = getConfigPath();
+        expect(path.basename(configPath)).toBe('dotgithub.yaml');
+        expect(configPath).toContain('.github');
+      });
+
+      it('finds dotgithub.yml when others do not exist', () => {
+        const ymlPath = path.join(tempDir, '.github', 'dotgithub.yml');
+        
+        fs.writeFileSync(ymlPath, 'version: "1.0.0"');
+        
+        const configPath = getConfigPath();
+        expect(path.basename(configPath)).toBe('dotgithub.yml');
+        expect(configPath).toContain('.github');
+      });
+    });
+
+    describe('createConfigFile', () => {
+      it('creates JSON config file by default', () => {
+        const configPath = createConfigFile();
+        expect(fs.existsSync(configPath)).toBe(true);
+        expect(path.basename(configPath)).toBe('dotgithub.json');
+        
+        const content = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+        expect(content.version).toBe('1.0.0');
+        expect(content.outputDir).toBe('src');
+      });
+
+      it('creates YAML config file', () => {
+        const configPath = createConfigFile('yaml');
+        expect(fs.existsSync(configPath)).toBe(true);
+        expect(path.basename(configPath)).toBe('dotgithub.yaml');
+        
+        const content = fs.readFileSync(configPath, 'utf8');
+        expect(content).toContain('version: 1.0.0');
+        expect(content).toContain('outputDir: src');
+      });
+
+      it('creates YML config file', () => {
+        const configPath = createConfigFile('yml');
+        expect(fs.existsSync(configPath)).toBe(true);
+        expect(path.basename(configPath)).toBe('dotgithub.yml');
+      });
+
+      it('creates JS config file', () => {
+        const configPath = createConfigFile('js');
+        expect(fs.existsSync(configPath)).toBe(true);
+        expect(path.basename(configPath)).toBe('dotgithub.js');
+        
+        const content = fs.readFileSync(configPath, 'utf8');
+        expect(content).toContain('module.exports =');
+        expect(content).toContain('"version": "1.0.0"');
+      });
+
+      it('throws error if config file already exists', () => {
+        const configPath = createConfigFile('json');
+        expect(fs.existsSync(configPath)).toBe(true);
+        
+        expect(() => createConfigFile('json')).toThrow('Config file already exists');
+      });
+    });
+
+    describe('readConfig with different formats', () => {
+      it('reads YAML config', () => {
+        const yamlPath = path.join(tempDir, '.github', 'dotgithub.yaml');
+        const yamlContent = `version: "1.0.0"
+outputDir: custom-output
+actions: []
+plugins: []
+stacks: []
+options:
+  tokenSource: env
+  formatting:
+    prettier: true`;
+        
+        fs.writeFileSync(yamlPath, yamlContent);
+        setConfigPath(yamlPath);
+        
+        const config = readConfig();
+        expect(config.version).toBe('1.0.0');
+        expect(config.outputDir).toBe('custom-output');
+        expect(Array.isArray(config.actions)).toBe(true);
+      });
+
+      it('reads JS config', () => {
+        const jsPath = path.join(tempDir, '.github', 'dotgithub.js');
+        const jsContent = `module.exports = {
+  version: "1.0.0",
+  outputDir: "custom-js-output",
+  actions: [],
+  plugins: [],
+  stacks: [],
+  options: {
+    tokenSource: "env",
+    formatting: {
+      prettier: true
+    }
+  }
+};`;
+        
+        fs.writeFileSync(jsPath, jsContent);
+        setConfigPath(jsPath);
+        
+        const config = readConfig();
+        expect(config.version).toBe('1.0.0');
+        expect(config.outputDir).toBe('custom-js-output');
+        expect(Array.isArray(config.actions)).toBe(true);
+      });
+    });
+
+    describe('writeConfig preserves format', () => {
+      it('preserves YAML format when updating', () => {
+        const yamlPath = createConfigFile('yaml');
+        setConfigPath(yamlPath);
+        
+        const config = readConfig();
+        config.outputDir = 'updated-output';
+        writeConfig(config);
+        
+        const content = fs.readFileSync(yamlPath, 'utf8');
+        expect(content).toContain('outputDir: updated-output');
+        expect(content).toContain('version: 1.0.0');
+      });
+
+      it('preserves JS format when updating', () => {
+        const jsPath = createConfigFile('js');
+        setConfigPath(jsPath);
+        
+        const config = readConfig();
+        config.outputDir = 'updated-js-output';
+        writeConfig(config);
+        
+        const content = fs.readFileSync(jsPath, 'utf8');
+        expect(content).toContain('module.exports =');
+        expect(content).toContain('"outputDir": "updated-js-output"');
+      });
     });
   });
 });

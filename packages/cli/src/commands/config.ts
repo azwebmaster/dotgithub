@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import { readConfig, writeConfig, getConfigPath, updateOutputDir, getActionsFromConfig, getResolvedOutputPath, removeActionFromConfig } from '@dotgithub/core';
+import { readConfig, writeConfig, getConfigPath, updateOutputDir, getActionsFromConfig, getResolvedOutputPath, removeActionFromConfig, createConfigFile } from '@dotgithub/core';
 
 export function createConfigCommand(): Command {
   const configCmd = new Command('config')
@@ -92,28 +92,41 @@ export function createConfigCommand(): Command {
   // Initialize config file
   configCmd
     .command('init')
-    .description('Initialize a new dotgithub.json config file')
+    .description('Initialize a new dotgithub config file')
     .option('--output-dir <dir>', 'Output directory for actions', '.github/actions')
+    .option('--format <format>', 'Config file format (json, js, yaml, yml)', 'json')
     .action((options) => {
       try {
-        const configPath = getConfigPath();
+        const format = options.format as 'json' | 'js' | 'yaml' | 'yml';
         
-        // Check if config already exists
+        // Validate format
+        if (!['json', 'js', 'yaml', 'yml'].includes(format)) {
+          console.error('Invalid format. Supported formats: json, js, yaml, yml');
+          process.exit(1);
+        }
+        
+        // Check if any config already exists
+        const currentConfigPath = getConfigPath();
         const fs = require('fs');
-        if (fs.existsSync(configPath)) {
-          console.log(`Configuration file already exists at: ${configPath}`);
+        if (fs.existsSync(currentConfigPath)) {
+          console.log(`Configuration file already exists at: ${currentConfigPath}`);
           console.log('Use "dotgithub config show" to view current configuration');
           return;
         }
         
-        // Create new config with specified output directory
-        const config = readConfig(); // This creates default config if none exists
+        // Create new config file in the specified format
+        const configPath = createConfigFile(format);
+        
+        // Update output directory if specified
         if (options.outputDir) {
+          const config = readConfig();
           config.outputDir = options.outputDir;
           writeConfig(config);
         }
         
+        const config = readConfig();
         console.log(`Initialized dotgithub configuration at: ${configPath}`);
+        console.log(`Format: ${format}`);
         console.log(`Default output directory: ${config.outputDir}`);
       } catch (err) {
         console.error(err instanceof Error ? err.message : err);
