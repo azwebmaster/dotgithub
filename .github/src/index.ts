@@ -1,10 +1,16 @@
 // GitHub Actions workspace entry point
-import { createStep } from "@dotgithub/core";
+import { createStep, GitHubStack } from "@dotgithub/core";
+import { checkout } from "./actions/actions";
 
-// Example: Create a checkout step
-export const checkoutStep = createStep("actions/checkout@v4", {
-  // Add your step configuration here
+const x = new GitHubStack();
+x.addWorkflow('example-workflow', {
+  on: ['push'],
+  jobs: {
+    example_job: {
+      'runs-on': 'ubuntu-latest',
+      steps: [
+        checkout({ 'fetch-depth': '0' })
+      ]
+    }
+  }
 });
-
-// Export your workflow definitions here
-export * from "./workflows/index.js";

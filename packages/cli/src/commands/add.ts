@@ -3,7 +3,7 @@ import { generateActionFiles, readConfig } from '@dotgithub/core';
 
 export function createAddCommand(): Command {
   return new Command('add')
-    .argument('<orgRepoRef>', 'GitHub repository reference (e.g., actions/checkout@v4)')
+    .argument('<orgRepoRef>', 'GitHub repository reference (e.g., actions/checkout@v4, actions/checkout@latest, or actions/checkout - defaults to latest tag)')
     .description('Generate TypeScript types from a GitHub Action and save to output directory')
     .option('--output <outputDir>', 'Output directory for generated TypeScript file (uses config default if not specified)')
     .option('-t, --token <token>', 'GitHub token (overrides env GITHUB_TOKEN)')

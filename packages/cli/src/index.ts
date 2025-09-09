@@ -2,12 +2,12 @@
 import { Command } from 'commander';
 import { setConfigPath } from '@dotgithub/core';
 import { createAddCommand } from './commands/add.js';
-import { createTemplateCommand } from './commands/template.js';
 import { createConfigCommand } from './commands/config.js';
 import { createRemoveCommand } from './commands/remove.js';
 import { createRegenerateCommand } from './commands/regenerate.js';
 import { createListCommand } from './commands/list.js';
 import { createInitCommand } from './commands/init.js';
+import { createUpdateCommand } from './commands/update.js';
 
 export function helloCli(): string {
   return 'Hello from @dotgithub/cli!';
@@ -26,7 +26,7 @@ program
 
 program.addCommand(createInitCommand());
 program.addCommand(createAddCommand());
-program.addCommand(createTemplateCommand());
+program.addCommand(createUpdateCommand());
 program.addCommand(createConfigCommand());
 program.addCommand(createRemoveCommand());
 program.addCommand(createRegenerateCommand());

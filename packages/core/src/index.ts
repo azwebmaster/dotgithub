@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { getDefaultBranch, getRefSha } from './github';
+import { getDefaultBranch, getRefSha, getLatestTag, getLatestTagSafe } from './github';
 import { cloneRepo } from './git';
 import { readActionYml } from './action-yml';
 import { generateTypesFromYml } from './typegen';
@@ -86,7 +86,7 @@ export interface GenerateTypesResult {
 
 export interface GenerateActionFilesOptions {
   orgRepoRef: string;
-  outputDir: string;
+  outputDir?: string;
   token?: string;
   useSha?: boolean;
 }
@@ -106,6 +106,31 @@ export interface RemoveActionFilesResult {
   removed: boolean;
   actionName: string;
   removedFiles: string[];
+}
+
+export interface UpdateActionFilesOptions {
+  orgRepoRef?: string; // If not provided, update all actions
+  outputDir?: string;
+  token?: string;
+  useLatest?: boolean; // Use latest git tag instead of versionRef
+  useSha?: boolean;
+}
+
+export interface UpdateActionFilesResult {
+  updated: UpdatedAction[];
+  errors: UpdateError[];
+}
+
+export interface UpdatedAction {
+  orgRepo: string;
+  previousVersion: string;
+  newVersion: string;
+  filePath: string;
+}
+
+export interface UpdateError {
+  orgRepo: string;
+  error: string;
 }
 
 /**
@@ -144,6 +169,7 @@ export async function generateTypesFromActionYml(orgRepo: string, ref?: string, 
  * Generates a GitHub Action TypeScript file from a GitHub repo and saves it to the output directory.
  * Creates an organization folder structure and updates index files.
  * Tracks the action in the dotgithub.json config file.
+ * When no version is specified, defaults to the latest semver tag.
  * @param options - Configuration for file generation
  */
 export async function generateActionFiles(options: GenerateActionFilesOptions): Promise<GenerateActionFilesResult> {
@@ -152,7 +178,23 @@ export async function generateActionFiles(options: GenerateActionFilesOptions): 
   if (!owner || !repo) throw new Error('orgRepo must be in the form org/repo');
 
   const token = options.token || process.env.GITHUB_TOKEN;
-  const resolvedRef = ref || await getDefaultBranch(owner, repo, token);
+  
+  // If no ref provided, default to latest tag; if @latest specified, resolve it
+  let resolvedRef: string;
+  if (!ref) {
+    // No version specified, use latest tag as default
+    try {
+      resolvedRef = await getLatestTag(owner, repo, token);
+    } catch (error) {
+      // Fallback to default branch if no tags available
+      console.warn(`No tags found for ${orgRepo}, falling back to default branch`);
+      resolvedRef = await getDefaultBranch(owner, repo, token);
+    }
+  } else {
+    // Resolve @latest to actual tag name, or use provided ref
+    const resolvedLatestRef = await resolveLatestRef(orgRepo, ref, token);
+    resolvedRef = resolvedLatestRef || ref;
+  }
 
   // Resolve to SHA by default unless useSha is explicitly false
   const useSha = options.useSha !== false;
@@ -161,7 +203,7 @@ export async function generateActionFiles(options: GenerateActionFilesOptions): 
   // Use output directory from config if not specified
   const configPath = path.dirname(getConfigPath());
   const config = readConfig();
-  const outputDir = options.outputDir || path.resolve(configPath, config.outputDir);
+  const outputDir = options.outputDir ? path.resolve(options.outputDir) : path.resolve(configPath, config.outputDir);
 
   // Check if this action already exists in config (only one per org/repo allowed)
   const existingAction = config.actions.find(action => action.orgRepo === orgRepo);
@@ -283,6 +325,87 @@ export async function removeActionFiles(options: RemoveActionFilesOptions): Prom
   };
 }
 
+/**
+ * Updates GitHub Actions to their latest versions or specified versions.
+ * @param options - Configuration for update
+ */
+export async function updateActionFiles(options: UpdateActionFilesOptions): Promise<UpdateActionFilesResult> {
+  const config = readConfig();
+  const updated: UpdatedAction[] = [];
+  const errors: UpdateError[] = [];
+  
+  // Determine which actions to update
+  let actionsToUpdate = config.actions;
+  let specificVersionRef: string | undefined;
+  
+  if (options.orgRepoRef) {
+    const { orgRepo, ref } = parseOrgRepoRef(options.orgRepoRef);
+    // Resolve @latest to actual tag name if needed
+    const token = options.token || process.env.GITHUB_TOKEN;
+    specificVersionRef = await resolveLatestRef(orgRepo, ref, token); // Store the specific version if provided
+    actionsToUpdate = config.actions.filter(action => action.orgRepo === orgRepo);
+    
+    if (actionsToUpdate.length === 0) {
+      errors.push({
+        orgRepo,
+        error: `Action ${orgRepo} not found in config`
+      });
+      return { updated, errors };
+    }
+  }
+
+  for (const action of actionsToUpdate) {
+    try {
+      const [owner, repo] = action.orgRepo.split('/');
+      const token = options.token || process.env.GITHUB_TOKEN;
+      
+      let newVersionRef: string;
+      if (options.useLatest) {
+        // Get the latest tag using semver
+        newVersionRef = await (getLatestTagSafe as any)(owner, repo, token);
+      } else if (specificVersionRef) {
+        // Use the specific version provided in the command
+        newVersionRef = specificVersionRef;
+      } else {
+        // Use the existing versionRef (for updating all actions without specifying versions)
+        newVersionRef = action.versionRef;
+      }
+      
+      // Check if this is actually an update
+      if (newVersionRef === action.versionRef && !options.useLatest) {
+        continue; // Skip if no update needed
+      }
+      
+      const previousVersion = action.versionRef;
+      
+      // Update the action using the add function (which handles replacement)
+      const addOptions: GenerateActionFilesOptions = {
+        orgRepoRef: `${action.orgRepo}@${newVersionRef}`,
+        outputDir: options.outputDir,
+        token: token,
+        useSha: options.useSha
+      };
+      
+      const result = await generateActionFiles(addOptions);
+      
+      updated.push({
+        orgRepo: action.orgRepo,
+        previousVersion,
+        newVersion: newVersionRef,
+        filePath: result.filePath
+      });
+      
+    } catch (error) {
+      errors.push({
+        orgRepo: action.orgRepo,
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  }
+  
+  return { updated, errors };
+}
+
 // Private helpers
 function createTempDir(): string {
   return fs.mkdtempSync(os.tmpdir() + '/action-yml-');
@@ -318,7 +441,7 @@ async function formatWithPrettier(code: string): Promise<string> {
 }
 
 /**
- * Parses orgRepoRef format like "actions/checkout@v4" or "actions/checkout"
+ * Parses orgRepoRef format like "actions/checkout@v4", "actions/checkout@latest", or "actions/checkout"
  * @param orgRepoRef - String in format org/repo@ref or org/repo
  * @returns Object with orgRepo and ref
  */
@@ -331,6 +454,22 @@ function parseOrgRepoRef(orgRepoRef: string): { orgRepo: string; ref?: string } 
     orgRepo: orgRepoRef.substring(0, atIndex),
     ref: orgRepoRef.substring(atIndex + 1)
   };
+}
+
+/**
+ * Resolves @latest references to the latest semver tag
+ * @param orgRepo - Organization/repository string
+ * @param ref - Reference that might be '@latest'
+ * @param token - GitHub token
+ * @returns Resolved reference (tag name for @latest, original ref otherwise)
+ */
+async function resolveLatestRef(orgRepo: string, ref: string | undefined, token?: string): Promise<string | undefined> {
+  if (ref === 'latest') {
+    const [owner, repo] = orgRepo.split('/');
+    if (!owner || !repo) throw new Error('orgRepo must be in the form org/repo');
+    return await getLatestTag(owner, repo, token);
+  }
+  return ref;
 }
 
 /**
@@ -370,7 +509,8 @@ async function updateOrgIndexFile(orgDir: string, actionName: string): Promise<v
   if (fs.existsSync(indexPath)) {
     const existingContent = fs.readFileSync(indexPath, 'utf8');
     // Check if the export already exists to avoid duplicates (check for the action reference regardless of quotes)
-    if (!existingContent.includes(`export * from './${actionName}.js'`)) {
+    const exportPattern = new RegExp(`export\\s*\\*\\s*from\\s*['"]\\./${actionName}\\.js['"]`);
+    if (!exportPattern.test(existingContent)) {
       const newContent = existingContent + exportStatement;
       const formattedContent = await formatWithPrettier(newContent);
       fs.writeFileSync(indexPath, formattedContent, 'utf8');
@@ -393,7 +533,8 @@ async function updateRootIndexFile(outputDir: string, orgName: string): Promise<
   if (fs.existsSync(indexPath)) {
     const existingContent = fs.readFileSync(indexPath, 'utf8');
     // Check if the export already exists to avoid duplicates (check for the org reference regardless of quotes)
-    if (!existingContent.includes(`export * as ${orgName} from`)) {
+    const exportPattern = new RegExp(`export\\s*\\*\\s*as\\s*${orgName}\\s*from\\s*['"]\\./${orgName}/index\\.js['"]`);
+    if (!exportPattern.test(existingContent)) {
       const newContent = existingContent + exportStatement;
       const formattedContent = await formatWithPrettier(newContent);
       fs.writeFileSync(indexPath, formattedContent, 'utf8');

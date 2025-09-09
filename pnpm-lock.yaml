@@ -23,6 +23,9 @@ importers:
       octokit:
         specifier: ^5.0.3
         version: 5.0.3
+      semver:
+        specifier: ^7.7.2
+        version: 7.7.2
       simple-git:
         specifier: ^3.28.0
         version: 3.28.0
@@ -36,6 +39,9 @@ importers:
       '@types/node':
         specifier: latest
         version: 24.3.1
+      '@types/semver':
+        specifier: ^7.5.8
+        version: 7.7.1
       jsii:
         specifier: latest
         version: 5.9.4
@@ -584,6 +590,9 @@ packages:
 
   '@types/react@19.1.12':
     resolution: {integrity: sha512-cMoR+FoAf/Jyq6+Df2/Z41jISvGZZ2eTlnsaJRptmZ76Caldwy1odD4xTr/gNV9VLj0AWgg/nmkevIyUfIIq5w==}
+
+  '@types/semver@7.7.1':
+    resolution: {integrity: sha512-FmgJfu+MOcQ370SD0ev7EI8TlCAfKYU+B4m5T3yXc1CiRN94g/SZPtsCkk506aUDtlMnFZvasDwHHUcZUEaYuA==}
 
   '@vitest/expect@3.2.4':
     resolution: {integrity: sha512-Io0yyORnB6sikFlt8QW5K7slY4OjqNX9jmJQ02QDda8lyM6B5oNgVWoSoKPac8/kgnCUzuHQKrSLtu/uOqqrig==}
@@ -1862,6 +1871,8 @@ snapshots:
   '@types/react@19.1.12':
     dependencies:
       csstype: 3.1.3
+
+  '@types/semver@7.7.1': {}
 
   '@vitest/expect@3.2.4':
     dependencies:

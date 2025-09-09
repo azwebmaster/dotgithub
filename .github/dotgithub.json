@@ -3,11 +3,25 @@
   "outputDir": "src",
   "actions": [
     {
+      "orgRepo": "actions/cache",
+      "ref": "0400d5f644dc74513175e3cd8d07132dd4860809",
+      "versionRef": "v4",
+      "displayName": "Cache",
+      "outputPath": "actions/actions/cache.ts"
+    },
+    {
       "orgRepo": "actions/checkout",
       "ref": "08c6903cd8c0fde910a37f88322edcfb5dd907a8",
       "versionRef": "v5",
       "displayName": "Checkout",
       "outputPath": "actions/actions/checkout.ts"
+    },
+    {
+      "orgRepo": "actions/setup-node",
+      "ref": "a0853c24544627f65ddf259abe73b1d18a591444",
+      "versionRef": "v5",
+      "displayName": "Setup Node.js environment",
+      "outputPath": "actions/actions/setup-node-js-environment.ts"
     }
   ],
   "options": {
