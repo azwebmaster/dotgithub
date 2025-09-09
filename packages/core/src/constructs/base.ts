@@ -32,6 +32,7 @@ export abstract class Construct implements IConstruct {
 export class GitHubStack extends Construct {
   private readonly _workflows: GitHubWorkflows = {};
   private readonly _resources: DotGitHubResources = {};
+  private readonly _metadata: Record<string, any> = {};
 
   constructor(scope?: IConstruct, id: string = 'GitHubStack') {
     super(scope, id);
@@ -120,5 +121,29 @@ export class GitHubStack extends Construct {
       // In a real implementation, you'd write to filesystem here
       console.log(`Would write ${filePath}:\n${content}`);
     }
+  }
+
+  setMetadata(key: string, value: any): void {
+    this._metadata[key] = value;
+  }
+
+  getMetadata(key: string): any {
+    return this._metadata[key];
+  }
+
+  getAllMetadata(): Record<string, any> {
+    return { ...this._metadata };
+  }
+
+  hasMetadata(key: string): boolean {
+    return key in this._metadata;
+  }
+
+  removeMetadata(key: string): boolean {
+    if (key in this._metadata) {
+      delete this._metadata[key];
+      return true;
+    }
+    return false;
   }
 }

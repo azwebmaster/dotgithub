@@ -22,6 +22,12 @@
       "versionRef": "v5",
       "displayName": "Setup Node.js environment",
       "outputPath": "actions/actions/setup-node-js-environment.ts"
+    },
+    {
+      "orgRepo": "actions/test-action",
+      "versionRef": "v1",
+      "displayName": "TestAction",
+      "outputPath": "actions/actions/testaction.ts"
     }
   ],
   "options": {
@@ -29,5 +35,7 @@
     "formatting": {
       "prettier": true
     }
-  }
+  },
+  "plugins": [],
+  "stacks": []
 }

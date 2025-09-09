@@ -72,12 +72,23 @@ export {
   updateOutputDir,
   getConfigPath,
   setConfigPath,
-  createDefaultConfig
+  createDefaultConfig,
+  getPluginsFromConfig,
+  getStacksFromConfig,
+  addPluginToConfig,
+  removePluginFromConfig,
+  addStackToConfig,
+  removeStackFromConfig
 } from './config';
 export type {
   DotGithubConfig,
   DotGithubAction
 } from './config';
+
+// Export plugin system
+export * from './plugins';
+export { StackSynthesizer } from './stack-synthesizer';
+export type { StackSynthesizerOptions, SynthesisResult, SynthesisResults } from './stack-synthesizer';
 
 export interface GenerateTypesResult {
   yaml: any;

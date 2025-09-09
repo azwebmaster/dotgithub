@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import type { PluginConfig, StackConfig } from './plugins/types';
 
 export interface DotGithubAction {
   /** GitHub repository in org/repo format */
@@ -21,6 +22,10 @@ export interface DotGithubConfig {
   outputDir: string;
   /** List of added actions */
   actions: DotGithubAction[];
+  /** Plugin configurations */
+  plugins?: PluginConfig[];
+  /** Stack configurations */
+  stacks?: StackConfig[];
   /** Additional configuration options */
   options?: {
     /** GitHub token source preference */
@@ -169,6 +174,8 @@ export function createDefaultConfig(): DotGithubConfig {
     version: CONFIG_VERSION,
     outputDir: DEFAULT_OUTPUT_DIR,
     actions: [],
+    plugins: [],
+    stacks: [],
     options: {
       tokenSource: 'env',
       formatting: {
@@ -301,6 +308,96 @@ export function updateOutputDir(outputDir: string): void {
 }
 
 /**
+ * Gets all plugins from the config
+ */
+export function getPluginsFromConfig(): PluginConfig[] {
+  const config = readConfig();
+  return config.plugins || [];
+}
+
+/**
+ * Gets all stacks from the config
+ */
+export function getStacksFromConfig(): StackConfig[] {
+  const config = readConfig();
+  return config.stacks || [];
+}
+
+/**
+ * Adds or updates a plugin in the config
+ */
+export function addPluginToConfig(pluginConfig: PluginConfig): void {
+  const config = readConfig();
+  if (!config.plugins) config.plugins = [];
+  
+  const existingIndex = config.plugins.findIndex(p => p.name === pluginConfig.name);
+  
+  if (existingIndex >= 0) {
+    config.plugins[existingIndex] = pluginConfig;
+  } else {
+    config.plugins.push(pluginConfig);
+  }
+  
+  config.plugins.sort((a, b) => a.name.localeCompare(b.name));
+  writeConfig(config);
+}
+
+/**
+ * Removes a plugin from the config
+ */
+export function removePluginFromConfig(pluginName: string): boolean {
+  const config = readConfig();
+  if (!config.plugins) return false;
+  
+  const originalLength = config.plugins.length;
+  config.plugins = config.plugins.filter(p => p.name !== pluginName);
+  
+  if (config.plugins.length !== originalLength) {
+    writeConfig(config);
+    return true;
+  }
+  
+  return false;
+}
+
+/**
+ * Adds or updates a stack in the config
+ */
+export function addStackToConfig(stackConfig: StackConfig): void {
+  const config = readConfig();
+  if (!config.stacks) config.stacks = [];
+  
+  const existingIndex = config.stacks.findIndex(s => s.name === stackConfig.name);
+  
+  if (existingIndex >= 0) {
+    config.stacks[existingIndex] = stackConfig;
+  } else {
+    config.stacks.push(stackConfig);
+  }
+  
+  config.stacks.sort((a, b) => a.name.localeCompare(b.name));
+  writeConfig(config);
+}
+
+/**
+ * Removes a stack from the config
+ */
+export function removeStackFromConfig(stackName: string): boolean {
+  const config = readConfig();
+  if (!config.stacks) return false;
+  
+  const originalLength = config.stacks.length;
+  config.stacks = config.stacks.filter(s => s.name !== stackName);
+  
+  if (config.stacks.length !== originalLength) {
+    writeConfig(config);
+    return true;
+  }
+  
+  return false;
+}
+
+/**
  * Validates and migrates config to current version
  */
 function validateAndMigrateConfig(config: any): DotGithubConfig {
@@ -308,6 +405,8 @@ function validateAndMigrateConfig(config: any): DotGithubConfig {
   if (!config.version) config.version = CONFIG_VERSION;
   if (!config.outputDir) config.outputDir = DEFAULT_OUTPUT_DIR;
   if (!Array.isArray(config.actions)) config.actions = [];
+  if (!Array.isArray(config.plugins)) config.plugins = [];
+  if (!Array.isArray(config.stacks)) config.stacks = [];
   
   // Ensure options exist
   if (!config.options) {
@@ -320,6 +419,16 @@ function validateAndMigrateConfig(config: any): DotGithubConfig {
   // Validate each action
   config.actions = config.actions.filter((action: any) => {
     return action.orgRepo && action.ref && action.versionRef && action.displayName;
+  });
+  
+  // Validate each plugin
+  config.plugins = config.plugins.filter((plugin: any) => {
+    return plugin.name && plugin.package;
+  });
+  
+  // Validate each stack
+  config.stacks = config.stacks.filter((stack: any) => {
+    return stack.name && Array.isArray(stack.plugins);
   });
   
   return config as DotGithubConfig;

@@ -8,6 +8,8 @@ import { createRegenerateCommand } from './commands/regenerate.js';
 import { createListCommand } from './commands/list.js';
 import { createInitCommand } from './commands/init.js';
 import { createUpdateCommand } from './commands/update.js';
+import { createSynthCommand } from './commands/synth.js';
+import { createPluginCommand } from './commands/plugin.js';
 
 export function helloCli(): string {
   return 'Hello from @dotgithub/cli!';
@@ -31,6 +33,8 @@ program.addCommand(createConfigCommand());
 program.addCommand(createRemoveCommand());
 program.addCommand(createRegenerateCommand());
 program.addCommand(createListCommand());
+program.addCommand(createSynthCommand());
+program.addCommand(createPluginCommand());
 
 if (require.main === module) {
   program.parse(process.argv);
