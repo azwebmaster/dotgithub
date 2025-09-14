@@ -1,7 +1,7 @@
 import { Command } from 'commander';
-import { removeActionFiles } from '@dotgithub/core';
+import { removeActionFiles, type DotGithubContext } from '@dotgithub/core';
 
-export function createRemoveCommand(): Command {
+export function createRemoveCommand(createContext: (options?: any) => DotGithubContext): Command {
   return new Command('remove')
     .alias('rm')
     .argument('<orgRepoRef>', 'GitHub repository reference (e.g., actions/checkout@v4 or actions/checkout)')
@@ -9,7 +9,8 @@ export function createRemoveCommand(): Command {
     .option('--keep-files', 'Remove from tracking but keep generated files')
     .action(async (orgRepoRef, options) => {
       try {
-        const result = await removeActionFiles({
+        const context = createContext();
+        const result = await removeActionFiles(context, {
           orgRepoRef,
           keepFiles: options.keepFiles
         });

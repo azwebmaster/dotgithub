@@ -1,7 +1,7 @@
 import { Command } from 'commander';
-import { readConfig, writeConfig, getConfigPath, updateOutputDir, getActionsFromConfig, getResolvedOutputPath, removeActionFromConfig, createConfigFile } from '@dotgithub/core';
+import { readConfig, writeConfig, getConfigPath, updateOutputDir, getActionsFromConfig, getResolvedOutputPath, removeActionFromConfig, createConfigFile, type DotGithubContext } from '@dotgithub/core';
 
-export function createConfigCommand(): Command {
+export function createConfigCommand(createContext: (options?: any) => DotGithubContext): Command {
   const configCmd = new Command('config')
     .description('Manage dotgithub configuration');
 
@@ -46,7 +46,7 @@ export function createConfigCommand(): Command {
         console.log('================');
         
         actions.forEach(action => {
-          console.log(`\n• ${action.displayName}`);
+          console.log(`\n• ${action.functionName}()`);
           console.log(`  Repository: ${action.orgRepo}@${action.versionRef} (SHA: ${action.ref.substring(0, 8)})`);
           console.log(`  Output: ${getResolvedOutputPath(action)}`);
         });

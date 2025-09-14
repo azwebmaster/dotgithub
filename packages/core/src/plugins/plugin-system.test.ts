@@ -1,8 +1,92 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { GitHubStack } from '../constructs/base';
 import { PluginManager } from './manager';
-import { ciPlugin, releasePlugin } from './built-in';
-import type { PluginConfig, StackConfig } from './types';
+import type { PluginConfig, StackConfig, DotGitHubPlugin } from './types';
+
+// Mock plugins for testing
+const ciPlugin: DotGitHubPlugin = {
+  name: 'ci',
+  description: 'CI/CD workflow plugin',
+  validate(context) {
+    if (context.config.packageManager && !['npm', 'pnpm', 'yarn', 'bun'].includes(context.config.packageManager)) {
+      throw new Error('packageManager must be one of: npm, pnpm, yarn, bun');
+    }
+  },
+  apply(context) {
+    const { stack, config } = context;
+    const nodeVersions = config.nodeVersions || ['18', '20'];
+    const packageManager = config.packageManager || 'npm';
+    const testCommand = config.testCommand || `${packageManager} test`;
+    const buildCommand = config.buildCommand;
+    const lintCommand = config.lintCommand;
+
+    const installCmd = packageManager === 'yarn' ? 'yarn install --frozen-lockfile' : `${packageManager} install`;
+    
+    const steps: any[] = [
+      { uses: 'actions/checkout@v4' },
+      { uses: 'actions/setup-node@v4', with: { 'node-version': '${{ matrix.node-version }}' } },
+      { run: installCmd }
+    ];
+
+    if (lintCommand) {
+      steps.push({ run: lintCommand });
+    }
+    if (buildCommand) {
+      steps.push({ run: buildCommand });
+    }
+    steps.push({ run: testCommand });
+
+    stack.addWorkflow('ci', {
+      name: 'CI',
+      on: { push: {}, pull_request: {} },
+      jobs: {
+        test: {
+          'runs-on': ['ubuntu-latest'],
+          strategy: {
+            matrix: {
+              'node-version': nodeVersions
+            }
+          },
+          steps
+        }
+      }
+    });
+
+    stack.setMetadata('ci', {
+      enabled: true,
+      nodeVersions,
+      packageManager,
+      hasTests: true,
+      hasBuild: !!buildCommand,
+      hasLint: !!lintCommand
+    });
+  }
+};
+
+const releasePlugin: DotGitHubPlugin = {
+  name: 'release',
+  description: 'Release automation plugin',
+  dependencies: ['ci'],
+  apply(context) {
+    const { stack } = context;
+    
+    stack.addWorkflow('release', {
+      name: 'Release',
+      on: { push: { branches: ['main'] } },
+      jobs: {
+        release: {
+          'runs-on': ['ubuntu-latest'],
+          steps: [
+            { uses: 'actions/checkout@v4' },
+            { uses: 'actions/setup-node@v4', with: { 'node-version': '20' } },
+            { run: 'npm install' },
+            { run: 'npx release-it' }
+          ]
+        }
+      }
+    });
+  }
+};
 
 describe('Plugin System', () => {
   let manager: PluginManager;

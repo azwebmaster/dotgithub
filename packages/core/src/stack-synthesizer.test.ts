@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { StackSynthesizer } from './stack-synthesizer';
 import { readConfig, writeConfig, setConfigPath, createDefaultConfig } from './config';
+import { DotGithubContext } from './context';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
@@ -55,14 +56,18 @@ describe('StackSynthesizer', () => {
   });
 
   it('should create synthesizer with project root detection', () => {
-    const synthesizer = new StackSynthesizer();
+    const config = createDefaultConfig();
+    const context = new DotGithubContext({ config, configPath });
+    const synthesizer = new StackSynthesizer({ context });
     expect(synthesizer.getProjectRoot()).toBeDefined();
   });
 
   it('should create synthesizer with custom options', () => {
+    const config = createDefaultConfig();
+    const context = new DotGithubContext({ config, configPath });
     const synthesizer = new StackSynthesizer({
-      projectRoot: '/custom/path',
-      outputDir: '.github'
+      context,
+      projectRoot: '/custom/path'
     });
     
     expect(synthesizer.getProjectRoot()).toBe('/custom/path');
@@ -82,7 +87,10 @@ describe('StackSynthesizer', () => {
       return '';
     });
 
-    const synthesizer = new StackSynthesizer({ projectRoot: tmpDir });
+    const config = createDefaultConfig();
+    config.stacks = [];
+    const context = new DotGithubContext({ config, configPath });
+    const synthesizer = new StackSynthesizer({ context, projectRoot: tmpDir });
     const results = await synthesizer.synthesizeAll();
 
     expect(results.success).toBe(true);
@@ -91,7 +99,18 @@ describe('StackSynthesizer', () => {
   });
 
   it('should synthesize stack with mocked built-in plugins', async () => {
-    const synthesizer = new StackSynthesizer({ projectRoot: tmpDir });
+    const config = createDefaultConfig();
+    config.stacks = [{
+      name: 'test-stack',
+      plugins: ['ci']
+    }];
+    config.plugins = [{
+      name: 'ci',
+      package: 'built-in',
+      config: {}
+    }];
+    const context = new DotGithubContext({ config, configPath });
+    const synthesizer = new StackSynthesizer({ context, projectRoot: tmpDir });
     
     // Mock the plugin manager to use built-in plugins
     const pluginManager = synthesizer.getPluginManager();
@@ -154,7 +173,7 @@ describe('StackSynthesizer', () => {
     expect(results.errors).toHaveLength(0);
 
     const result = results.results[0];
-    expect(result.stackConfig.name).toBe('main');
+    expect(result.stackConfig.name).toBe('test-stack');
     expect(result.stackConfig.plugins).toEqual(['ci']);
     expect(result.pluginResults).toHaveLength(1);
     expect(result.pluginResults[0].success).toBe(true);
@@ -167,7 +186,18 @@ describe('StackSynthesizer', () => {
   });
 
   it('should handle plugin loading errors', async () => {
-    const synthesizer = new StackSynthesizer({ projectRoot: tmpDir });
+    const config = createDefaultConfig();
+    config.stacks = [{
+      name: 'test-stack',
+      plugins: ['ci']
+    }];
+    config.plugins = [{
+      name: 'ci',
+      package: 'built-in',
+      config: {}
+    }];
+    const context = new DotGithubContext({ config, configPath });
+    const synthesizer = new StackSynthesizer({ context, projectRoot: tmpDir });
     
     // Mock plugin manager to throw error during loading
     const pluginManager = synthesizer.getPluginManager();
@@ -182,7 +212,18 @@ describe('StackSynthesizer', () => {
   });
 
   it('should handle plugin execution errors', async () => {
-    const synthesizer = new StackSynthesizer({ projectRoot: tmpDir });
+    const config = createDefaultConfig();
+    config.stacks = [{
+      name: 'test-stack',
+      plugins: ['ci']
+    }];
+    config.plugins = [{
+      name: 'ci',
+      package: 'built-in',
+      config: {}
+    }];
+    const context = new DotGithubContext({ config, configPath });
+    const synthesizer = new StackSynthesizer({ context, projectRoot: tmpDir });
     
     // Mock successful plugin loading but failed execution
     const pluginManager = synthesizer.getPluginManager();
@@ -203,7 +244,18 @@ describe('StackSynthesizer', () => {
   });
 
   it('should write synthesized files', async () => {
-    const synthesizer = new StackSynthesizer({ projectRoot: tmpDir });
+    const config = createDefaultConfig();
+    config.stacks = [{
+      name: 'test-stack',
+      plugins: ['ci']
+    }];
+    config.plugins = [{
+      name: 'ci',
+      package: 'built-in',
+      config: {}
+    }];
+    const context = new DotGithubContext({ config, configPath });
+    const synthesizer = new StackSynthesizer({ context, projectRoot: tmpDir });
     
     // Mock successful synthesis
     const pluginManager = synthesizer.getPluginManager();

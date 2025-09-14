@@ -2,7 +2,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import { generateActionFiles } from './index';
+import { generateActionFiles, createDefaultConfig } from './index';
+import { DotGithubContext } from './context';
 
 vi.mock('./github');
 vi.mock('./git');
@@ -46,7 +47,16 @@ runs:
       fs.writeFileSync(path.join(tmpDir, 'action.yml'), actionYml);
     });
 
-    const result = await generateActionFiles({
+    const config = createDefaultConfig();
+    const configPath = path.join(tmpDir, 'dotgithub.json');
+    fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+    
+    const context = new DotGithubContext({ 
+      config, 
+      configPath 
+    });
+    
+    const result = await generateActionFiles(context, {
       orgRepoRef: 'actions/my-action@v4',
       outputDir: tmpDir
     });
@@ -55,10 +65,12 @@ runs:
 
     // Verify structure matches the expected format from the issue
     expect(generatedContent).toContain('import { createStep } from "@dotgithub/core";');
-    expect(generatedContent).toContain('import type { GitHubStep, GitHubStepBase } from "@dotgithub/core";');
+    expect(generatedContent).toContain('GitHubStep');
+    expect(generatedContent).toContain('GitHubStepBase');
+    expect(generatedContent).toContain('GitHubActionInputValue');
     expect(generatedContent).toContain('export type MyActionInputs = {');
-    expect(generatedContent).toContain('/** Property 1 */\n  prop1: string;');
-    expect(generatedContent).toContain('/** Property 2 | default: "p2" */\n  "prop-2"?: string;');
+    expect(generatedContent).toContain('/** Property 1 */\n  prop1: GitHubActionInputValue;');
+    expect(generatedContent).toContain('/** Property 2 | default: "p2" */\n  "prop-2"?: GitHubActionInputValue;');
     expect(generatedContent).toContain('export type MyActionOutputs = {');
     expect(generatedContent).toContain('/** Output 1 */\n  output1: string;');
     expect(generatedContent).toContain('Action description');

@@ -1,12 +1,13 @@
 import { Command } from 'commander';
 import * as fs from 'fs';
 import * as path from 'path';
+import type { DotGithubContext } from '@dotgithub/core';
 
 export interface InitCommandOptions {
   force?: boolean;
 }
 
-export function createInitCommand(): Command {
+export function createInitCommand(createContext: (options?: any) => DotGithubContext): Command {
   return new Command('init')
     .description('Initialize a new GitHub Actions workspace with TypeScript and ESM support')
     .option('--force', 'Overwrite existing files if they exist', false)

@@ -1,7 +1,7 @@
 import * as path from 'path';
 import * as fs from 'fs';
 import type { PluginConfig, PluginModule, DotGitHubPlugin, PluginLoadResult } from './types';
-import { resolvePathFromConfig } from '../config';
+import { resolveFromOutput } from '../config';
 
 export class PluginResolver {
   constructor(private readonly projectRoot: string) {}
@@ -36,7 +36,7 @@ export class PluginResolver {
   }
 
   private async loadLocalPlugin(pluginPath: string): Promise<DotGitHubPlugin> {
-    const resolvedPath = resolvePathFromConfig(pluginPath);
+    const resolvedPath = resolveFromOutput(pluginPath);
     
     if (!fs.existsSync(resolvedPath)) {
       throw new Error(`Local plugin not found at: ${resolvedPath}`);

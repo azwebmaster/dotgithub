@@ -23,7 +23,7 @@ export type CacheOutputs = {
   /** A boolean value to indicate an exact match was found for the primary key */
   "cache-hit": string;
 };
-/*
+/**
   Cache artifacts like dependencies and build outputs to improve workflow execution time
   https://github.com/actions/cache/tree/v4
 */

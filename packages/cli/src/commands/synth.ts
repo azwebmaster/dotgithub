@@ -1,8 +1,8 @@
 import { Command } from 'commander';
-import { StackSynthesizer } from '@dotgithub/core';
+import { StackSynthesizer, type DotGithubContext } from '@dotgithub/core';
 import * as path from 'path';
 
-export function createSynthCommand(): Command {
+export function createSynthCommand(createContext: (options?: any) => DotGithubContext): Command {
   const synthCommand = new Command('synth');
 
   synthCommand
@@ -13,9 +13,10 @@ export function createSynthCommand(): Command {
     .option('--verbose', 'show detailed output', false)
     .action(async (options) => {
       try {
+        const context = createContext(options);
         const synthesizer = new StackSynthesizer({
-          projectRoot: process.cwd(),
-          outputDir: options.output
+          context,
+          projectRoot: process.cwd()
         });
 
         if (options.dryRun) {

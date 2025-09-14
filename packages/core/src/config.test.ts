@@ -119,7 +119,7 @@ describe('config', () => {
         orgRepo: 'actions/checkout',
         ref: 'abc123def456',
         versionRef: 'v4',
-        displayName: 'Checkout',
+        functionName: 'checkout',
         outputPath: absoluteOutputPath
       }, 'src');
 
@@ -128,7 +128,7 @@ describe('config', () => {
       expect(actions[0]!.orgRepo).toBe('actions/checkout');
       expect(actions[0]!.ref).toBe('abc123def456');
       expect(actions[0]!.versionRef).toBe('v4');
-      expect(actions[0]!.displayName).toBe('Checkout');
+      expect(actions[0]!.functionName).toBe('checkout');
       
       
       // The stored outputPath should be relative to the outputDir
@@ -156,7 +156,7 @@ describe('config', () => {
         orgRepo: 'actions/checkout',
         ref: 'abc123def456',
         versionRef: 'v4',
-        displayName: 'Checkout',
+        functionName: 'checkout',
         outputPath: initialOutputPath
       }, 'src');
 
@@ -165,14 +165,14 @@ describe('config', () => {
         orgRepo: 'actions/checkout',
         ref: 'abc123def456',
         versionRef: 'v4',
-        displayName: 'Checkout v4',
+        functionName: 'checkoutV4',
         outputPath: updatedOutputPath
       }, 'src');
 
       const actions = getActionsFromConfig();
       expect(actions).toHaveLength(1);
       expect(actions[0]!.versionRef).toBe('v4');
-      expect(actions[0]!.displayName).toBe('Checkout v4');
+      expect(actions[0]!.functionName).toBe('checkoutV4');
       expect(actions[0]!.outputPath).toBe(expectedRelativePath);
       const resolvedPath = getResolvedOutputPath(actions[0]!);
       expect(path.basename(resolvedPath)).toBe(path.basename(updatedOutputPath));
@@ -194,7 +194,7 @@ describe('config', () => {
         orgRepo: 'actions/setup-node',
         ref: 'def456ghi789',
         versionRef: 'v3',
-        displayName: 'Setup Node',
+        functionName: 'setupNode',
         outputPath: setupNodePath
       }, 'src');
 
@@ -202,7 +202,7 @@ describe('config', () => {
         orgRepo: 'actions/checkout',
         ref: 'abc123def456',
         versionRef: 'v4',
-        displayName: 'Checkout',
+        functionName: 'checkout',
         outputPath: checkoutPath
       }, 'src');
 
@@ -226,7 +226,7 @@ describe('config', () => {
         orgRepo: 'actions/checkout',
         ref: 'abc123def456',
         versionRef: 'v4',
-        displayName: 'Checkout',
+        functionName: 'checkout',
         outputPath: path.join(outputDir, 'actions', 'checkout', 'checkout.ts')
       });
 
@@ -234,7 +234,7 @@ describe('config', () => {
         orgRepo: 'actions/setup-node',
         ref: 'def456ghi789',
         versionRef: 'v3',
-        displayName: 'Setup Node',
+        functionName: 'setupNode',
         outputPath: path.join(outputDir, 'actions', 'setup-node', 'setup-node.ts')
       });
 
@@ -242,7 +242,7 @@ describe('config', () => {
         orgRepo: 'actions/cache',
         ref: 'ghi789abc123',
         versionRef: 'v3',
-        displayName: 'Cache',
+        functionName: 'cache',
         outputPath: path.join(outputDir, 'actions', 'cache', 'cache.ts')
       }, 'src');
     });
@@ -301,7 +301,7 @@ describe('config', () => {
         orgRepo: 'actions/checkout',
         ref: 'abc123def456',
         versionRef: 'v4',
-        displayName: 'Checkout',
+        functionName: 'checkout',
         outputPath: absolutePath
       }, 'src');
 
@@ -337,14 +337,14 @@ describe('config', () => {
             orgRepo: 'actions/checkout',
             ref: 'abc123def456',
             versionRef: 'v4',
-            displayName: 'Checkout',
+            functionName: 'checkout',
             outputPath: '/path/to/checkout.ts',
             addedAt: '2024-01-01T00:00:00.000Z'
           },
           {
             // Invalid action missing required fields
             orgRepo: 'incomplete/action'
-            // Missing ref, filename, displayName
+            // Missing ref, functionName, outputPath
           }
         ]
       };
@@ -371,7 +371,7 @@ describe('config', () => {
         orgRepo: 'actions/checkout',
         ref: 'abc123def456',
         versionRef: 'v4',
-        displayName: 'Checkout',
+        functionName: 'checkout',
         outputPath: absolutePath
       }, 'src');
 
@@ -396,7 +396,7 @@ describe('config', () => {
         orgRepo: 'actions/setup-node',
         ref: 'abc123def456',
         versionRef: 'v3',
-        displayName: 'Setup Node',
+        functionName: 'setupNode',
         outputPath: absolutePath
       }, 'src');
 
@@ -421,7 +421,7 @@ describe('config', () => {
         orgRepo: 'actions/checkout',
         ref: 'sha123abc',
         versionRef: 'v4',
-        displayName: 'Checkout v4',
+        functionName: 'checkoutV4',
         outputPath: absolutePath1
       }, 'src');
 
@@ -429,14 +429,14 @@ describe('config', () => {
       expect(actions).toHaveLength(1);
       expect(actions[0]!.ref).toBe('sha123abc');
       expect(actions[0]!.versionRef).toBe('v4');
-      expect(actions[0]!.displayName).toBe('Checkout v4');
+      expect(actions[0]!.functionName).toBe('checkoutV4');
       
       // Add same orgRepo with different ref - should update, not duplicate
       addActionToConfig({
         orgRepo: 'actions/checkout',
         ref: 'v5',
         versionRef: 'v5',
-        displayName: 'Checkout v5',
+        functionName: 'checkoutV5',
         outputPath: absolutePath2
       }, 'src');
 
@@ -445,7 +445,7 @@ describe('config', () => {
       expect(actions[0]!.orgRepo).toBe('actions/checkout');
       expect(actions[0]!.ref).toBe('v5'); // Should be updated
       expect(actions[0]!.versionRef).toBe('v5'); // Should be updated
-      expect(actions[0]!.displayName).toBe('Checkout v5'); // Should be updated
+      expect(actions[0]!.functionName).toBe('checkoutV5'); // Should be updated
     });
   });
 

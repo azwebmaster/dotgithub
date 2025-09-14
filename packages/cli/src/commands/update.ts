@@ -1,7 +1,7 @@
 import { Command } from 'commander';
-import { updateActionFiles } from '@dotgithub/core';
+import { updateActionFiles, type DotGithubContext } from '@dotgithub/core';
 
-export function createUpdateCommand(): Command {
+export function createUpdateCommand(createContext: (options?: any) => DotGithubContext): Command {
   return new Command('update')
     .argument('[orgRepoRef]', 'GitHub repository reference (e.g., actions/checkout). If not provided, updates all actions')
     .description('Update GitHub Actions to latest versions or use versionRef')
@@ -11,7 +11,8 @@ export function createUpdateCommand(): Command {
     .option('--no-sha', 'Use the original ref instead of resolving to SHA')
     .action(async (orgRepoRef, options) => {
       try {
-        const result = await updateActionFiles({
+        const context = createContext();
+        const result = await updateActionFiles(context, {
           orgRepoRef,
           outputDir: options.output,
           token: options.token,

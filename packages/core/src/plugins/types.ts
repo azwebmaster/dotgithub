@@ -20,16 +20,22 @@ export interface PluginContext {
   projectRoot: string;
 }
 
-export interface DotGitHubPlugin {
+export abstract class DotGitHubPlugin {
   readonly name: string;
   readonly version?: string;
   readonly description?: string;
   readonly dependencies?: string[];
   readonly conflicts?: string[];
+
+  constructor() {
+    this.name = 'base-plugin';
+  }
   
   validate?(context: PluginContext): Promise<void> | void;
-  
-  apply(context: PluginContext): Promise<void> | void;
+
+  apply(context: PluginContext): Promise<void> | void {
+    // Default implementation does nothing
+  }
 }
 
 export interface PluginModule {

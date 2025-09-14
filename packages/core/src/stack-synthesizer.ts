@@ -2,17 +2,17 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { GitHubStack } from './constructs/base';
 import { PluginManager } from './plugins/manager';
-import { getConfigPath, readConfig } from './config';
+import { getProjectRoot } from './config';
 import type { 
   StackConfig, 
   PluginConfig, 
   PluginExecutionResult
 } from './plugins/types';
+import type { DotGithubContext } from './context';
 
 export interface StackSynthesizerOptions {
+  context: DotGithubContext;
   projectRoot?: string;
-  configPath?: string;
-  outputDir?: string;
 }
 
 export interface SynthesisResult {
@@ -30,18 +30,20 @@ export interface SynthesisResults {
 }
 
 export class StackSynthesizer {
+  private readonly context: DotGithubContext;
   private readonly projectRoot: string;
   private readonly pluginManager: PluginManager;
 
-  constructor(options: StackSynthesizerOptions = {}) {
-    this.projectRoot = options.projectRoot || this.findProjectRoot(options.configPath);
+  constructor(options: StackSynthesizerOptions) {
+    this.context = options.context;
+    this.projectRoot = options.projectRoot || getProjectRoot();
     this.pluginManager = new PluginManager({
       projectRoot: this.projectRoot
     });
   }
 
   async synthesizeAll(): Promise<SynthesisResults> {
-    const config = readConfig();
+    const config = this.context.config;
     const results: SynthesisResult[] = [];
     const errors: Error[] = [];
 
@@ -101,7 +103,6 @@ export class StackSynthesizer {
     const files = stack.synth();
 
     // Determine output path
-    const config = readConfig();
     const outputPath = path.join(
       this.projectRoot,
       '.github'
@@ -155,22 +156,6 @@ export class StackSynthesizer {
     }
   }
 
-  private findProjectRoot(configPath?: string): string {
-    if (configPath) {
-      return path.dirname(path.dirname(configPath));
-    }
-
-    const detectedConfigPath = getConfigPath();
-    const configDir = path.dirname(detectedConfigPath);
-    
-    // If config is in .github directory, project root is parent
-    if (path.basename(configDir) === '.github') {
-      return path.dirname(configDir);
-    }
-    
-    // Otherwise, config directory is the project root
-    return configDir;
-  }
 
   getPluginManager(): PluginManager {
     return this.pluginManager;

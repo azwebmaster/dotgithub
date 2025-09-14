@@ -2,9 +2,11 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { getDefaultBranch, getRefSha, getLatestTag, getLatestTagSafe } from './github';
 import { generateTypesFromActionYml } from './types-generator';
-import { addActionToConfig, readConfig, writeConfig, getResolvedOutputPath, getConfigPath } from './config';
+import { addActionToConfig, writeConfig } from './config';
 import type { DotGithubAction } from './config';
 import { formatWithPrettier, updateOrgIndexFile, updateRootIndexFile, updateIndexFilesAfterRemoval } from './file-utils';
+import { toProperCase } from './utils';
+import type { DotGithubContext } from './context';
 
 export interface GenerateActionFilesOptions {
   orgRepoRef: string;
@@ -62,7 +64,7 @@ export interface UpdateError {
  * When no version is specified, defaults to the latest semver tag.
  * @param options - Configuration for file generation
  */
-export async function generateActionFiles(options: GenerateActionFilesOptions): Promise<GenerateActionFilesResult> {
+export async function generateActionFiles(context: DotGithubContext, options: GenerateActionFilesOptions): Promise<GenerateActionFilesResult> {
   const { orgRepo, ref } = parseOrgRepoRef(options.orgRepoRef);
   const [owner, repo] = orgRepo.split('/');
   if (!owner || !repo) throw new Error('orgRepo must be in the form org/repo');
@@ -90,17 +92,12 @@ export async function generateActionFiles(options: GenerateActionFilesOptions): 
   const useSha = options.useSha !== false;
   const finalRef = useSha ? await getRefSha(owner, repo, resolvedRef, token) : resolvedRef;
 
-  // Use output directory from config if not specified
-  const configPath = path.dirname(getConfigPath());
-  const config = readConfig();
-  const outputDir = options.outputDir ? path.resolve(options.outputDir) : path.resolve(configPath, config.outputDir);
-
   // Check if this action already exists in config (only one per org/repo allowed)
-  const existingAction = config.actions.find(action => action.orgRepo === orgRepo);
+  const existingAction = context.config.actions.find(action => action.orgRepo === orgRepo);
   if (existingAction) {
     // Remove the existing action's files before adding the new one
     try {
-      const existingPath = getResolvedOutputPath(existingAction);
+      const existingPath = context.resolvePath(existingAction.outputPath);
       if (fs.existsSync(existingPath)) {
         fs.unlinkSync(existingPath);
       }
@@ -119,7 +116,7 @@ export async function generateActionFiles(options: GenerateActionFilesOptions): 
   const actionNameForFile = generateFilenameFromActionName(result.yaml.name);
   const fileName = `${actionNameForFile}.ts`;
   
-  const rootActionDir = path.join(outputDir, 'actions');
+  const rootActionDir = context.resolvePath('actions');
   const actionDir = path.join(rootActionDir, owner);
   const filePath = path.join(actionDir, fileName);
 
@@ -139,17 +136,23 @@ export async function generateActionFiles(options: GenerateActionFilesOptions): 
   // Update or create index.ts file in the org folder
   await updateOrgIndexFile(actionDir, actionNameForFile);
   
-  // Update or create index.ts file in the root output directory
-  await updateRootIndexFile(outputDir, 'actions');
+  // Update or create index.ts file in the actions directory
+  await updateRootIndexFile(rootActionDir, owner);
+
+  // Generate function name (camelCase version of action name)
+  const actionName = result.yaml.name.replace(/[^a-zA-Z0-9]/g, ' ');
+  const ActionName = toProperCase(actionName.replace(/\s+/g, ' '));
+  const functionName = ActionName.charAt(0).toLowerCase() + ActionName.slice(1);
 
   // Track this action in the config file
+  const relativePath = path.relative(rootActionDir, filePath);
   addActionToConfig({
     orgRepo,
     ref: useSha ? finalRef : resolvedRef,  // Use SHA when useSha=true, versionRef when useSha=false
     versionRef: resolvedRef,
-    displayName: result.yaml.name,
-    outputPath: filePath
-  }, outputDir);
+    functionName,
+    outputPath: path.join('actions', relativePath)
+  });
 
   return {
     filePath,
@@ -162,21 +165,20 @@ export async function generateActionFiles(options: GenerateActionFilesOptions): 
  * Removes a GitHub Action from tracking and optionally deletes generated files.
  * @param options - Configuration for removal
  */
-export async function removeActionFiles(options: RemoveActionFilesOptions): Promise<RemoveActionFilesResult> {
+export async function removeActionFiles(context: DotGithubContext, options: RemoveActionFilesOptions): Promise<RemoveActionFilesResult> {
   const { orgRepo } = parseOrgRepoRef(options.orgRepoRef);
   const [owner, repo] = orgRepo.split('/');
   if (!owner || !repo) throw new Error('orgRepoRef must be in the form org/repo');
 
-  const config = readConfig();
   let removedAction: DotGithubAction | undefined;
   let removedFiles: string[] = [];
 
   // Find the action in config (should only be one per org/repo)
-  const actionIndex = config.actions.findIndex(action => action.orgRepo === orgRepo);
+  const actionIndex = context.config.actions.findIndex(action => action.orgRepo === orgRepo);
   
   if (actionIndex >= 0) {
-    removedAction = config.actions[actionIndex];
-    config.actions.splice(actionIndex, 1);
+    removedAction = context.config.actions[actionIndex];
+    context.config.actions.splice(actionIndex, 1);
   }
 
   if (!removedAction) {
@@ -190,7 +192,7 @@ export async function removeActionFiles(options: RemoveActionFilesOptions): Prom
   // Remove files if not keeping them
   if (!options.keepFiles) {
     try {
-      const resolvedPath = getResolvedOutputPath(removedAction);
+      const resolvedPath = context.resolvePath(removedAction.outputPath);
       if (fs.existsSync(resolvedPath)) {
         fs.unlinkSync(resolvedPath);
         removedFiles.push(resolvedPath);
@@ -206,11 +208,11 @@ export async function removeActionFiles(options: RemoveActionFilesOptions): Prom
   }
 
   // Save updated config
-  writeConfig(config);
+  writeConfig(context.config);
 
   return {
     removed: true,
-    actionName: removedAction.displayName,
+    actionName: removedAction.functionName,
     removedFiles
   };
 }
@@ -219,13 +221,12 @@ export async function removeActionFiles(options: RemoveActionFilesOptions): Prom
  * Updates GitHub Actions to their latest versions or specified versions.
  * @param options - Configuration for update
  */
-export async function updateActionFiles(options: UpdateActionFilesOptions): Promise<UpdateActionFilesResult> {
-  const config = readConfig();
+export async function updateActionFiles(context: DotGithubContext, options: UpdateActionFilesOptions): Promise<UpdateActionFilesResult> {
   const updated: UpdatedAction[] = [];
   const errors: UpdateError[] = [];
   
   // Determine which actions to update
-  let actionsToUpdate = config.actions;
+  let actionsToUpdate = context.config.actions;
   let specificVersionRef: string | undefined;
   
   if (options.orgRepoRef) {
@@ -233,7 +234,7 @@ export async function updateActionFiles(options: UpdateActionFilesOptions): Prom
     // Resolve @latest to actual tag name if needed
     const token = options.token || process.env.GITHUB_TOKEN;
     specificVersionRef = await resolveLatestRef(orgRepo, ref, token); // Store the specific version if provided
-    actionsToUpdate = config.actions.filter(action => action.orgRepo === orgRepo);
+    actionsToUpdate = context.config.actions.filter(action => action.orgRepo === orgRepo);
     
     if (actionsToUpdate.length === 0) {
       errors.push({
@@ -276,7 +277,7 @@ export async function updateActionFiles(options: UpdateActionFilesOptions): Prom
         useSha: options.useSha
       };
       
-      const result = await generateActionFiles(addOptions);
+      const result = await generateActionFiles(context, addOptions);
       
       updated.push({
         orgRepo: action.orgRepo,
@@ -348,6 +349,6 @@ function generateFilenameFromActionName(actionName: string): string {
  * @returns TypeScript code with import statements
  */
 function addImportsToGeneratedTypes(generatedTypes: string): string {
-  const imports = `import { createStep } from '@dotgithub/core';\nimport type { GitHubStep, GitHubStepBase } from '@dotgithub/core';\n\n`;
+  const imports = `import { createStep } from '@dotgithub/core';\nimport type { GitHubStep, GitHubStepBase, GitHubActionInputValue } from '@dotgithub/core';\n\n`;
   return imports + generatedTypes;
 }

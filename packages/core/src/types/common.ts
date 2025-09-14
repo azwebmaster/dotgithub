@@ -1,4 +1,4 @@
-import type { GitHubWorkflow, GitHubWorkflows } from "./workflow";
+import type { GitHubWorkflows } from "./workflow";
 
 export type DotGitHubRootResources = DotGitHubResources & { workflows: GitHubWorkflows };
 export type DotGitHubResources = Record<string, DotGitHubResource>;
@@ -11,6 +11,8 @@ export type DotGitHubResource = {
 }
 
 export type DotGitHub = DotGitHubRootResources;
+
+export type GitHubActionInputValue = string | boolean | number;
 
 export type GitHubActionInput ={
   description?: string;

@@ -3,16 +3,17 @@
 exports[`generateTypesFromYml > generates correct types and function 1`] = `
 "export type CreateUserInputs = {
     /** This is a name | default: "John Doe" */
-    name: string;
+    name: GitHubActionInputValue;
     /** This is the address */
-    address?: string;
+    address?: GitHubActionInputValue;
 };
 export type CreateUserOutputs = {
     /** ID of user */
     id: string;
 };
-/*
+/**
   Creates a user
+
   https://github.com/actions/create-user/tree/sha1
 */
 export function createUser(inputs: CreateUserInputs, step?: Partial<GitHubStepBase>, ref?: string): GitHubStep<CreateUserInputs> {
@@ -23,10 +24,11 @@ export function createUser(inputs: CreateUserInputs, step?: Partial<GitHubStepBa
 
 exports[`generateTypesFromYml > handles missing outputs 1`] = `
 "export type SimpleInputs = {
-    foo: string;
+    foo: GitHubActionInputValue;
 };
-/*
+/**
   A simple action
+
   https://github.com/actions/my-action/tree/main
 */
 export function simple(inputs: SimpleInputs, step?: Partial<GitHubStepBase>, ref?: string): GitHubStep<SimpleInputs> {

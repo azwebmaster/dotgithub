@@ -1,5 +1,5 @@
 
-import type { GitHubActionInput, GitHubActionOutput, GitHubActionYml } from './types';
+import type { GitHubActionInput, GitHubActionOutput, GitHubActionYml, GitHubActionInputValue } from './types';
 import type { GitHubStepBase } from './types/workflow';
 import { toProperCase } from './utils';
 
@@ -32,7 +32,7 @@ export function buildInputMembers(inputs?: GitHubActionInputs): string {
       if (val.default !== undefined) commentParts.push(`default: ${JSON.stringify(val.default)}`);
       const desc = commentParts.length > 0 ? `/** ${commentParts.join(' | ')} */\n    ` : '';
       const required = val.required === true || val.required === 'true';
-      return `${desc}${quotePropertyName(key)}${required ? '' : '?'}: string;`;
+      return `${desc}${quotePropertyName(key)}${required ? '' : '?'}: GitHubActionInputValue;`;
     })
     .join('\n    ');
 }
@@ -115,7 +115,7 @@ export function generateTypesFromYml(
 
   // Attach comment with description + repo link using displayRef
   const descriptionComment = yml.description
-    ? `/*\n  ${yml.description}\n  https://github.com/${repo}/tree/${displayRef}\n*/\n`
+    ? `/**\n  ${yml.description}\n\n  https://github.com/${repo}/tree/${displayRef}\n*/\n`
     : '';
 
   const func = descriptionComment + createFactoryFunction(ActionName, actionNameCamel, repo, ref, yml.inputs as any);

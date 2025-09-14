@@ -1,10 +1,10 @@
-import type { GitHubStep } from "./types/workflow";
+import type { GitHubStep, GitHubStepWith, GitHubStepBase } from "./types/workflow";
 
 import type { EnvVars } from './types/common';
 
 export const actionVersions: EnvVars = {};
 
-export function createStep<T>(uses: string, step?: GitHubStep<T>, ref?: string): GitHubStep<T> {
+export function createStep<T extends GitHubStepWith>(uses: string, step?: Partial<Omit<GitHubStep<T>, "uses">>, ref?: string): GitHubStep<T> {
     const version = actionVersions[uses] || ref || 'latest';
     const newStep: GitHubStep<T> = {
         uses: `${uses}@${version}`,

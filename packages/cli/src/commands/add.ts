@@ -1,7 +1,7 @@
 import { Command } from 'commander';
-import { generateActionFiles, readConfig } from '@dotgithub/core';
+import { generateActionFiles, type DotGithubContext } from '@dotgithub/core';
 
-export function createAddCommand(): Command {
+export function createAddCommand(createContext: (options?: any) => DotGithubContext): Command {
   return new Command('add')
     .argument('<orgRepoRef>', 'GitHub repository reference (e.g., actions/checkout@v4, actions/checkout@latest, or actions/checkout - defaults to latest tag)')
     .description('Generate TypeScript types from a GitHub Action and save to output directory')
@@ -10,7 +10,8 @@ export function createAddCommand(): Command {
     .option('--no-sha', 'Use the original ref instead of resolving to SHA')
     .action(async (orgRepoRef, options) => {
       try {
-        const result = await generateActionFiles({
+        const context = createContext();
+        const result = await generateActionFiles(context, {
           orgRepoRef,
           outputDir: options.output,
           token: options.token,

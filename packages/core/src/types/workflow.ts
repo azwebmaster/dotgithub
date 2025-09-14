@@ -80,7 +80,7 @@ export type GitHubConcurrency = {
   "cancel-in-progress"?: boolean | string;
 };
 
-export type GitHubSteps = GitHubStep<any>[]
+export type GitHubSteps = GitHubStepAny[];
 
 export type GitHubJob = {
   name?: string;
@@ -146,19 +146,27 @@ export type GitHubJobService = {
   options?: string;
 };
 
-export type GitHubStep<T> = GitHubStepBase & {
+export type GitHubStep<T extends GitHubStepWith> = GitHubStepBase & {
+  uses: string;
   with?: T;
+  run?: never;
 }
+
+export type GitHubStepRun = GitHubStepBase & {
+  run: string;
+  shell?: string;
+  "working-directory"?: string;
+  uses?: never;
+  with?: never;
+}
+
+export type GitHubStepAny = GitHubStep<GitHubStepWith> | GitHubStepRun;
 
 export type GitHubStepBase = {
   id?: string;
   if?: string;
   name?: string;
-  uses?: string;
-  run?: string;
-  shell?: string;
   env?: GitHubEnv;
   "continue-on-error"?: boolean;
   "timeout-minutes"?: number;
-  "working-directory"?: string;
 };

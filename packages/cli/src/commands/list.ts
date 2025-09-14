@@ -1,7 +1,7 @@
 import { Command } from 'commander';
-import { getActionsFromConfig } from '@dotgithub/core';
+import { getActionsFromConfig, type DotGithubContext } from '@dotgithub/core';
 
-export function createListCommand(): Command {
+export function createListCommand(createContext: (options?: any) => DotGithubContext): Command {
   return new Command('list')
     .description('List all tracked GitHub Actions')
     .action(async () => {
@@ -16,7 +16,7 @@ export function createListCommand(): Command {
         console.log(`Found ${actions.length} tracked action${actions.length === 1 ? '' : 's'}:\n`);
         
         actions.forEach((action, index) => {
-          console.log(`${index + 1}. ${action.displayName}`);
+          console.log(`${index + 1}. ${action.functionName}()`);
           console.log(`   Repository: ${action.orgRepo}`);
           console.log(`   Version: ${action.versionRef}`);
           console.log(`   SHA: ${action.ref}`);

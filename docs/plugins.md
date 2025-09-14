@@ -736,7 +736,7 @@ export class SecurityPlugin extends BasePlugin {
     });
 
     const scanJob = new JobConstruct(workflow, 'analyze', {
-      runsOn: ['ubuntu-latest'],
+      'runs-on: ['ubuntu-latest'],
       strategy: {
         matrix: {
           language: ['javascript', 'typescript']

@@ -1,9 +1,15 @@
 import { describe, it, expect } from 'vitest';
 import { createRegenerateCommand } from './regenerate';
+import { createDefaultConfig, DotGithubContext } from '@dotgithub/core';
 
 describe('createRegenerateCommand', () => {
+  const mockCreateContext = () => new DotGithubContext({ 
+    config: createDefaultConfig(), 
+    configPath: '/tmp/dotgithub.json' 
+  });
+
   it('creates a regenerate command with correct configuration', () => {
-    const command = createRegenerateCommand();
+    const command = createRegenerateCommand(mockCreateContext);
     
     expect(command.name()).toBe('regenerate');
     expect(command.description()).toBe('Regenerate TypeScript files based on the config');
@@ -15,7 +21,7 @@ describe('createRegenerateCommand', () => {
   });
 
   it('has correct option descriptions', () => {
-    const command = createRegenerateCommand();
+    const command = createRegenerateCommand(mockCreateContext);
     
     // Verify option configuration
     const tokenOption = command.options.find(opt => opt.flags === '-t, --token <token>');

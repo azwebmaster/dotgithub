@@ -6,12 +6,13 @@ import {
   removePluginFromConfig,
   addStackToConfig,
   removeStackFromConfig,
-  generatePluginFromGithubFiles
+  generatePluginFromGithubFiles,
+  type DotGithubContext
 } from '@dotgithub/core';
 import type { PluginConfig, StackConfig } from '@dotgithub/core';
 import * as path from 'path';
 
-export function createPluginCommand(): Command {
+export function createPluginCommand(createContext: (options?: any) => DotGithubContext): Command {
   const pluginCommand = new Command('plugin');
   pluginCommand.description('Manage plugins and stacks');
 
@@ -96,20 +97,20 @@ export function createPluginCommand(): Command {
   const pluginCreateCommand = new Command('create')
     .description('Create a plugin from .github files')
     .requiredOption('--name <name>', 'plugin name')
-    .requiredOption('--source <path|repo>', 'local path to .github directory or GitHub repo (org/repo@ref)')
-    .option('--output <dir>', 'output directory for plugin file', './plugins')
+    .requiredOption('--source <path|repo|url>', 'local path to .github directory, GitHub repo (org/repo@ref), or GitHub file URL')
     .option('--description <desc>', 'plugin description')
     .option('--overwrite', 'overwrite existing plugin file')
     .action(async (options) => {
       try {
         console.log(`🔌 Creating plugin "${options.name}" from ${options.source}...`);
         
+        const context = createContext(options);
         const result = await generatePluginFromGithubFiles({
           pluginName: options.name,
           source: options.source,
-          outputDir: options.output,
           description: options.description,
-          overwrite: options.overwrite
+          overwrite: options.overwrite,
+          context
         });
         
         console.log(`✅ Plugin created successfully!`);

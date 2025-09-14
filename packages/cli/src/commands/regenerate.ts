@@ -1,11 +1,11 @@
 import { Command } from 'commander';
-import { readConfig, getActionsFromConfigWithResolvedPaths, generateTypesFromActionYml } from '@dotgithub/core';
+import { readConfig, getActionsFromConfigWithResolvedPaths, generateTypesFromActionYml, type DotGithubContext } from '@dotgithub/core';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as prettier from 'prettier';
 import { minimatch } from 'minimatch';
 
-export function createRegenerateCommand(): Command {
+export function createRegenerateCommand(createContext: (options?: any) => DotGithubContext): Command {
   return new Command('regenerate')
     .argument('[pattern]', 'Optional glob pattern to filter actions (e.g., "actions/*" or "*/checkout")')
     .description('Regenerate TypeScript files based on the config')
@@ -142,7 +142,7 @@ function generateFilenameFromActionName(actionName: string): string {
  * Adds necessary import statements to the generated TypeScript code
  */
 function addImportsToGeneratedTypes(generatedTypes: string): string {
-  const imports = `import { createStep } from '@dotgithub/core';\nimport type { GitHubStep, GitHubStepBase } from '@dotgithub/core';\n\n`;
+  const imports = `import { createStep } from '@dotgithub/core';\nimport type { GitHubStep, GitHubStepBase, GitHubActionInputValue } from '@dotgithub/core';\n\n`;
   return imports + generatedTypes;
 }
 
