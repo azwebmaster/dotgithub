@@ -22,13 +22,17 @@ function quotePropertyName(propertyName: string): string {
   return needsQuoting(propertyName) ? `"${propertyName}"` : propertyName;
 }
 
+function escapeJSDocComment(text: string): string {
+  return text.replace(/\*\//g, '*\\/');
+}
+
 
 export function buildInputMembers(inputs?: GitHubActionInputs): string {
   if (!inputs) return '';
   return Object.entries(inputs)
     .map(([key, val]) => {
       let commentParts: string[] = [];
-      if (val.description) commentParts.push(val.description);
+      if (val.description) commentParts.push(escapeJSDocComment(val.description));
       if (val.default !== undefined) commentParts.push(`default: ${JSON.stringify(val.default)}`);
       const desc = commentParts.length > 0 ? `/** ${commentParts.join(' | ')} */\n    ` : '';
       const required = val.required === true || val.required === 'true';
@@ -44,7 +48,7 @@ function buildOutputMembers(outputs?: GitHubActionOutputs): string {
   if (!outputs) return '';
   return Object.entries(outputs)
     .map(([key, val]) => {
-      const desc = val.description ? `/** ${val.description} */\n    ` : '';
+      const desc = val.description ? `/** ${escapeJSDocComment(val.description)} */\n    ` : '';
       return `${desc}${quotePropertyName(key)}: string;`;
     })
     .join('\n    ');
@@ -115,7 +119,7 @@ export function generateTypesFromYml(
 
   // Attach comment with description + repo link using displayRef
   const descriptionComment = yml.description
-    ? `/**\n  ${yml.description}\n\n  https://github.com/${repo}/tree/${displayRef}\n*/\n`
+    ? `/**\n  ${escapeJSDocComment(yml.description)}\n\n  https://github.com/${repo}/tree/${displayRef}\n*/\n`
     : '';
 
   const func = descriptionComment + createFactoryFunction(ActionName, actionNameCamel, repo, ref, yml.inputs as any);

@@ -61,12 +61,12 @@ export type { StackSynthesizerOptions, SynthesisResult, SynthesisResults } from 
 
 // Export plugin generator
 export { 
-  generatePluginFromGithubFiles, 
+  generatePluginFromGitHubFiles, 
   createPluginFromFiles 
 } from './plugin-generator.js';
 export type { 
-  GeneratePluginFromGithubFilesOptions, 
-  GeneratePluginFromGithubFilesResult,
+  GeneratePluginFromGitHubFilesOptions, 
+  GeneratePluginFromGitHubFilesResult,
   CreatePluginFromFilesOptions,
   CreatePluginFromFilesResult
 } from './plugin-generator.js';

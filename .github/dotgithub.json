@@ -3,11 +3,111 @@
   "outputDir": "src",
   "actions": [
     {
+      "orgRepo": "actions/cache",
+      "ref": "0400d5f644dc74513175e3cd8d07132dd4860809",
+      "versionRef": "v4",
+      "functionName": "cache",
+      "outputPath": "actions/actions/cache/cache.ts"
+    },
+    {
+      "orgRepo": "actions/cache",
+      "ref": "0400d5f644dc74513175e3cd8d07132dd4860809",
+      "versionRef": "v4",
+      "functionName": "restoreCache",
+      "outputPath": "actions/actions/cache/restore/restore-cache.ts",
+      "actionPath": "restore"
+    },
+    {
+      "orgRepo": "actions/cache",
+      "ref": "0400d5f644dc74513175e3cd8d07132dd4860809",
+      "versionRef": "v4",
+      "functionName": "saveACache",
+      "outputPath": "actions/actions/cache/save/save-a-cache.ts",
+      "actionPath": "save"
+    },
+    {
       "orgRepo": "actions/checkout",
-      "ref": "08c6903cd8c0fde910a37f88322edcfb5dd907a8",
-      "versionRef": "v5",
+      "ref": "08eba0b27e820071cde6df949e0beb9ba4906955",
+      "versionRef": "v4",
       "functionName": "checkout",
-      "outputPath": "../../actions/actions/checkout.ts"
+      "outputPath": "actions/actions/checkout.ts"
+    },
+    {
+      "orgRepo": "actions/setup-node",
+      "ref": "55YtaEqYEUM7ASAZ9XmVdSBNy6F7r5zkdLsJFv2ZPtAx0020",
+      "versionRef": "v4",
+      "functionName": "setupNodeJsEnvironment",
+      "outputPath": "actions/actions/setup-node.ts"
+    },
+    {
+      "orgRepo": "actions/upload-artifact",
+      "ref": "ea165f8d65b6e75b540449e92b4886f43607fa02",
+      "versionRef": "v4",
+      "functionName": "uploadABuildArtifact",
+      "outputPath": "actions/actions/upload-artifact/upload-a-build-artifact.ts"
+    },
+    {
+      "orgRepo": "actions/upload-artifact",
+      "ref": "ea165f8d65b6e75b540449e92b4886f43607fa02",
+      "versionRef": "v4",
+      "functionName": "mergeBuildArtifacts",
+      "outputPath": "actions/actions/upload-artifact/merge/merge-build-artifacts.ts",
+      "actionPath": "merge"
+    },
+    {
+      "orgRepo": "github/codeql-action",
+      "ref": "528ca598d956c91826bd742262cdfc5d02b77710",
+      "versionRef": "v3",
+      "functionName": "codeQLStub",
+      "outputPath": "actions/github/codeql-action/codeql-stub.ts"
+    },
+    {
+      "orgRepo": "github/codeql-action",
+      "ref": "528ca598d956c91826bd742262cdfc5d02b77710",
+      "versionRef": "v3",
+      "functionName": "codeQLFinish",
+      "outputPath": "actions/github/codeql-action/analyze/codeql-finish.ts",
+      "actionPath": "analyze"
+    },
+    {
+      "orgRepo": "github/codeql-action",
+      "ref": "528ca598d956c91826bd742262cdfc5d02b77710",
+      "versionRef": "v3",
+      "functionName": "codeQLAutobuild",
+      "outputPath": "actions/github/codeql-action/autobuild/codeql-autobuild.ts",
+      "actionPath": "autobuild"
+    },
+    {
+      "orgRepo": "github/codeql-action",
+      "ref": "528ca598d956c91826bd742262cdfc5d02b77710",
+      "versionRef": "v3",
+      "functionName": "codeQLInit",
+      "outputPath": "actions/github/codeql-action/init/codeql-init.ts",
+      "actionPath": "init"
+    },
+    {
+      "orgRepo": "github/codeql-action",
+      "ref": "528ca598d956c91826bd742262cdfc5d02b77710",
+      "versionRef": "v3",
+      "functionName": "codeQLResolveBuildEnvironment",
+      "outputPath": "actions/github/codeql-action/resolve-environment/codeql-resolve-build-environment.ts",
+      "actionPath": "resolve-environment"
+    },
+    {
+      "orgRepo": "github/codeql-action",
+      "ref": "528ca598d956c91826bd742262cdfc5d02b77710",
+      "versionRef": "v3",
+      "functionName": "codeQLStartProxy",
+      "outputPath": "actions/github/codeql-action/start-proxy/codeql-start-proxy.ts",
+      "actionPath": "start-proxy"
+    },
+    {
+      "orgRepo": "github/codeql-action",
+      "ref": "528ca598d956c91826bd742262cdfc5d02b77710",
+      "versionRef": "v3",
+      "functionName": "codeScanningUploadSARIF",
+      "outputPath": "actions/github/codeql-action/upload-sarif/code-scanning-upload-sarif.ts",
+      "actionPath": "upload-sarif"
     }
   ],
   "plugins": [

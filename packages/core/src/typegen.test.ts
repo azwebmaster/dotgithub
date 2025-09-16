@@ -18,6 +18,17 @@ describe('buildInputMembers', () => {
   it('returns empty string for undefined inputs', () => {
     expect(buildInputMembers(undefined)).toBe('');
   });
+
+  it('escapes */ sequences in input descriptions', () => {
+    const inputs = {
+      test: {
+        description: 'This is a comment /* with */ embedded comment',
+        required: true
+      },
+    };
+    const result = buildInputMembers(inputs);
+    expect(result).toContain('/** This is a comment /* with *\\/ embedded comment */');
+  });
 });
 import { describe, it, expect } from 'vitest';
 import { generateTypesFromYml } from './typegen';
@@ -136,5 +147,31 @@ describe('generateTypesFromYml', () => {
     const code = generateTypesFromYml(ymlSample, 'actions/clone-test', 'sha123abc', 'v4');
     expect(code).toContain('https://github.com/actions/clone-test/tree/v4'); // Comment uses versionRef
     expect(code).toContain('ref ?? "sha123abc"'); // createStep uses ref (SHA)
+  });
+
+  it('escapes */ sequences in action descriptions', () => {
+    const ymlWithComment: GitHubActionYml = {
+      name: 'comment-test',
+      description: 'This action has */ comment terminators in description',
+      inputs: {
+        test: { required: true },
+      },
+    };
+    const code = generateTypesFromYml(ymlWithComment);
+    expect(code).toContain('This action has *\\/ comment terminators in description');
+  });
+
+  it('escapes */ sequences in output descriptions', () => {
+    const ymlWithOutputComment: GitHubActionYml = {
+      name: 'output-comment-test',
+      description: 'Test output comment escaping',
+      outputs: {
+        result: {
+          description: 'Output with */ comment terminator'
+        }
+      },
+    };
+    const code = generateTypesFromYml(ymlWithOutputComment);
+    expect(code).toContain('/** Output with *\\/ comment terminator */');
   });
 });

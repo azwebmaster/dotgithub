@@ -60,7 +60,7 @@ interface FunctionCallObject {
   [key: string]: any;
 }
 
-export interface GeneratePluginFromGithubFilesOptions {
+export interface GeneratePluginFromGitHubFilesOptions {
   pluginName: string;
   source: string; // Local path, GitHub repo (org/repo@ref format), or GitHub URL to file
   description?: string;
@@ -68,7 +68,7 @@ export interface GeneratePluginFromGithubFilesOptions {
   context: DotGithubContext; // Required context for config access and output directory resolution
 }
 
-export interface GeneratePluginFromGithubFilesResult {
+export interface GeneratePluginFromGitHubFilesResult {
   pluginPath: string;
   pluginName: string;
   filesFound: string[];
@@ -102,7 +102,7 @@ export function createPluginFromFiles(options: CreatePluginFromFilesOptions): Cr
   
   // Validate path exists and is accessible
   if (!githubFilesPath || githubFilesPath.trim().length === 0) {
-    throw new Error('Github files path is required and cannot be empty');
+    throw new Error('GitHub files path is required and cannot be empty');
   }
   
   let stats: fs.Stats;
@@ -151,7 +151,7 @@ export function createPluginFromFiles(options: CreatePluginFromFilesOptions): Cr
 /**
  * Generates a plugin from .github files (local path or GitHub repo)
  */
-export async function generatePluginFromGithubFiles(options: GeneratePluginFromGithubFilesOptions): Promise<GeneratePluginFromGithubFilesResult> {
+export async function generatePluginFromGitHubFiles(options: GeneratePluginFromGitHubFilesOptions): Promise<GeneratePluginFromGitHubFilesResult> {
   const { pluginName, source, description, overwrite = false, context } = options;
   
   // Use context to resolve path relative to configured output directory

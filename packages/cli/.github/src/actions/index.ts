@@ -1,2 +1,1 @@
-export * as github from "./github/index.js";
 export * as actions from "./actions/index.js";

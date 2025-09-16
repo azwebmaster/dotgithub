@@ -15,6 +15,8 @@ export interface DotGithubAction {
   functionName: string;
   /** Output file path where the TypeScript was generated */
   outputPath: string;
+  /** Path within the repository to the action (empty string for root) */
+  actionPath?: string;
 }
 
 export interface DotGithubConfig {
@@ -278,9 +280,10 @@ export function writeConfig(config: DotGithubConfig): void {
 export function addActionToConfig(actionInfo: DotGithubAction, outputDir?: string): void {
   const config = readConfig();
   
-  // Check if action already exists (only check orgRepo, not ref)
+  // Check if action already exists (check orgRepo AND actionPath for uniqueness)
   const existingIndex = config.actions.findIndex(
-    action => action.orgRepo === actionInfo.orgRepo
+    action => action.orgRepo === actionInfo.orgRepo &&
+              (action.actionPath || '') === (actionInfo.actionPath || '')
   );
   
   const actionWithRelativePath: DotGithubAction = {
@@ -296,8 +299,12 @@ export function addActionToConfig(actionInfo: DotGithubAction, outputDir?: strin
     config.actions.push(actionWithRelativePath);
   }
   
-  // Sort actions by orgRepo for consistent ordering
-  config.actions.sort((a, b) => a.orgRepo.localeCompare(b.orgRepo));
+  // Sort actions by orgRepo and then actionPath for consistent ordering
+  config.actions.sort((a, b) => {
+    const orgComparison = a.orgRepo.localeCompare(b.orgRepo);
+    if (orgComparison !== 0) return orgComparison;
+    return (a.actionPath || '').localeCompare(b.actionPath || '');
+  });
   
   writeConfig(config);
 }

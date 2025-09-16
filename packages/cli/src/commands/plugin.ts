@@ -6,7 +6,7 @@ import {
   removePluginFromConfig,
   addStackToConfig,
   removeStackFromConfig,
-  generatePluginFromGithubFiles,
+  generatePluginFromGitHubFiles,
   type DotGithubContext
 } from '@dotgithub/core';
 import type { PluginConfig, StackConfig } from '@dotgithub/core';
@@ -105,7 +105,7 @@ export function createPluginCommand(createContext: (options?: any) => DotGithubC
         console.log(`🔌 Creating plugin "${options.name}" from ${options.source}...`);
         
         const context = createContext(options);
-        const result = await generatePluginFromGithubFiles({
+        const result = await generatePluginFromGitHubFiles({
           pluginName: options.name,
           source: options.source,
           description: options.description,

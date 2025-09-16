@@ -10,17 +10,21 @@ export class DotGithubContext {
   /** The dotgithub configuration */
   config: DotGithubConfig;
   configPath: string;
-  outputBasePath: string;
+  outputPath: string;
 
   constructor({ config, configPath }: DotGithubContextOptions) {
     this.config = config;
     this.configPath = configPath;
-    this.outputBasePath = path.dirname(configPath);
+    this.outputPath = path.join(path.dirname(configPath), this.config.outputDir);
   }
 
   resolvePath(relativePath: string): string {
-    const outputDir = path.join(this.outputBasePath, this.config.outputDir);
-    return path.resolve(outputDir, relativePath);
+    return path.resolve(this.outputPath, relativePath);
+  }
+
+  relativePath(absolutePath: string): string {
+    console.log(`Calculating relative path from ${this.outputPath} to ${absolutePath}`);
+    return path.relative(this.outputPath, absolutePath);
   }
 
   static fromConfig(configPath: string): DotGithubContext {

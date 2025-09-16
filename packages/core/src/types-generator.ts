@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import * as os from 'os';
+import * as path from 'path';
 import { getDefaultBranch } from './github';
 import { cloneRepo } from './git';
 import { readActionYml } from './action-yml';
@@ -57,4 +58,63 @@ async function cloneRepoToTemp(owner: string, repo: string, ref: string | undefi
 
 function cleanupTempDir(tmpDir: string) {
   fs.rmSync(tmpDir, { recursive: true, force: true });
+}
+
+/**
+ * Finds all action.yml or action.yaml files in a repository directory
+ * @param repoDir Directory containing the cloned repository
+ * @returns Array of paths relative to repoDir where action files were found
+ */
+export function findAllActionsInRepo(repoDir: string): string[] {
+  const actionPaths: string[] = [];
+
+  function searchDirectory(dir: string, relativePath: string = '') {
+    // Check for action.yml or action.yaml in current directory
+    const actionYmlPath = path.join(dir, 'action.yml');
+    const actionYamlPath = path.join(dir, 'action.yaml');
+
+    if (fs.existsSync(actionYmlPath) || fs.existsSync(actionYamlPath)) {
+      actionPaths.push(relativePath);
+    }
+
+    // Search subdirectories (skip .git and node_modules)
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (entry.isDirectory() &&
+          entry.name !== '.git' &&
+          entry.name !== 'node_modules' &&
+          entry.name !== '.github' &&
+          !entry.name.startsWith('.')) {
+        const subDir = path.join(dir, entry.name);
+        const subRelativePath = relativePath ? path.join(relativePath, entry.name) : entry.name;
+        searchDirectory(subDir, subRelativePath);
+      }
+    }
+  }
+
+  searchDirectory(repoDir);
+  return actionPaths;
+}
+
+/**
+ * Generates types for an action at a specific path within a cloned repo
+ * @param tmpDir Temporary directory containing the cloned repo
+ * @param actionPath Path to the action directory within the repo (empty string for root)
+ * @param orgRepo Organization/repository string
+ * @param ref Reference to use in generated code
+ * @param versionRef User-friendly version reference
+ */
+export function generateTypesFromActionYmlAtPath(
+  tmpDir: string,
+  actionPath: string,
+  orgRepo: string,
+  ref: string,
+  versionRef?: string
+): GenerateTypesResult {
+  const actionDir = actionPath ? path.join(tmpDir, actionPath) : tmpDir;
+  const yml = readActionYml(actionDir);
+  // For actions in subdirectories, include the action path in the repo string
+  const repoForUses = actionPath ? `${orgRepo}/${actionPath}` : orgRepo;
+  const type = generateTypesFromYml(yml, repoForUses, ref, versionRef);
+  return { yaml: yml, type };
 }

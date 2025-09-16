@@ -590,7 +590,7 @@ async apply(context: PluginContext): Promise<void> {
       .replace(/node-version: '[^']*'/, `node-version: '${config.nodeVersion}'`);
   }
   
-  const result = generateGithubFiles({
+  const result = generateGitHubFiles({
     outputDir: path.join(context.projectRoot, '.github'),
     files: filesToGenerate,
     overwrite: config.overwriteExisting || false,
