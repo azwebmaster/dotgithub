@@ -92,8 +92,8 @@ interface PluginContext {
       "package": "@dotgithub/plugin-ci",
       "config": {
         "nodeVersions": ["18", "20"],
-        "testCommand": "pnpm test",
-        "packageManager": "pnpm"
+        "testCommand": "bun test",
+        "packageManager": "bun"
       },
       "enabled": true
     }
@@ -141,10 +141,10 @@ Creates standard CI/CD workflows for Node.js projects.
   "package": "built-in",
   "config": {
     "nodeVersions": ["18", "20", "22"],
-    "packageManager": "pnpm",
-    "testCommand": "pnpm test",
-    "buildCommand": "pnpm build", 
-    "lintCommand": "pnpm lint",
+    "packageManager": "bun",
+    "testCommand": "bun test",
+    "buildCommand": "bun run build",
+    "lintCommand": "bun run lint",
     "workingDirectory": "./packages/api",
     "runOn": ["ubuntu-latest", "windows-latest"],
     "branches": ["main", "develop"],
@@ -156,7 +156,7 @@ Creates standard CI/CD workflows for Node.js projects.
 
 **Generated Workflow:**
 - Runs tests on multiple Node.js versions
-- Supports npm, pnpm, yarn, and bun package managers
+- Supports npm, yarn, pnpm, and bun package managers
 - Configurable lint and build steps
 - Matrix strategy for multiple environments
 
@@ -174,13 +174,13 @@ Automated release workflow for npm packages.
   "package": "built-in",
   "config": {
     "branches": ["main"],
-    "packageManager": "pnpm",
-    "buildCommand": "pnpm build",
+    "packageManager": "bun",
+    "buildCommand": "bun run build",
     "registry": "https://registry.npmjs.org",
     "workingDirectory": "./packages/core",
     "releaseIt": true,
     "semanticRelease": false,
-    "customReleaseCommand": "pnpm release",
+    "customReleaseCommand": "bun run release",
     "nodeVersion": "20"
   }
 }
@@ -249,7 +249,7 @@ dotgithub plugin list
    Package: @dotgithub/plugin-ci
    Config: {
      "nodeVersions": ["18", "20"],
-     "testCommand": "pnpm test"
+     "testCommand": "bun test"
    }
 
 ✅ release
@@ -871,14 +871,14 @@ Plugins can share data through stack metadata:
 // In CI plugin
 stack.setMetadata('ci', {
   hasTests: true,
-  packageManager: 'pnpm',
+  packageManager: 'bun',
   nodeVersions: ['18', '20']
 });
 
 // In Release plugin  
 const ciMetadata = stack.getMetadata('ci');
-if (ciMetadata?.packageManager === 'pnpm') {
-  // Use pnpm-specific release commands
+if (ciMetadata?.packageManager === 'bun') {
+  // Use bun-specific release commands
 }
 ```
 
@@ -894,7 +894,7 @@ apply(context: PluginContext): void {
   const hasTSConfig = fs.existsSync(path.join(projectRoot, 'tsconfig.json'));
   
   // Check if project is a monorepo
-  const hasWorkspaces = fs.existsSync(path.join(projectRoot, 'pnpm-workspace.yaml'));
+  const hasWorkspaces = fs.existsSync(path.join(projectRoot, 'bun-workspace.yaml'));
   
   if (hasTSConfig) {
     this.addTypeCheckStep();
@@ -1027,10 +1027,10 @@ dotgithub synth --stack frontend
       "package": "built-in",
       "config": {
         "nodeVersions": ["18", "20"],
-        "packageManager": "pnpm",
-        "testCommand": "pnpm test:coverage",
-        "buildCommand": "pnpm build",
-        "lintCommand": "pnpm lint"
+        "packageManager": "bun",
+        "testCommand": "bun test:coverage",
+        "buildCommand": "bun run build",
+        "lintCommand": "bun run lint"
       }
     },
     {
@@ -1038,8 +1038,8 @@ dotgithub synth --stack frontend
       "package": "built-in",
       "config": {
         "branches": ["main"],
-        "packageManager": "pnpm",
-        "buildCommand": "pnpm build"
+        "packageManager": "bun",
+        "buildCommand": "bun run build"
       }
     },
     {
@@ -1090,11 +1090,11 @@ dotgithub synth --stack frontend
       "name": "ci",
       "package": "built-in",
       "config": {
-        "packageManager": "pnpm",
+        "packageManager": "bun",
         "workingDirectory": ".",
-        "testCommand": "pnpm -r run test",
-        "buildCommand": "pnpm -r run build",
-        "lintCommand": "pnpm -r run lint"
+        "testCommand": "bun run test",
+        "buildCommand": "bun run build",
+        "lintCommand": "bun run lint"
       }
     },
     {
@@ -1102,8 +1102,8 @@ dotgithub synth --stack frontend
       "package": "built-in",
       "config": {
         "workingDirectory": "./packages/core",
-        "packageManager": "pnpm",
-        "customReleaseCommand": "pnpm changeset publish"
+        "packageManager": "bun",
+        "customReleaseCommand": "bun changeset publish"
       }
     },
     {
@@ -1111,8 +1111,8 @@ dotgithub synth --stack frontend
       "package": "built-in", 
       "config": {
         "workingDirectory": "./packages/cli",
-        "packageManager": "pnpm",
-        "customReleaseCommand": "pnpm changeset publish"
+        "packageManager": "bun",
+        "customReleaseCommand": "bun changeset publish"
       }
     }
   ],

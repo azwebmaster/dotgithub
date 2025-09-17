@@ -4,14 +4,14 @@
     {
       "label": "Build all packages",
       "type": "shell",
-      "command": "pnpm -r run build",
+      "command": "bun run build",
       "group": "build",
       "problemMatcher": []
     },
     {
       "label": "Test all packages",
       "type": "shell",
-      "command": "pnpm -r run test",
+      "command": "bun test",
       "group": "test",
       "problemMatcher": []
     }
@@ -19,7 +19,7 @@
     {
       "label": "Install dependencies",
       "type": "shell",
-      "command": "pnpm install",
+      "command": "bun install",
       "presentation": {
         "reveal": "always",
         "panel": "shared"

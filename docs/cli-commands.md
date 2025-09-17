@@ -426,7 +426,7 @@ dotgithub plugin stack list
    Plugins: lint-plugin, test-plugin, build-plugin
    Config: {
      "nodeVersion": "18",
-     "packageManager": "pnpm"
+     "packageManager": "bun"
    }
 
 📦 backend-stack

@@ -38,7 +38,7 @@ describe('StackSynthesizer', () => {
               package: 'built-in',
               config: {
                 nodeVersions: ['18', '20'],
-                testCommand: 'pnpm test'
+                testCommand: 'bun test'
               }
             }
           ],

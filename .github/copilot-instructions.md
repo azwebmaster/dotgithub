@@ -16,10 +16,10 @@
 
 ## Quick Reference
 
-- **Install dependencies:** `pnpm install`
-- **Build all packages:** `pnpm -r run build`
-- **Test all packages:** `pnpm -r run test`
-- **Test core only:** `pnpm --filter ./packages/core test`
+- **Install dependencies:** `bun install`
+- **Build all packages:** `bun run build`
+- **Test all packages:** `bun test`
+- **Test core only:** `bun --filter ./packages/core test`
 - **Edit only within `packages/*`, never move files across package boundaries.**
 - **Extract helpers for repeated logic, place in `src/typegen-helpers.ts`.**
 - **Run tests after every change.**
@@ -31,7 +31,7 @@
 This file gives actionable, repository-specific guidance to AI coding agents so they can be productive quickly.
 
 - **Repo type:** TypeScript monorepo
-- **Package manager:** `pnpm` (workspace root with `pnpm-workspace.yaml`)
+- **Package manager:** `bun` (workspace root)
 - **Runtime:** `Bun` is used in development tooling; Node-compatible code expected
 - **Test framework:** `vitest` (per-package `vitest.config.ts`)
 - **Packages:** `packages/core`, `packages/cli`
@@ -51,19 +51,19 @@ High-level architecture (how things fit together)
 Developer workflows & commands (use these exactly)
 - Install dependencies (root):
 ```bash
-pnpm install
+bun install
 ```
 - Build all packages:
 ```bash
-pnpm -r run build
+bun run build
 ```
 - Run tests for all packages:
 ```bash
-pnpm -r run test
+bun test
 ```
 - Run a single package's tests (example for core):
 ```bash
-pnpm --filter ./packages/core test
+bun --filter ./packages/core test
 ```
 - Run TypeScript diagnostics on a file (agent action): use the project's `get_errors` tool or `tsc` via workspace scripts. Prefer diagnostics API when available.
 
@@ -86,7 +86,7 @@ TypeScript: reduce duplication & keep functions small
 Quick refactor checklist for AI agents
 - Find repeated patterns (search for `createPropertySignature`, `createStringLiteral`, `createObjectLiteralExpression`).
 - Extract a helper with a typed signature and unit tests in the same package.
-- Replace call sites and run `pnpm --filter ./packages/core test`.
+- Replace call sites and run `bun --filter ./packages/core test`.
 - If snapshots change, update them only after confirming intended behaviour.
 
 
@@ -97,7 +97,7 @@ Integration points & external dependencies
 
 Editing and testing guidance for agents
 - When making changes:
-  - Run the package's unit tests locally (`pnpm --filter ./packages/core test`).
+  - Run the package's unit tests locally (`bun --filter ./packages/core test`).
   - Run the root test command if a change affects multiple packages.
   - If you change exported types, update `packages/*/package.json` `types` fields only when intentional.
 - If a change touches codegen (`typegen.ts`):

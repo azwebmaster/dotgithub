@@ -8,8 +8,8 @@ const ciPlugin: DotGitHubPlugin = {
   name: 'ci',
   description: 'CI/CD workflow plugin',
   validate(context) {
-    if (context.config.packageManager && !['npm', 'pnpm', 'yarn', 'bun'].includes(context.config.packageManager)) {
-      throw new Error('packageManager must be one of: npm, pnpm, yarn, bun');
+    if (context.config.packageManager && !['npm', 'yarn', 'pnpm', 'bun'].includes(context.config.packageManager)) {
+      throw new Error('packageManager must be one of: npm, yarn, pnpm, bun');
     }
   },
   apply(context) {
@@ -105,7 +105,7 @@ describe('Plugin System', () => {
           package: '@dotgithub/plugin-ci',
           config: {
             nodeVersions: ['18', '20'],
-            testCommand: 'pnpm test'
+            testCommand: 'bun test'
           }
         }
       ];
@@ -136,8 +136,8 @@ describe('Plugin System', () => {
           package: '@dotgithub/plugin-ci',
           config: {
             nodeVersions: ['18', '20'],
-            testCommand: 'pnpm test',
-            buildCommand: 'pnpm build'
+            testCommand: 'bun test',
+            buildCommand: 'bun run build'
           }
         }
       ];
@@ -241,7 +241,7 @@ describe('Plugin System', () => {
 
       await expect(
         manager.executePluginsForStack(stack, stackConfig, pluginConfigs)
-      ).rejects.toThrow('packageManager must be one of: npm, pnpm, yarn, bun');
+      ).rejects.toThrow('packageManager must be one of: npm, yarn, pnpm, bun');
     });
   });
 

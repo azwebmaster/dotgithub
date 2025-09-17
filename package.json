@@ -20,7 +20,7 @@
   "peerDependencies": {
     "typescript": "^5"
   },
-  "packageManager": "pnpm@10.10.0+sha512.d615db246fe70f25dcfea6d8d73dee782ce23e2245e3c4f6f888249fb568149318637dca73c2c5c8ef2a4ca0d5657fb9567188bfab47f566d1ee6ce987815c39",
+  "packageManager": "bun@1.1.40",
   "dependencies": {
     "@changesets/cli": "^2.29.5",
     "commander": "^14.0.0",
@@ -28,7 +28,8 @@
     "minimatch": "^10.0.1",
     "octokit": "^5.0.3",
     "semver": "^7.7.2",
-    "simple-git": "^3.28.0"
+    "simple-git": "^3.28.0",
+    "axios": "^1.7.0"
   },
   "workspaces": [
     "packages/*",

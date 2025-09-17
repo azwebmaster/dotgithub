@@ -18,7 +18,7 @@ export type SetupNodeJsEnvironmentInputs = {
   scope?: string;
   /** Used to pull node distributions from node-versions. Since there's a default, this is typically not supplied by the user. When running this action on github.com, the default value is sufficient. When running on GHES, you can pass a personal access token for github.com if you are experiencing rate limiting. | default: "${{ github.server_url == 'https://github.com' && github.token || '' }}" */
   token?: string;
-  /** Used to specify a package manager for caching in the default directory. Supported values: npm, yarn, pnpm. */
+  /** Used to specify a package manager for caching in the default directory. Supported values: npm, yarn, pnpm, bun. */
   cache?: string;
   /** Used to specify the path to a dependency file: package-lock.json, yarn.lock, etc. Supports wildcards or a list of file names for caching multiple dependencies. */
   "cache-dependency-path"?: string;

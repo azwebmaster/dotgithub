@@ -9,27 +9,27 @@ This is a TypeScript monorepo that generates strongly-typed GitHub Action interf
 - **@dotgithub/core**: Core library for parsing GitHub Actions and generating TypeScript types
 - **@dotgithub/cli**: Command-line interface that uses the core library
 
-The project uses Bun as the primary runtime, pnpm for package management, Vitest for testing, and jsii for compiling to Python.
+The project uses Bun as the primary runtime and package manager, Vitest for testing, and jsii for compiling to Python.
 
 ## Essential Commands
 
 ### Development Setup
 ```bash
-pnpm install                    # Install all dependencies
+bun install                    # Install all dependencies
 ```
 
 ### Building
 ```bash
-pnpm -r run build              # Build all packages
+bun run build                  # Build all packages
 bun run tsc                    # Build individual package (run from package directory)
 ```
 
 ### Testing
 ```bash
-pnpm test                      # Test all packages (run from repo root)
-pnpm -r run test               # Alternative: test all packages
-pnpm --filter ./packages/core test    # Test only core package
-pnpm --filter ./packages/cli test     # Test only CLI package
+bun test                       # Test all packages (run from repo root)
+bun run test                   # Alternative: test all packages
+bun --filter ./packages/core test     # Test only core package
+bun --filter ./packages/cli test      # Test only CLI package
 ```
 
 ### CLI Usage
@@ -90,7 +90,7 @@ The tool generates TypeScript files with:
 - Exit with proper error codes in CLI
 
 ### Testing
-- Run tests after every change using `pnpm test`
+- Run tests after every change using `bun test`
 - Preserve snapshot tests in `packages/core/src/__snapshots__`
 - Unit test extracted helper functions
 

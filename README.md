@@ -1,7 +1,7 @@
 
 # dotgithub Monorepo
 
-This is a monorepo for TypeScript packages managed with [pnpm](https://pnpm.io/), using [Bun](https://bun.sh) as the primary runtime, [Vitest](https://vitest.dev/) for testing (managed centrally from the repo root, pinned to ^3.2.4), and [jsii](https://github.com/aws/jsii) to compile packages to Python.
+This is a monorepo for TypeScript packages using [Bun](https://bun.sh) as the primary runtime and package manager, [Vitest](https://vitest.dev/) for testing (managed centrally from the repo root, pinned to ^3.2.4), and [jsii](https://github.com/aws/jsii) to compile packages to Python.
 
 ## Packages
 
@@ -10,10 +10,10 @@ This is a monorepo for TypeScript packages managed with [pnpm](https://pnpm.io/)
 
 ## Getting Started
 
-Install dependencies (using pnpm):
+Install dependencies (using bun):
 
 ```bash
-pnpm install
+bun install
 ```
 
 ## Scripts
@@ -21,13 +21,13 @@ pnpm install
 Build all packages:
 
 ```bash
-pnpm -r run build
+bun run build
 ```
 
 Test all packages (run from the repo root):
 
 ```bash
-pnpm test
+bun test
 ```
 
 ## Using Bun

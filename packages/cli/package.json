@@ -12,15 +12,9 @@
     "@dotgithub/core": "workspace:*"
   },
   "bin": {
-    "dotgithub": "dist/index.js"
+    "dgh": "dist/index.js"
   },
   "devDependencies": {},
-  "jsii": {
-    "outdir": "dist",
-    "targets": {
-      "python": {}
-    }
-  },
   "engines": {
     "bun": ">=1.2.19"
   }
