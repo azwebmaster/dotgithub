@@ -4,18 +4,24 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "test": "vitest run"
+    "build": "bun run --filter './packages/*' build",
+    "test": "vitest run",
+    "changeset": "changeset",
+    "changeset:version": "changeset version",
+    "changeset:publish": "changeset publish --registry https://npm.pkg.github.com",
+    "changeset:status": "changeset status --verbose"
   },
   "devDependencies": {
+    "@changesets/changelog-github": "^0.5.1",
     "@types/bun": "latest",
     "@types/js-yaml": "^4.0.9",
+    "@types/node": "latest",
     "@types/semver": "^7.5.8",
+    "jsii": "latest",
     "json-schema-to-typescript": "^15.0.4",
     "node-fetch": "^2.7.0",
-  "vitest": "^3.2.4",
-  "typescript": "^5.0.0",
-  "jsii": "latest",
-  "@types/node": "latest"
+    "typescript": "^5.0.0",
+    "vitest": "^3.2.4"
   },
   "peerDependencies": {
     "typescript": "^5"
@@ -32,7 +38,6 @@
     "axios": "^1.7.0"
   },
   "workspaces": [
-    "packages/*",
-    ".github/src"
+    "packages/*"
   ]
 }
