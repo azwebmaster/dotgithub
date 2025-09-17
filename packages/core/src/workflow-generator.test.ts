@@ -41,7 +41,7 @@ describe('workflow-generator', () => {
         },
         permissions: {
           contents: 'read',
-          pullRequests: 'write'
+          'pull-requests': 'write'
         },
         env: {
           NODE_VERSION: '18',
@@ -150,15 +150,15 @@ describe('workflow-generator', () => {
       const workflow: GitHubWorkflow = {
         on: 'push',
         permissions: {
-          idToken: 'write',
-          pullRequests: 'read',
-          securityEvents: 'write'
+          'id-token': 'write',
+          'pull-requests': 'read',
+          'security-events': 'write'
         },
         jobs: {
           test: {
             'runs-on': 'ubuntu-latest',
-            timeoutMinutes: 30,
-            continueOnError: true,
+            'timeout-minutes': 30,
+            'continue-on-error': true,
             steps: [
               {
                 name: 'Test step',
