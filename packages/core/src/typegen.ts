@@ -1,7 +1,8 @@
 
-import type { GitHubActionInput, GitHubActionOutput, GitHubActionYml, GitHubActionInputValue } from './types';
+import type { GitHubActionInput, GitHubActionOutput, GitHubActionYml, GitHubInputValue } from './types';
 import type { GitHubStepBase } from './types/workflow';
 import { toProperCase } from './utils';
+import { Project, SourceFile, TypeAliasDeclaration, FunctionDeclaration, JSDocTag } from 'ts-morph';
 
 
 
@@ -27,32 +28,10 @@ function escapeJSDocComment(text: string): string {
 }
 
 
-export function buildInputMembers(inputs?: GitHubActionInputs): string {
-  if (!inputs) return '';
-  return Object.entries(inputs)
-    .map(([key, val]) => {
-      let commentParts: string[] = [];
-      if (val.description) commentParts.push(escapeJSDocComment(val.description));
-      if (val.default !== undefined) commentParts.push(`default: ${JSON.stringify(val.default)}`);
-      const desc = commentParts.length > 0 ? `/** ${commentParts.join(' | ')} */\n    ` : '';
-      const required = val.required === true || val.required === 'true';
-      return `${desc}${quotePropertyName(key)}${required ? '' : '?'}: GitHubActionInputValue;`;
-    })
-    .join('\n    ');
-}
 
 
 import type { GitHubActionInputs, GitHubActionOutputs } from './types/common';
 
-function buildOutputMembers(outputs?: GitHubActionOutputs): string {
-  if (!outputs) return '';
-  return Object.entries(outputs)
-    .map(([key, val]) => {
-      const desc = val.description ? `/** ${escapeJSDocComment(val.description)} */\n    ` : '';
-      return `${desc}${quotePropertyName(key)}: string;`;
-    })
-    .join('\n    ');
-}
 
 
 
@@ -60,6 +39,49 @@ function buildOutputMembers(outputs?: GitHubActionOutputs): string {
 function hasRequiredInputs(inputs?: GitHubActionInputs): boolean {
   if (!inputs) return false;
   return Object.values(inputs).some(input => input.required === true || input.required === 'true');
+}
+
+function hasRequiredInputsCheck(inputs?: GitHubActionInputs): boolean {
+  if (!inputs) return false;
+  return Object.values(inputs).some(input => input.required === true || input.required === 'true');
+}
+
+/**
+ * Builds input members for type-safe code generation
+ */
+function buildInputMembers(inputs?: GitHubActionInputs): string {
+  if (!inputs) return '{}';
+  
+  const members = Object.entries(inputs).map(([key, val]) => {
+    const required = val.required === true || val.required === 'true';
+    const optionalToken = required ? '' : '?';
+    const quotedKey = needsQuoting(key) ? `"${key}"` : key;
+    
+    // Build JSDoc comment if description or default is present
+    let commentParts: string[] = [];
+    if (val.description) commentParts.push(escapeJSDocComment(val.description));
+    if (val.default !== undefined) commentParts.push(`default: ${JSON.stringify(val.default)}`);
+    
+    const comment = commentParts.length > 0 ? `/** ${commentParts.join(' | ')} */\n    ` : '';
+    return `${comment}${quotedKey}${optionalToken}: GitHubInputValue`;
+  });
+  
+  return `{\n    ${members.join(';\n    ')};\n  }`;
+}
+
+/**
+ * Builds output members for type-safe code generation
+ */
+function buildOutputMembers(outputs?: GitHubActionOutputs): string {
+  if (!outputs) return '{}';
+  
+  const members = Object.entries(outputs).map(([key, val]) => {
+    const quotedKey = needsQuoting(key) ? `"${key}"` : key;
+    const comment = val.description ? `/** ${escapeJSDocComment(val.description)} */\n    ` : '';
+    return `${comment}${quotedKey}: string`;
+  });
+  
+  return `{\n    ${members.join(';\n    ')};\n  }`;
 }
 
 function createFactoryFunction(
@@ -106,23 +128,92 @@ export function generateTypesFromYml(
   // Use versionRef for user-visible parts, fallback to ref if not provided
   const displayRef = versionRef || ref;
 
-  // Inputs type
-  const inputMembers = buildInputMembers(yml.inputs as any);
-  const inputsType = `export type ${ActionName}Inputs = {\n    ${inputMembers}\n};`;
+  // Create a new ts-morph project for code generation
+  const project = new Project({
+    useInMemoryFileSystem: true,
+    compilerOptions: {
+      target: 5, // ES2022
+      module: 1, // CommonJS
+      declaration: true,
+      strict: true,
+      esModuleInterop: true,
+      skipLibCheck: true,
+      forceConsistentCasingInFileNames: true,
+    },
+  });
 
-  // Outputs type
-  let outputsType = '';
-  if (yml.outputs) {
-    const outputMembers = buildOutputMembers(yml.outputs as any);
-    outputsType = `export type ${ActionName}Outputs = {\n    ${outputMembers}\n};`;
+  const fileName = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.ts`;
+  const sourceFile = project.createSourceFile(fileName);
+
+  // Generate inputs type
+  const inputsType = sourceFile.addTypeAlias({
+    name: `${ActionName}Inputs`,
+    isExported: true,
+    type: buildInputMembers(yml.inputs as any),
+  });
+
+  // Add JSDoc comment for inputs type
+  if (yml.inputs && Object.keys(yml.inputs).length > 0) {
+    inputsType.addJsDoc({
+      description: `Input parameters for the ${yml.name} action`,
+    });
   }
 
-  // Attach comment with description + repo link using displayRef
-  const descriptionComment = yml.description
-    ? `/**\n  ${escapeJSDocComment(yml.description)}\n\n  https://github.com/${repo}/tree/${displayRef}\n*/\n`
-    : '';
+  // Generate outputs type if present
+  let outputsType: TypeAliasDeclaration | undefined;
+  if (yml.outputs && Object.keys(yml.outputs).length > 0) {
+    outputsType = sourceFile.addTypeAlias({
+      name: `${ActionName}Outputs`,
+      isExported: true,
+      type: buildOutputMembers(yml.outputs as any),
+    });
 
-  const func = descriptionComment + createFactoryFunction(ActionName, actionNameCamel, repo, ref, yml.inputs as any);
+    outputsType.addJsDoc({
+      description: `Output parameters for the ${yml.name} action`,
+    });
+  }
 
-  return [inputsType, outputsType, func].filter(Boolean).join('\n') + '\n';
+  // Generate factory function
+  const hasRequiredInputs = hasRequiredInputsCheck(yml.inputs as any);
+
+  const factoryFunction = sourceFile.addFunction({
+    name: actionNameCamel,
+    isExported: true,
+    parameters: [
+      {
+        name: 'inputs',
+        type: `${ActionName}Inputs`,
+        hasQuestionToken: !hasRequiredInputs,
+      },
+      {
+        name: 'step',
+        type: 'Partial<GitHubStepBase>',
+        hasQuestionToken: true,
+      },
+      {
+        name: 'ref',
+        type: 'string',
+        hasQuestionToken: true,
+      },
+    ],
+    returnType: `GitHubStep<${ActionName}Inputs>`,
+    statements: [
+      `return createStep("${repo}", { ...step, with: inputs }, ref ?? "${ref}");`,
+    ],
+  });
+
+  // Add JSDoc comment for factory function
+  const jsDocDescription = yml.description
+    ? `${escapeJSDocComment(yml.description)}\n\nhttps://github.com/${repo}/tree/${displayRef}`
+    : `Factory function for the ${yml.name} action`;
+
+  factoryFunction.addJsDoc({
+    description: `${jsDocDescription}
+@param inputs ${hasRequiredInputs ? 'Required input parameters' : 'Optional input parameters'}
+@param step Optional step configuration overrides
+@param ref Optional git reference (defaults to the version used for generation)
+@returns A GitHub step configuration`,
+  });
+
+  return sourceFile.getFullText();
 }

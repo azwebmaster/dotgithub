@@ -1,9 +1,7 @@
-export function helloCore(): string {
-  return 'Hello from @dotgithub/core!';
-}
+
 
 // Export types and functions that will be used by generated code
-export { createStep } from './actions.js';
+export { createStep, run } from './actions.js';
 export type { GitHubStep, GitHubStepBase, GitHubWorkflow, GitHubJob, GitHubWorkflows } from './types/workflow.js';
 
 // Export construct classes for CDK-style workflow building
@@ -11,7 +9,7 @@ export * from './constructs/index.js';
 
 // Export GH class and types
 export { GH } from './GH.js';
-export type { DotGitHubResource, DotGitHub, GitHubActionInputValue } from './types/common.js';
+export type { DotGitHubResource, DotGitHub, GitHubInputValue } from './types/common.js';
 
 // Export workflow generation functions
 export { generateWorkflowYaml, createWorkflow, createJob } from './workflow-generator.js';

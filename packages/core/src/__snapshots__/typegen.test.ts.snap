@@ -1,21 +1,28 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`generateTypesFromYml > generates correct types and function 1`] = `
-"export type CreateUserInputs = {
-    /** This is a name | default: "John Doe" */
-    name: GitHubActionInputValue;
-    /** This is the address */
-    address?: GitHubActionInputValue;
-};
+"/** Input parameters for the create-user action */
+export type CreateUserInputs = {
+        /** This is a name | default: "John Doe" */
+        name: GitHubInputValue;
+        /** This is the address */
+        address?: GitHubInputValue;
+      };
+/** Output parameters for the create-user action */
 export type CreateUserOutputs = {
-    /** ID of user */
-    id: string;
-};
-/**
-  Creates a user
+        /** ID of user */
+        id: string;
+      };
 
-  https://github.com/actions/create-user/tree/sha1
-*/
+/**
+ * Creates a user
+ *
+ * https://github.com/actions/create-user/tree/sha1
+ * @param inputs Required input parameters
+ * @param step Optional step configuration overrides
+ * @param ref Optional git reference (defaults to the version used for generation)
+ * @returns A GitHub step configuration
+ */
 export function createUser(inputs: CreateUserInputs, step?: Partial<GitHubStepBase>, ref?: string): GitHubStep<CreateUserInputs> {
     return createStep("actions/create-user", { ...step, with: inputs }, ref ?? "sha1");
 }
@@ -23,14 +30,70 @@ export function createUser(inputs: CreateUserInputs, step?: Partial<GitHubStepBa
 `;
 
 exports[`generateTypesFromYml > handles missing outputs 1`] = `
-"export type SimpleInputs = {
-    foo: GitHubActionInputValue;
-};
-/**
-  A simple action
+"/** Input parameters for the simple action */
+export type SimpleInputs = {
+        foo: GitHubInputValue;
+      };
 
-  https://github.com/actions/my-action/tree/main
-*/
+/**
+ * A simple action
+ *
+ * https://github.com/actions/my-action/tree/main
+ * @param inputs Required input parameters
+ * @param step Optional step configuration overrides
+ * @param ref Optional git reference (defaults to the version used for generation)
+ * @returns A GitHub step configuration
+ */
+export function simple(inputs: SimpleInputs, step?: Partial<GitHubStepBase>, ref?: string): GitHubStep<SimpleInputs> {
+    return createStep("actions/my-action", { ...step, with: inputs }, ref ?? "main");
+}
+"
+`;
+
+exports[`generateTypesFromYml generates correct types and function 1`] = `
+"/** Input parameters for the create-user action */
+export type CreateUserInputs = {
+        /** This is a name | default: "John Doe" */
+        name: GitHubInputValue;
+        /** This is the address */
+        address?: GitHubInputValue;
+      };
+/** Output parameters for the create-user action */
+export type CreateUserOutputs = {
+        /** ID of user */
+        id: string;
+      };
+
+/**
+ * Creates a user
+ *
+ * https://github.com/actions/create-user/tree/sha1
+ * @param inputs Required input parameters
+ * @param step Optional step configuration overrides
+ * @param ref Optional git reference (defaults to the version used for generation)
+ * @returns A GitHub step configuration
+ */
+export function createUser(inputs: CreateUserInputs, step?: Partial<GitHubStepBase>, ref?: string): GitHubStep<CreateUserInputs> {
+    return createStep("actions/create-user", { ...step, with: inputs }, ref ?? "sha1");
+}
+"
+`;
+
+exports[`generateTypesFromYml handles missing outputs 1`] = `
+"/** Input parameters for the simple action */
+export type SimpleInputs = {
+        foo: GitHubInputValue;
+      };
+
+/**
+ * A simple action
+ *
+ * https://github.com/actions/my-action/tree/main
+ * @param inputs Required input parameters
+ * @param step Optional step configuration overrides
+ * @param ref Optional git reference (defaults to the version used for generation)
+ * @returns A GitHub step configuration
+ */
 export function simple(inputs: SimpleInputs, step?: Partial<GitHubStepBase>, ref?: string): GitHubStep<SimpleInputs> {
     return createStep("actions/my-action", { ...step, with: inputs }, ref ?? "main");
 }

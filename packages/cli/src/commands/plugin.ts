@@ -100,6 +100,8 @@ export function createPluginCommand(createContext: (options?: any) => DotGithubC
     .requiredOption('--source <path|repo|url>', 'local path to .github directory, GitHub repo (org/repo@ref), or GitHub file URL')
     .option('--description <desc>', 'plugin description')
     .option('--overwrite', 'overwrite existing plugin file')
+    .option('--auto-add-actions', 'automatically add TypeScript actions found in workflows')
+    .option('--token <token>', 'GitHub token for auto-adding actions (overrides env GITHUB_TOKEN)')
     .action(async (options) => {
       try {
         console.log(`🔌 Creating plugin "${options.name}" from ${options.source}...`);
@@ -110,7 +112,9 @@ export function createPluginCommand(createContext: (options?: any) => DotGithubC
           source: options.source,
           description: options.description,
           overwrite: options.overwrite,
-          context
+          context,
+          autoAddActions: options.autoAddActions,
+          token: options.token
         });
         
         console.log(`✅ Plugin created successfully!`);

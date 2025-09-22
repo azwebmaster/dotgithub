@@ -33,7 +33,7 @@ export type DotGitHub = DotGitHubRootResources;
  * Possible values for GitHub Action inputs.
  * Actions can accept string, boolean, or numeric input values.
  */
-export type GitHubActionInputValue = string | boolean | number;
+export type GitHubInputValue = string | boolean | number;
 
 /**
  * Configuration for a GitHub Action input parameter.

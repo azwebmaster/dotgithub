@@ -43,17 +43,17 @@ export async function getLatestTag(owner: string, repo: string, token?: string):
     }
     
     // Separate tags into major-only tags and full semver tags
-    const allTags = tags.data.map(tag => tag.name);
+    const allTags = tags.data.map((tag: any) => tag.name);
     
     // First, look for major version only tags (e.g., v4, v3, 4, 3)
-    const majorVersionTags = allTags.filter(tag => {
+    const majorVersionTags = allTags.filter((tag: string) => {
       const normalizedTag = tag.replace(/^v/, ''); // Remove 'v' prefix if present
       const majorVersionPattern = /^\d+$/; // Only digits, no dots
       return majorVersionPattern.test(normalizedTag);
     });
     
     // Sort major version tags by numeric value (descending)
-    const sortedMajorTags = majorVersionTags.sort((a, b) => {
+    const sortedMajorTags = majorVersionTags.sort((a: string, b: string) => {
       const aMajor = parseInt(a.replace(/^v/, ''), 10);
       const bMajor = parseInt(b.replace(/^v/, ''), 10);
       return bMajor - aMajor; // Descending order
@@ -70,7 +70,7 @@ export async function getLatestTag(owner: string, repo: string, token?: string):
     
     // Fallback to full semver tags if no major-only tags found
     const validTags = allTags
-      .filter(tagName => semver.valid(tagName))
+      .filter((tagName: string) => semver.valid(tagName))
       .sort(semver.rcompare); // Use semver.rcompare directly for descending order
     
     if (validTags.length === 0) {

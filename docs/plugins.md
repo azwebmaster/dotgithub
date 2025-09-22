@@ -337,7 +337,7 @@ dotgithub plugin create \
 ```
 🔌 Creating plugin "my-templates" from .github...
 ✅ Plugin created successfully!
-   Plugin file: /project/plugins/my-templates-plugin.ts
+   Plugin file: /project/plugins/my-templates/index.ts
    Files included: 8
    📁 Files found:
       - workflows/ci.yml
@@ -350,7 +350,7 @@ dotgithub plugin create \
       - FUNDING.yml
 
 🔧 To use this plugin, add it to your configuration:
-   dotgithub plugin add --name "my-templates" --package "./plugins/my-templates-plugin.ts"
+   dotgithub plugin add --name "my-templates" --package "./plugins/my-templates"
 ```
 
 The `create` command automatically:
@@ -437,7 +437,7 @@ dotgithub plugin create \
 # Add the plugin to your configuration
 dotgithub plugin add \
   --name "my-org-standard" \
-  --package "./plugins/my-org-standard-plugin.ts"
+  --package "./plugins/my-org-standard"
 
 # Use it in a stack
 dotgithub plugin stack add \
@@ -648,7 +648,7 @@ dotgithub plugin create \
   --description "ACME Corp GitHub standards"
 
 # Share across all projects
-dotgithub plugin add --name "acme-standards" --package "./acme-standards-plugin.ts"
+dotgithub plugin add --name "acme-standards" --package "./acme-standards"
 ```
 
 **Open Source Templates:**
@@ -675,7 +675,7 @@ dotgithub plugin create \
 
 # Now manage via plugins instead of manual files
 rm -rf .github
-dotgithub plugin add --name "legacy-migration" --package "./legacy-migration-plugin.ts"
+dotgithub plugin add --name "legacy-migration" --package "./legacy-migration"
 dotgithub synth
 ```
 
@@ -954,7 +954,7 @@ dotgithub plugin create \
 # Step 2: Add plugin to dotgithub configuration
 dotgithub plugin add \
   --name "company-standards" \
-  --package "./plugins/company-standards-plugin.ts" \
+  --package "./plugins/company-standards" \
   --config '{
     "overwriteExisting": false,
     "nodeVersion": "20"
@@ -980,7 +980,7 @@ dotgithub synth --stack frontend
   "plugins": [
     {
       "name": "company-standards",
-      "package": "./plugins/company-standards-plugin.ts",
+      "package": "./plugins/company-standards",
       "config": {
         "overwriteExisting": false,
         "nodeVersion": "20"
@@ -1245,7 +1245,7 @@ Common issues when creating plugins from .github files:
 
 #### File Permission Issues
 ```
-❌ Plugin file already exists: ./plugins/my-plugin-plugin.ts
+❌ Plugin file already exists: ./plugins/my-plugin/index.ts
 ```
 **Solutions:**
 - Use `--overwrite` flag to replace existing plugins

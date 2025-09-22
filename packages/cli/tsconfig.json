@@ -2,14 +2,13 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "outDir": "dist",
-    "rootDir": "src",
     "baseUrl": "./src",
     "paths": {
-      "@dotgithub/core": ["../../core/dist"]
+      "@dotgithub/core": ["../../core/src"]
     },
     "moduleResolution": "node",
-  "noEmit": false,
-  "allowImportingTsExtensions": false
+    "noEmit": false,
+    "allowImportingTsExtensions": false
   },
   "include": ["src/**/*.ts"]
 }

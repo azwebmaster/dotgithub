@@ -1,35 +1,3 @@
-import { buildInputMembers } from './typegen';
-
-describe('buildInputMembers', () => {
-  it('includes description and default in comment if present', () => {
-    const inputs = {
-      foo: { description: 'desc', default: 'bar', required: true },
-      baz: { description: 'baz desc', required: false },
-      qux: { default: '42', required: true },
-      noComment: { required: true },
-    };
-    const result = buildInputMembers(inputs);
-    expect(result).toContain('/** desc | default: "bar" */\n    foo: GitHubActionInputValue;');
-    expect(result).toContain('/** baz desc */\n    baz?: GitHubActionInputValue;');
-    expect(result).toContain('/** default: "42" */\n    qux: GitHubActionInputValue;');
-    expect(result).toContain('noComment: GitHubActionInputValue;');
-  });
-
-  it('returns empty string for undefined inputs', () => {
-    expect(buildInputMembers(undefined)).toBe('');
-  });
-
-  it('escapes */ sequences in input descriptions', () => {
-    const inputs = {
-      test: {
-        description: 'This is a comment /* with */ embedded comment',
-        required: true
-      },
-    };
-    const result = buildInputMembers(inputs);
-    expect(result).toContain('/** This is a comment /* with *\\/ embedded comment */');
-  });
-});
 import { describe, it, expect } from 'vitest';
 import { generateTypesFromYml } from './typegen';
 import type { GitHubActionYml } from './types';
@@ -59,8 +27,8 @@ describe('generateTypesFromYml', () => {
   it('generates correct types and function', () => {
     const code = generateTypesFromYml(sampleYml, 'actions/create-user', 'sha1');
     expect(code).toContain('export type CreateUserInputs');
-    expect(code).toContain('name: GitHubActionInputValue;');
-    expect(code).toContain('address?: GitHubActionInputValue;');
+    expect(code).toContain('name: GitHubInputValue;');
+    expect(code).toContain('address?: GitHubInputValue;');
     expect(code).toContain('export type CreateUserOutputs');
     expect(code).toContain('id: string;');
     expect(code).toContain('export function createUser(');

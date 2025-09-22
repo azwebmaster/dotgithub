@@ -12,7 +12,8 @@
     "@dotgithub/core": "workspace:*"
   },
   "bin": {
-    "dgh": "dist/index.js"
+    "dgh": "dist/index.js",
+    "dotgithub": "dist/index.js"
   },
   "devDependencies": {},
   "engines": {

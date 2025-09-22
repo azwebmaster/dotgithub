@@ -65,12 +65,14 @@ export async function updateOrgIndexFile(orgDir: string, repoName: string): Prom
  */
 export async function updateRootIndexFile(outputDir: string, orgName: string): Promise<void> {
   const indexPath = path.join(outputDir, 'index.ts');
-  const exportStatement = `export * as ${orgName} from './${orgName}/index.js';\n`;
+  // Convert org name to valid TypeScript identifier (replace hyphens with underscores)
+  const validOrgName = orgName.replace(/-/g, '_');
+  const exportStatement = `export * as ${validOrgName} from './${orgName}/index.js';\n`;
   
   if (fs.existsSync(indexPath)) {
     const existingContent = fs.readFileSync(indexPath, 'utf8');
-    // Check if the export already exists to avoid duplicates (check for the org reference regardless of quotes)
-    const exportPattern = new RegExp(`export\\s*\\*\\s*as\\s*${orgName}\\s*from\\s*['"]\\./${orgName}/index\\.js['"]`);
+    // Check if the export already exists to avoid duplicates (check for the valid org reference)
+    const exportPattern = new RegExp(`export\\s*\\*\\s*as\\s*${validOrgName}\\s*from\\s*['"]\\./${orgName}/index\\.js['"]`);
     if (!exportPattern.test(existingContent)) {
       const newContent = existingContent + exportStatement;
       const formattedContent = await formatWithPrettier(newContent);

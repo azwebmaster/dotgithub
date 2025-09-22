@@ -142,7 +142,7 @@ function generateFilenameFromActionName(actionName: string): string {
  * Adds necessary import statements to the generated TypeScript code
  */
 function addImportsToGeneratedTypes(generatedTypes: string): string {
-  const imports = `import { createStep } from '@dotgithub/core';\nimport type { GitHubStep, GitHubStepBase, GitHubActionInputValue } from '@dotgithub/core';\n\n`;
+  const imports = `import { createStep } from '@dotgithub/core';\nimport type { GitHubStep, GitHubStepBase, GitHubInputValue } from '@dotgithub/core';\n\n`;
   return imports + generatedTypes;
 }
 

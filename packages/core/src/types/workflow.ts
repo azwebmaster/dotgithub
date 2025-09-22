@@ -86,6 +86,35 @@ export type GitHubWorkflow = {
 };
 
 /**
+ * Configuration for a GitHub Actions reusable workflow.
+ * A reusable workflow can be called from other workflows and accepts inputs.
+ */
+export type GitHubReusableWorkflow = {
+  /** The name of the workflow. Displayed in GitHub's UI. */
+  name?: string;
+  /** The name for workflow runs generated from the workflow. */
+  "run-name"?: string;
+  /** Events that trigger the workflow. */
+  on: GitHubWorkflowOn;
+  /** Permissions granted to the GITHUB_TOKEN for all jobs in the workflow. */
+  permissions?: GitHubPermissions | GitHubPermissionsAll;
+  /** Environment variables available to all jobs in the workflow. */
+  env?: GitHubEnv;
+  /** Default settings that will apply to all jobs in the workflow. */
+  defaults?: GitHubDefaults;
+  /** Concurrency controls to prevent multiple workflow runs from running simultaneously. */
+  concurrency?: GitHubConcurrency;
+  /** Jobs that make up the workflow. */
+  jobs: GitHubJobs;
+  /** Input parameters that can be passed to the reusable workflow. */
+  inputs?: GitHubWorkflowInputs;
+  /** Outputs that the reusable workflow can return to the caller. */
+  outputs?: GitHubWorkflowOutputs;
+  /** Secrets that can be passed to the reusable workflow. */
+  secrets?: GitHubWorkflowSecrets;
+};
+
+/**
  * Events that can trigger a workflow.
  * Can be a single event name, array of event names, or detailed event configuration.
  */
@@ -213,7 +242,7 @@ export type GitHubDefaults = {
  * Concurrency controls to prevent multiple workflow runs from running simultaneously.
  * Useful for preventing conflicts in deployment scenarios.
  */
-export type GitHubConcurrency = {
+export type GitHubConcurrency = string | {
   /** Identifier for the concurrency group. */
   group: string;
   /** Whether to cancel in-progress runs when a new run starts. */

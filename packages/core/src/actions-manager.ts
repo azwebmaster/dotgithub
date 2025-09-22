@@ -7,6 +7,7 @@ import { cloneRepo } from './git';
 import { addActionToConfig, writeConfig } from './config';
 import type { DotGithubAction } from './config';
 import { formatWithPrettier, updateOrgIndexFile, updateRootIndexFile, updateIndexFilesAfterRemoval } from './file-utils';
+import { Project, SourceFile } from 'ts-morph';
 import { toProperCase } from './utils';
 import type { DotGithubContext } from './context';
 
@@ -466,8 +467,36 @@ function generateFilenameFromActionName(actionName: string): string {
  * @returns TypeScript code with import statements
  */
 function addImportsToGeneratedTypes(generatedTypes: string): string {
-  const imports = `import { createStep } from '@dotgithub/core';\nimport type { GitHubStep, GitHubStepBase, GitHubActionInputValue } from '@dotgithub/core';\n\n`;
-  return imports + generatedTypes;
+  // Create a new ts-morph project for code generation
+  const project = new Project({
+    useInMemoryFileSystem: true,
+    compilerOptions: {
+      target: 5, // ES2022
+      module: 1, // CommonJS
+      declaration: true,
+      strict: true,
+      esModuleInterop: true,
+      skipLibCheck: true,
+      forceConsistentCasingInFileNames: true,
+    },
+  });
+
+  const fileName = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.ts`;
+  const sourceFile = project.createSourceFile(fileName, generatedTypes);
+
+  // Add import statements
+  sourceFile.addImportDeclaration({
+    moduleSpecifier: '@dotgithub/core',
+    namedImports: ['createStep'],
+  });
+
+  sourceFile.addImportDeclaration({
+    moduleSpecifier: '@dotgithub/core',
+    namedImports: ['GitHubStep', 'GitHubStepBase', 'GitHubInputValue'],
+    isTypeOnly: true,
+  });
+
+  return sourceFile.getFullText();
 }
 
 /**
@@ -501,16 +530,36 @@ function cleanupTempDir(tmpDir: string) {
  */
 async function updateRepoIndexFile(repoDir: string, actions: GeneratedAction[]) {
   const indexPath = path.join(repoDir, 'index.ts');
-  const exports: string[] = [];
+  
+  // Create a new ts-morph project for code generation
+  const project = new Project({
+    useInMemoryFileSystem: true,
+    compilerOptions: {
+      target: 5, // ES2022
+      module: 1, // CommonJS
+      declaration: true,
+      strict: true,
+      esModuleInterop: true,
+      skipLibCheck: true,
+      forceConsistentCasingInFileNames: true,
+    },
+  });
 
+  const fileName = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.ts`;
+  const sourceFile = project.createSourceFile(fileName);
+
+  // Add export statements for each action
   for (const action of actions) {
     const relativePath = action.actionPath
       ? `./${action.actionPath}/${action.actionName}`
       : `./${action.actionName}`;
-    exports.push(`export * from '${relativePath}';`);
+    
+    sourceFile.addExportDeclaration({
+      moduleSpecifier: relativePath,
+    });
   }
 
-  const content = exports.join('\n') + '\n';
+  const content = sourceFile.getFullText();
   const formattedContent = await formatWithPrettier(content);
   fs.writeFileSync(indexPath, formattedContent, 'utf8');
 }

@@ -38,20 +38,24 @@ export class GitHubStack extends Construct {
     super(scope, id);
   }
 
-  addWorkflow(id: string, workflow: GitHubWorkflow): void {
+  addWorkflow(id: string, workflow: GitHubWorkflow): GitHubWorkflow {
     this._workflows[id] = workflow;
+    return workflow;
   }
 
-  addResource(path: string, resource: DotGitHubResource): void {
+  addResource(path: string, resource: DotGitHubResource): DotGitHubResource {
     this._resources[path] = resource;
+    return resource;
   }
 
-  addFileResource(path: string, content: string): void {
+  addFileResource(path: string, content: string): DotGitHubResource {
     this._resources[path] = { content };
+    return this._resources[path];
   }
 
-  addDirectoryResource(path: string, children: DotGitHubResources = {}): void {
+  addDirectoryResource(path: string, children: DotGitHubResources = {}): DotGitHubResource {
     this._resources[path] = { children };
+    return this._resources[path];
   }
 
   get workflows(): GitHubWorkflows {
