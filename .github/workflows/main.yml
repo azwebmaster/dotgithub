@@ -1,58 +1,50 @@
 name: Main
-
-on:
+'on':
   push:
-    branches: [ main ]
-  workflow_dispatch:
-
+    branches:
+      - main
+  workflow_dispatch: null
 concurrency: ${{ github.workflow }}-${{ github.ref }}
-
 jobs:
   ci:
     name: CI
     uses: ./.github/workflows/shared-ci.yml
-
   publish:
     name: Publish
     runs-on: ubuntu-latest
     needs: ci
     steps:
-      - name: Checkout Repo
-        uses: actions/checkout@v4
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        name: Checkout Repo
+        with: {}
+      - uses: oven-sh/setup-bun@735343b667d3e6f658f44d0eca948eb6282f2b76
+        name: Setup Bun
         with:
           bun-version: latest
-
-      - name: Cache Bun dependencies
-        uses: actions/cache@v4
+      - uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809
+        name: Cache Bun dependencies
         with:
           path: ~/.bun/install/cache
           key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
           restore-keys: |
             ${{ runner.os }}-bun-
-
-      - name: Install Dependencies
-        run: bun install
-
-      - name: Build
-        run: bun run build
-
-      - name: Setup Node.js for NPM
-        uses: actions/setup-node@v4
+      - run: bun install
+        name: Install Dependencies
+      - run: bun run build
+        name: Build
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        name: Setup Node.js for NPM
         with:
           node-version: '18'
-          registry-url: 'https://registry.npmjs.org'
-
-      - name: Create Release Pull Request or Publish to NPM
+          registry-url: https://registry.npmjs.org
+      - uses: changesets/action@8eb63fb4cfc7f9643537c7d39d0b68c835012a19
+        name: Create Release Pull Request or Publish to NPM
         id: changesets
-        uses: changesets/action@v1
-        with:
-          publish: bun run release
-          version: bun run version
-          commit: "chore: release package"
-          title: "chore: release package"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
+        with:
+          publish: bun run release
+          version: bun run version
+          commit: 'chore: release package'
+          title: 'chore: release package'
