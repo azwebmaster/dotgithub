@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import { readConfig, writeConfig, getConfigPath, updateOutputDir, getActionsFromConfig, getResolvedOutputPath, removeActionFromConfig, createConfigFile, type DotGithubContext } from '@dotgithub/core';
+import { readConfig, writeConfig, getConfigPath, updateRootDir, getActionsFromConfig, getResolvedOutputPath, removeActionFromConfig, createConfigFile, type DotGithubContext } from '@dotgithub/core';
 
 export function createConfigCommand(createContext: (options?: any) => DotGithubContext): Command {
   const configCmd = new Command('config')
@@ -9,14 +9,13 @@ export function createConfigCommand(createContext: (options?: any) => DotGithubC
   configCmd
     .command('show')
     .description('Show current configuration')
-    .action(() => {
+    .action((options) => {
       try {
-        const config = readConfig();
-        const configPath = getConfigPath();
+        const context = createContext(options);
         
-        console.log(`Configuration file: ${configPath}`);
+        console.log(`Configuration file: ${context.configPath}`);
         console.log('\nCurrent configuration:');
-        console.log(JSON.stringify(config, null, 2));
+        console.log(JSON.stringify(context.config, null, 2));
       } catch (err) {
         console.error(err instanceof Error ? err.message : err);
         process.exit(1);
@@ -30,7 +29,8 @@ export function createConfigCommand(createContext: (options?: any) => DotGithubC
     .option('--json', 'Output as JSON')
     .action((options) => {
       try {
-        const actions = getActionsFromConfig();
+        const context = createContext(options);
+        const actions = context.config.actions;
         
         if (options.json) {
           console.log(JSON.stringify(actions, null, 2));
@@ -46,9 +46,11 @@ export function createConfigCommand(createContext: (options?: any) => DotGithubC
         console.log('================');
         
         actions.forEach(action => {
-          console.log(`\n• ${action.functionName}()`);
+          const { generateFunctionName } = require('@dotgithub/core/utils');
+          const functionName = action.actionName ? generateFunctionName(action.actionName) : action.orgRepo;
+          console.log(`\n• ${functionName}()`);
           console.log(`  Repository: ${action.orgRepo}@${action.versionRef} (SHA: ${action.ref.substring(0, 8)})`);
-          console.log(`  Output: ${getResolvedOutputPath(action)}`);
+          console.log(`  Output: ${action.outputPath ? context.resolvePath(action.outputPath) : 'Not generated'}`);
         });
       } catch (err) {
         console.error(err instanceof Error ? err.message : err);
@@ -60,9 +62,11 @@ export function createConfigCommand(createContext: (options?: any) => DotGithubC
   configCmd
     .command('set-output-dir <directory>')
     .description('Set default output directory for generated actions')
-    .action((directory) => {
+    .action((directory, options) => {
       try {
-        updateOutputDir(directory);
+        const context = createContext(options);
+        context.config.rootDir = directory;
+        writeConfig(context.config);
         console.log(`Updated default output directory to: ${directory}`);
       } catch (err) {
         console.error(err instanceof Error ? err.message : err);
@@ -76,9 +80,14 @@ export function createConfigCommand(createContext: (options?: any) => DotGithubC
     .description('Remove action from tracking')
     .action((orgRepo, options) => {
       try {
-        const removed = removeActionFromConfig(orgRepo);
+        const context = createContext(options);
+        const originalLength = context.config.actions.length;
         
-        if (removed) {
+        // Remove the action for this org/repo
+        context.config.actions = context.config.actions.filter(action => action.orgRepo !== orgRepo);
+        
+        if (context.config.actions.length !== originalLength) {
+          writeConfig(context.config);
           console.log(`Removed ${orgRepo} from tracking`);
         } else {
           console.log(`Action ${orgRepo} was not being tracked`);
@@ -106,28 +115,28 @@ export function createConfigCommand(createContext: (options?: any) => DotGithubC
         }
         
         // Check if any config already exists
-        const currentConfigPath = getConfigPath();
+        const context = createContext(options);
         const fs = require('fs');
-        if (fs.existsSync(currentConfigPath)) {
-          console.log(`Configuration file already exists at: ${currentConfigPath}`);
+        if (fs.existsSync(context.configPath)) {
+          console.log(`Configuration file already exists at: ${context.configPath}`);
           console.log('Use "dotgithub config show" to view current configuration');
           return;
         }
         
         // Create new config file in the specified format
-        const configPath = createConfigFile(format);
+        const configPath = createConfigFile(format, context.configPath);
         
         // Update output directory if specified
         if (options.outputDir) {
-          const config = readConfig();
-          config.outputDir = options.outputDir;
+          const config = readConfig(configPath);
+          config.rootDir = options.outputDir;
           writeConfig(config);
         }
         
-        const config = readConfig();
+        const config = readConfig(configPath);
         console.log(`Initialized dotgithub configuration at: ${configPath}`);
         console.log(`Format: ${format}`);
-        console.log(`Default output directory: ${config.outputDir}`);
+        console.log(`Default root directory: ${config.rootDir}`);
       } catch (err) {
         console.error(err instanceof Error ? err.message : err);
         process.exit(1);

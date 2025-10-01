@@ -7,6 +7,11 @@ import {
   addStackToConfig,
   removeStackFromConfig,
   generatePluginFromGitHubFiles,
+  PluginManager,
+  formatPluginDescription,
+  generatePluginMarkdown,
+  searchPluginsByKeyword,
+  filterPluginsByCategory,
   type DotGithubContext
 } from '@dotgithub/core';
 import type { PluginConfig, StackConfig } from '@dotgithub/core';
@@ -19,8 +24,9 @@ export function createPluginCommand(createContext: (options?: any) => DotGithubC
   // Plugin management subcommands
   const pluginSubCommand = new Command('list')
     .description('List configured plugins')
-    .action(() => {
-      const plugins = getPluginsFromConfig();
+    .action((options) => {
+      const context = createContext(options);
+      const plugins = context.config.plugins || [];
       
       if (plugins.length === 0) {
         console.log('📝 No plugins configured');
@@ -139,6 +145,148 @@ export function createPluginCommand(createContext: (options?: any) => DotGithubC
       }
     });
 
+  const pluginDescribeCommand = new Command('describe')
+    .description('Describe plugin information and configuration schema')
+    .option('--name <name>', 'specific plugin name to describe')
+    .option('--format <format>', 'output format (text|markdown|json)', 'text')
+    .option('--search <keyword>', 'search plugins by keyword')
+    .option('--category <category>', 'filter plugins by category')
+    .option('--all', 'describe all loaded plugins')
+    .action(async (options) => {
+      try {
+        const context = createContext(options);
+        const manager = new PluginManager({
+          projectRoot: context.rootPath,
+          context
+        });
+
+        // Load plugins from config using the context
+        const pluginConfigs = context.config.plugins || [];
+        if (pluginConfigs.length === 0) {
+          console.log('📝 No plugins configured');
+          return;
+        }
+
+        await manager.loadPlugins(pluginConfigs);
+
+        if (options.name) {
+          // Describe specific plugin
+          const description = await manager.describePlugin(options.name);
+          if (!description) {
+            console.log(`❌ Plugin "${options.name}" not found or not loaded`);
+            process.exit(1);
+          }
+
+          switch (options.format) {
+            case 'markdown':
+              console.log(generatePluginMarkdown(description));
+              break;
+            case 'json':
+              console.log(JSON.stringify(description, null, 2));
+              break;
+            default:
+              console.log(`\n🔌 Plugin: ${description.name}\n`);
+              console.log(formatPluginDescription(description));
+          }
+        } else if (options.search) {
+          // Search plugins by keyword
+          const pluginList = await manager.listPlugins();
+          const descriptions = pluginList
+            .map(p => p.description)
+            .filter((desc): desc is NonNullable<typeof desc> => desc !== null);
+          
+          const searchResults = searchPluginsByKeyword(descriptions, options.search);
+          
+          if (searchResults.length === 0) {
+            console.log(`🔍 No plugins found matching "${options.search}"`);
+            return;
+          }
+
+          console.log(`🔍 Found ${searchResults.length} plugin(s) matching "${options.search}":\n`);
+          
+          for (const description of searchResults) {
+            console.log(`\n🔌 Plugin: ${description.name}\n`);
+            console.log(formatPluginDescription(description));
+            console.log('\n' + '─'.repeat(50) + '\n');
+          }
+        } else if (options.category) {
+          // Filter plugins by category
+          const pluginList = await manager.listPlugins();
+          const descriptions = pluginList
+            .map(p => p.description)
+            .filter((desc): desc is NonNullable<typeof desc> => desc !== null);
+          
+          const categoryResults = filterPluginsByCategory(descriptions, options.category);
+          
+          if (categoryResults.length === 0) {
+            console.log(`📂 No plugins found in category "${options.category}"`);
+            return;
+          }
+
+          console.log(`📂 Found ${categoryResults.length} plugin(s) in category "${options.category}":\n`);
+          
+          for (const description of categoryResults) {
+            console.log(`\n🔌 Plugin: ${description.name}\n`);
+            console.log(formatPluginDescription(description));
+            console.log('\n' + '─'.repeat(50) + '\n');
+          }
+        } else if (options.all) {
+          // Describe all plugins
+          const pluginList = await manager.listPlugins();
+          
+          if (pluginList.length === 0) {
+            console.log('📝 No plugins loaded');
+            return;
+          }
+
+          console.log(`🔌 Loaded plugins (${pluginList.length}):\n`);
+          
+          for (const { name, description } of pluginList) {
+            console.log(`\n🔌 Plugin: ${name}\n`);
+            if (description) {
+              console.log(formatPluginDescription(description));
+            } else {
+              console.log('No description available');
+            }
+            console.log('\n' + '─'.repeat(50) + '\n');
+          }
+        } else {
+          // List available plugins with basic info
+          const pluginList = await manager.listPlugins();
+          
+          if (pluginList.length === 0) {
+            console.log('📝 No plugins loaded');
+            return;
+          }
+
+          console.log(`🔌 Available plugins (${pluginList.length}):\n`);
+          
+          for (const { name, description } of pluginList) {
+            const status = description ? '✅' : '❌';
+            console.log(`${status} ${name}`);
+            if (description) {
+              if (description.version) console.log(`   Version: ${description.version}`);
+              if (description.description) console.log(`   Description: ${description.description}`);
+              if (description.category) console.log(`   Category: ${description.category}`);
+              if (description.keywords && description.keywords.length > 0) {
+                console.log(`   Keywords: ${description.keywords.join(', ')}`);
+              }
+            }
+            console.log();
+          }
+          
+          console.log('💡 Use --name <plugin> to get detailed information about a specific plugin');
+          console.log('💡 Use --search <keyword> to search plugins by keyword');
+          console.log('💡 Use --category <category> to filter by category');
+          console.log('💡 Use --all to describe all plugins');
+        }
+        
+      } catch (error) {
+        console.error('❌ Failed to describe plugins:', error instanceof Error ? error.message : error);
+        process.exit(1);
+      }
+    });
+
   // Stack management subcommands
   const stackCommand = new Command('stack');
   stackCommand.description('Manage GitHub stacks');
@@ -227,6 +375,7 @@ export function createPluginCommand(createContext: (options?: any) => DotGithubC
   pluginCommand.addCommand(pluginAddCommand);
   pluginCommand.addCommand(pluginRemoveCommand);
   pluginCommand.addCommand(pluginCreateCommand);
+  pluginCommand.addCommand(pluginDescribeCommand);
 
   stackCommand.addCommand(stackListCommand);
   stackCommand.addCommand(stackAddCommand);

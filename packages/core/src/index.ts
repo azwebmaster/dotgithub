@@ -2,7 +2,7 @@
 
 // Export types and functions that will be used by generated code
 export { createStep, run } from './actions.js';
-export type { GitHubStep, GitHubStepBase, GitHubWorkflow, GitHubJob, GitHubWorkflows } from './types/workflow.js';
+export type { GitHubStep, GitHubStepBase, GitHubStepAction, GitHubStepWith, GitHubWorkflow, GitHubJob, GitHubWorkflows } from './types/workflow.js';
 
 // Export construct classes for CDK-style workflow building
 export * from './constructs/index.js';
@@ -24,6 +24,7 @@ export {
   getActionsFromConfig,
   getActionsFromConfigWithResolvedPaths,
   getResolvedOutputPath,
+  updateRootDir,
   updateOutputDir,
   getConfigPath,
   setConfigPath,
@@ -36,13 +37,9 @@ export {
   addStackToConfig,
   removeStackFromConfig,
   // Path resolution utilities
-  getProjectRoot,
   getConfigDir,
-  getOutputDir,
-  makeRelativeToConfig,
-  makeRelativeToOutput,
-  resolveFromOutput,
-  resolvePathFromConfig
+  // OutputPath validation and fixing
+  validateAndFixOutputPaths
 } from './config.js';
 export type {
   DotGithubConfig,
@@ -54,6 +51,8 @@ export * from './context.js';
 
 // Export plugin system
 export * from './plugins/index.js';
+export { ActionCollection } from './plugins/action-collection.js';
+export { StepChainBuilder } from './plugins/actions-helper.js';
 export { StackSynthesizer } from './stack-synthesizer.js';
 export type { StackSynthesizerOptions, SynthesisResult, SynthesisResults } from './stack-synthesizer.js';
 

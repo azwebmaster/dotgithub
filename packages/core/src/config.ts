@@ -1,8 +1,8 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import * as yaml from 'js-yaml';
+import * as yaml from 'yaml';
 import type { PluginConfig, StackConfig } from './plugins/types';
-import { globalPathResolver } from './path-resolver';
+import type { DotGithubContext } from './context';
 
 export interface DotGithubAction {
   /** GitHub repository in org/repo format */
@@ -11,18 +11,22 @@ export interface DotGithubAction {
   ref: string;
   /** Original version reference that was requested (e.g., v4, main) */
   versionRef: string;
-  /** Function name for the generated action (camelCase) */
-  functionName: string;
-  /** Output file path where the TypeScript was generated */
-  outputPath: string;
+  /** Action name for type names and function names (overrides default from YAML) */
+  actionName?: string;
+  /** Output file path where the TypeScript was generated - required when generateCode is true */
+  outputPath?: string;
   /** Path within the repository to the action (empty string for root) */
   actionPath?: string;
+  /** Whether to generate TypeScript code for this action (default: true) */
+  generateCode?: boolean;
 }
 
 export interface DotGithubConfig {
   /** Version of the config file format */
   version: string;
-  /** Default output directory for generated actions */
+  /** Root directory for generated actions */
+  rootDir: string;
+  /** Output directory for synth (relative to config file) */
   outputDir: string;
   /** List of added actions */
   actions: DotGithubAction[];
@@ -42,64 +46,17 @@ export interface DotGithubConfig {
 }
 
 const CONFIG_VERSION = '1.0.0';
+const DEFAULT_ROOT_DIR = 'src';
 const DEFAULT_OUTPUT_DIR = 'src';
 
 
 /**
- * Converts an absolute path to a relative path from the outputDir
+ * Converts an absolute path to a relative path from the rootDir
  */
-function makePathRelativeToOutputDir(absolutePath: string, outputDir?: string): string {
-  return makeRelativeToOutput(absolutePath, outputDir);
+function makePathRelativeToRootDir(absolutePath: string, rootDir: string): string {
+  return path.relative(rootDir, absolutePath);
 }
 
-/**
- * Converts a relative path from the outputDir to an absolute path
- */
-export function resolvePathFromConfig(relativePath: string): string {
-  return resolveFromOutput(relativePath);
-}
-
-/**
- * Gets the project root directory (parent of .github directory)
- */
-export function getProjectRoot(): string {
-  return globalPathResolver.getProjectRoot();
-}
-
-/**
- * Gets the config directory (.github directory)
- */
-export function getConfigDir(): string {
-  return globalPathResolver.getConfigDir();
-}
-
-/**
- * Gets the absolute path to the output directory
- */
-export function getOutputDir(outputDir?: string): string {
-  return globalPathResolver.getOutputDirAbsolute(outputDir);
-}
-
-/**
- * Converts an absolute path to a path relative to the config directory
- */
-export function makeRelativeToConfig(absolutePath: string): string {
-  return globalPathResolver.makePathRelativeToConfig(absolutePath);
-}
-
-/**
- * Converts an absolute path to a path relative to the output directory
- */
-export function makeRelativeToOutput(absolutePath: string, outputDir?: string): string {
-  return globalPathResolver.makePathRelativeToOutputDir(absolutePath, outputDir);
-}
-
-/**
- * Resolves a relative path from the output directory to an absolute path
- */
-export function resolveFromOutput(relativePath: string, outputDir?: string): string {
-  return globalPathResolver.resolvePathFromOutputDir(relativePath, outputDir);
-}
 
 
 /**
@@ -123,7 +80,7 @@ function readConfigContent(filePath: string, format: 'json' | 'js' | 'yaml'): Do
     
     case 'yaml':
       const yamlContent = fs.readFileSync(filePath, 'utf8');
-      return yaml.load(yamlContent) as DotGithubConfig;
+      return yaml.parse(yamlContent) as DotGithubConfig;
     
     case 'js':
       // For JS files, we need to delete from require cache and then require
@@ -148,10 +105,13 @@ function writeConfigContent(filePath: string, config: DotGithubConfig, format: '
       break;
     
     case 'yaml':
-      const yamlContent = yaml.dump(config, {
+      const yamlContent = yaml.stringify(config, {
         indent: 2,
-        lineWidth: -1,
-        noRefs: true
+        lineWidth: 0,
+        minContentWidth: 0,
+        simpleKeys: false,
+        doubleQuotedAsJSON: false,
+        doubleQuotedMinMultiLineLength: 40
       });
       fs.writeFileSync(filePath, yamlContent, 'utf8');
       break;
@@ -172,7 +132,8 @@ module.exports = ${JSON.stringify(config, null, 2)};
  * Sets a custom config file path to override the default discovery
  */
 export function setConfigPath(configPath: string): void {
-  globalPathResolver.setCustomConfigPath(configPath);
+  // This function is kept for compatibility but doesn't need to do anything
+  // since we're using DotGithubContext now
 }
 
 /**
@@ -211,7 +172,38 @@ export function createConfigFile(format: 'json' | 'js' | 'yaml' | 'yml' = 'json'
  * Gets the path to the dotgithub config file (supports .json, .js, .yaml, .yml)
  */
 export function getConfigPath(): string {
-  return globalPathResolver.getConfigPath();
+  const CONFIG_FILE_NAMES = ['dotgithub.json', 'dotgithub.js', 'dotgithub.yaml', 'dotgithub.yml'];
+  
+  let currentDir = process.cwd();
+  
+  while (currentDir !== path.dirname(currentDir)) {
+    const githubDir = path.join(currentDir, '.github');
+    
+    for (const fileName of CONFIG_FILE_NAMES) {
+      const configPath = path.join(githubDir, fileName);
+      if (fs.existsSync(configPath)) {
+        return configPath;
+      }
+    }
+    
+    if (fs.existsSync(path.join(currentDir, '.git'))) {
+      const defaultPath = path.join(currentDir, '.github', CONFIG_FILE_NAMES[0]!);
+      return defaultPath;
+    }
+    
+    currentDir = path.dirname(currentDir);
+  }
+  
+  const defaultPath = path.join(process.cwd(), '.github', CONFIG_FILE_NAMES[0]!);
+  return defaultPath;
+}
+
+/**
+ * Gets the config directory (.github directory)
+ */
+export function getConfigDir(): string {
+  const configPath = getConfigPath();
+  return path.dirname(configPath);
 }
 
 /**
@@ -220,6 +212,7 @@ export function getConfigPath(): string {
 export function createDefaultConfig(): DotGithubConfig {
   return {
     version: CONFIG_VERSION,
+    rootDir: DEFAULT_ROOT_DIR,
     outputDir: DEFAULT_OUTPUT_DIR,
     actions: [],
     plugins: [],
@@ -248,7 +241,17 @@ export function readConfig(customConfigPath?: string): DotGithubConfig {
     const config = readConfigContent(configPath, format);
     
     // Validate and migrate if necessary
-    return validateAndMigrateConfig(config);
+    const validatedConfig = validateAndMigrateConfig(config);
+    
+    // Automatically fix outputPath issues for existing configs
+    const fixedConfig = validateAndFixOutputPaths(validatedConfig);
+    
+    // If we made changes, write the fixed config back
+    if (fixedConfig !== validatedConfig) {
+      writeConfig(fixedConfig, customConfigPath);
+    }
+    
+    return fixedConfig;
   } catch (error) {
     throw new Error(`Failed to read config file at ${configPath}: ${error instanceof Error ? error.message : error}`);
   }
@@ -257,8 +260,8 @@ export function readConfig(customConfigPath?: string): DotGithubConfig {
 /**
  * Writes the dotgithub config file (preserves existing format or defaults to JSON)
  */
-export function writeConfig(config: DotGithubConfig): void {
-  const configPath = getConfigPath();
+export function writeConfig(config: DotGithubConfig, customConfigPath?: string): void {
+  const configPath = customConfigPath || getConfigPath();
   const configDir = getConfigDir();
   
   // Ensure .github directory exists
@@ -267,8 +270,6 @@ export function writeConfig(config: DotGithubConfig): void {
   try {
     const format = getConfigFormat(configPath);
     writeConfigContent(configPath, config, format);
-    // Invalidate cache since config changed
-    globalPathResolver.invalidateCache();
   } catch (error) {
     throw new Error(`Failed to write config file at ${configPath}: ${error instanceof Error ? error.message : error}`);
   }
@@ -277,36 +278,33 @@ export function writeConfig(config: DotGithubConfig): void {
 /**
  * Adds an action to the config
  */
-export function addActionToConfig(actionInfo: DotGithubAction, outputDir?: string): void {
-  const config = readConfig();
-  
+export function addActionToConfig(actionInfo: DotGithubAction, context: DotGithubContext): void {
   // Check if action already exists (check orgRepo AND actionPath for uniqueness)
-  const existingIndex = config.actions.findIndex(
+  const existingIndex = context.config.actions.findIndex(
     action => action.orgRepo === actionInfo.orgRepo &&
               (action.actionPath || '') === (actionInfo.actionPath || '')
   );
   
   const actionWithRelativePath: DotGithubAction = {
     ...actionInfo,
-    outputPath: makePathRelativeToOutputDir(actionInfo.outputPath, outputDir)
   };
   
   if (existingIndex >= 0) {
     // Update existing action
-    config.actions[existingIndex] = actionWithRelativePath;
+    context.config.actions[existingIndex] = actionWithRelativePath;
   } else {
     // Add new action
-    config.actions.push(actionWithRelativePath);
+    context.config.actions.push(actionWithRelativePath);
   }
   
   // Sort actions by orgRepo and then actionPath for consistent ordering
-  config.actions.sort((a, b) => {
+  context.config.actions.sort((a, b) => {
     const orgComparison = a.orgRepo.localeCompare(b.orgRepo);
     if (orgComparison !== 0) return orgComparison;
     return (a.actionPath || '').localeCompare(b.actionPath || '');
   });
   
-  writeConfig(config);
+  writeConfig(context.config, context.configPath);
 }
 
 /**
@@ -338,19 +336,38 @@ export function getActionsFromConfig(): DotGithubAction[] {
 /**
  * Gets all actions from the config with resolved absolute output paths
  */
-export function getActionsFromConfigWithResolvedPaths(): (DotGithubAction & { resolvedOutputPath: string })[] {
+export function getActionsFromConfigWithResolvedPaths(): (DotGithubAction & { resolvedOutputPath?: string })[] {
   const config = readConfig();
+  const configDir = getConfigDir();
+  const rootDir = path.join(configDir, config.rootDir);
+  
   return config.actions.map(action => ({
     ...action,
-    resolvedOutputPath: resolvePathFromConfig(action.outputPath)
+    ...(action.outputPath && {
+      resolvedOutputPath: path.resolve(rootDir, action.outputPath)
+    })
   }));
 }
 
 /**
  * Gets a single action's resolved output path
  */
-export function getResolvedOutputPath(action: DotGithubAction): string {
-  return resolvePathFromConfig(action.outputPath);
+export function getResolvedOutputPath(action: DotGithubAction): string | undefined {
+  if (!action.outputPath) return undefined;
+  
+  const config = readConfig();
+  const configDir = getConfigDir();
+  const rootDir = path.join(configDir, config.rootDir);
+  return path.resolve(rootDir, action.outputPath);
+}
+
+/**
+ * Updates the root directory in the config
+ */
+export function updateRootDir(rootDir: string): void {
+  const config = readConfig();
+  config.rootDir = rootDir;
+  writeConfig(config);
 }
 
 /**
@@ -453,11 +470,56 @@ export function removeStackFromConfig(stackName: string): boolean {
 }
 
 /**
+ * Validates and fixes outputPath values in existing configs
+ */
+export function validateAndFixOutputPaths(config: DotGithubConfig): DotGithubConfig {
+  let hasChanges = false;
+  
+  config.actions = config.actions.map((action) => {
+    if (action.outputPath && typeof action.outputPath === 'string') {
+      // Check if the path goes outside the rootDir (starts with ../ or contains /../)
+      if (action.outputPath.startsWith('../') || action.outputPath.includes('/../')) {
+        console.warn(`⚠️  Fixing incorrect outputPath for ${action.orgRepo}: "${action.outputPath}"`);
+        
+        // Extract the filename and directory structure from the incorrect path
+        const pathParts = action.outputPath.split('/');
+        const fileName = pathParts[pathParts.length - 1];
+        const dirParts = pathParts.slice(0, -1);
+        
+        // Find the part that starts after the rootDir structure
+        const rootDirIndex = dirParts.findIndex((part: string) => part === 'src' || part === config.rootDir);
+        if (rootDirIndex >= 0) {
+          // Take everything after the rootDir
+          const correctedParts = dirParts.slice(rootDirIndex + 1);
+          const correctedPath = correctedParts.length > 0 ? `${correctedParts.join('/')}/${fileName}` : fileName;
+          console.warn(`   Corrected to: "${correctedPath}"`);
+          hasChanges = true;
+          return { ...action, outputPath: correctedPath };
+        } else {
+          // If we can't find the rootDir in the path, just use the filename
+          console.warn(`   Simplified to: "${fileName}"`);
+          hasChanges = true;
+          return { ...action, outputPath: fileName };
+        }
+      }
+    }
+    return action;
+  });
+  
+  if (hasChanges) {
+    console.log('✅ Fixed incorrect outputPath values in configuration');
+  }
+  
+  return config;
+}
+
+/**
  * Validates and migrates config to current version
  */
 function validateAndMigrateConfig(config: any): DotGithubConfig {
   // Ensure required fields exist
   if (!config.version) config.version = CONFIG_VERSION;
+  if (!config.rootDir) config.rootDir = DEFAULT_ROOT_DIR;
   if (!config.outputDir) config.outputDir = DEFAULT_OUTPUT_DIR;
   if (!Array.isArray(config.actions)) config.actions = [];
   if (!Array.isArray(config.plugins)) config.plugins = [];
@@ -473,7 +535,36 @@ function validateAndMigrateConfig(config: any): DotGithubConfig {
   
   // Validate each action
   config.actions = config.actions.filter((action: any) => {
-    return action.orgRepo && action.ref && action.versionRef && action.functionName;
+    return action.orgRepo && action.ref && action.versionRef;
+  });
+
+  // Fix incorrect outputPath values that go outside the rootDir
+  config.actions = config.actions.map((action: any) => {
+    if (action.outputPath && typeof action.outputPath === 'string') {
+      // Check if the path goes outside the rootDir (starts with ../ or contains /../)
+      if (action.outputPath.startsWith('../') || action.outputPath.includes('/../')) {
+        console.warn(`⚠️  Fixing incorrect outputPath for ${action.orgRepo}: "${action.outputPath}"`);
+        
+        // Extract the filename and directory structure from the incorrect path
+        const pathParts = action.outputPath.split('/');
+        const fileName = pathParts[pathParts.length - 1];
+        const dirParts = pathParts.slice(0, -1);
+        
+        // Find the part that starts after the rootDir structure
+        const rootDirIndex = dirParts.findIndex((part: string) => part === 'src' || part === config.rootDir);
+        if (rootDirIndex >= 0) {
+          // Take everything after the rootDir
+          const correctedParts = dirParts.slice(rootDirIndex + 1);
+          action.outputPath = correctedParts.length > 0 ? `${correctedParts.join('/')}/${fileName}` : fileName;
+          console.warn(`   Corrected to: "${action.outputPath}"`);
+        } else {
+          // If we can't find the rootDir in the path, just use the filename
+          action.outputPath = fileName;
+          console.warn(`   Simplified to: "${action.outputPath}"`);
+        }
+      }
+    }
+    return action;
   });
   
   // Validate each plugin

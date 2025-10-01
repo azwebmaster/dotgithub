@@ -17,8 +17,9 @@ export interface GenerateTypesResult {
  * @param ref tag/sha/branch (optional, defaults to default branch)
  * @param token GitHub token (optional, overrides env GITHUB_TOKEN)
  * @param versionRef user-friendly version reference to use in generated code
+ * @param customActionName custom action name to override the YAML name
  */
-export async function generateTypesFromActionYml(orgRepo: string, ref?: string, token?: string, versionRef?: string): Promise<GenerateTypesResult> {
+export async function generateTypesFromActionYml(orgRepo: string, ref?: string, token?: string, versionRef?: string, customActionName?: string): Promise<GenerateTypesResult> {
   const [owner, repo] = orgRepo.split('/');
   if (!owner || !repo) throw new Error('orgRepo must be in the form org/repo');
   token = token || process.env.GITHUB_TOKEN;
@@ -38,7 +39,7 @@ export async function generateTypesFromActionYml(orgRepo: string, ref?: string, 
   const tmpDir = createTempDir();
   await cloneRepoToTemp(owner, repo, cloneRefToUse, token, tmpDir);
   const yml = readActionYml(tmpDir);
-  const type = generateTypesFromYml(yml, orgRepo, ref, versionRef);
+  const type = generateTypesFromYml(yml, orgRepo, ref, versionRef, customActionName);
   cleanupTempDir(tmpDir);
   return { yaml: yml, type };
 }
@@ -103,18 +104,20 @@ export function findAllActionsInRepo(repoDir: string): string[] {
  * @param orgRepo Organization/repository string
  * @param ref Reference to use in generated code
  * @param versionRef User-friendly version reference
+ * @param customActionName Custom action name to override the YAML name
  */
 export function generateTypesFromActionYmlAtPath(
   tmpDir: string,
   actionPath: string,
   orgRepo: string,
   ref: string,
-  versionRef?: string
+  versionRef?: string,
+  customActionName?: string
 ): GenerateTypesResult {
   const actionDir = actionPath ? path.join(tmpDir, actionPath) : tmpDir;
   const yml = readActionYml(actionDir);
   // For actions in subdirectories, include the action path in the repo string
   const repoForUses = actionPath ? `${orgRepo}/${actionPath}` : orgRepo;
-  const type = generateTypesFromYml(yml, repoForUses, ref, versionRef);
+  const type = generateTypesFromYml(yml, repoForUses, ref, versionRef, customActionName);
   return { yaml: yml, type };
 }

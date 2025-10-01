@@ -7,11 +7,19 @@ import { cloneRepo } from './git';
 import { addActionToConfig, writeConfig } from './config';
 import type { DotGithubAction } from './config';
 import { formatWithPrettier, updateOrgIndexFile, updateRootIndexFile, updateIndexFilesAfterRemoval } from './file-utils';
-import { Project, SourceFile } from 'ts-morph';
+import { Project, SourceFile, SyntaxKind } from 'ts-morph';
 import { toProperCase } from './utils';
 import type { DotGithubContext } from './context';
 
 export interface GenerateActionFilesOptions {
+  orgRepoRef: string;
+  outputDir?: string;
+  token?: string;
+  useSha?: boolean;
+  customActionName?: string; // Override action name for type names and function names
+}
+
+export interface LookupActionInfoOptions {
   orgRepoRef: string;
   outputDir?: string;
   token?: string;
@@ -23,6 +31,20 @@ export interface GenerateActionFilesResult {
   actionName: string;
   generatedTypes: string;
   actions?: GeneratedAction[]; // For multi-action repos
+}
+
+export interface ActionLookupResult {
+  orgRepo: string;
+  ref: string;
+  versionRef: string;
+  actions: ActionInfo[];
+}
+
+export interface ActionInfo {
+  actionPath: string;
+  actionName: string;
+  functionName: string;
+  outputPath: string;
 }
 
 export interface GeneratedAction {
@@ -69,6 +91,73 @@ export interface UpdateError {
 }
 
 /**
+ * Looks up action information without generating TypeScript code.
+ * Returns action metadata including SHA, version, and action details.
+ * @param options - Configuration for action lookup
+ */
+export async function lookupActionInfo(options: LookupActionInfoOptions): Promise<ActionLookupResult> {
+  const { orgRepo, ref } = parseOrgRepoRef(options.orgRepoRef);
+  const [owner, repo] = orgRepo.split('/');
+  if (!owner || !repo) throw new Error('orgRepo must be in the form org/repo');
+
+  const token = options.token || process.env.GITHUB_TOKEN;
+
+  // If no ref provided, default to latest tag; if @latest specified, resolve it
+  let resolvedRef: string;
+  if (!ref) {
+    // No version specified, use latest tag as default
+    try {
+      resolvedRef = await getLatestTag(owner, repo, token);
+    } catch (error) {
+      // Fallback to default branch if no tags available
+      console.warn(`No tags found for ${orgRepo}, falling back to default branch`);
+      resolvedRef = await getDefaultBranch(owner, repo, token);
+    }
+  } else {
+    // Resolve @latest to actual tag name, or use provided ref
+    const resolvedLatestRef = await resolveLatestRef(orgRepo, ref, token);
+    resolvedRef = resolvedLatestRef || ref;
+  }
+
+  // Resolve to SHA by default unless useSha is explicitly false
+  const useSha = options.useSha !== false;
+  const finalRef = useSha ? await getRefSha(owner, repo, resolvedRef, token) : resolvedRef;
+
+  // Clone the repo and find all actions
+  const tmpDir = createTempDir();
+  try {
+    await cloneRepoToTemp(owner, repo, resolvedRef, token, tmpDir);
+    const actions = await findAllActionsInRepo(tmpDir);
+
+    const actionInfos: ActionInfo[] = actions.map(actionPath => {
+      // Extract action name from path (last segment or repo name if root)
+      const actionName = actionPath ? path.basename(actionPath) : repo;
+      const functionName = toProperCase(actionName);
+      const outputPath = actionPath 
+        ? path.join(options.outputDir || 'src', 'actions', owner, repo, actionPath, `${actionName}.ts`)
+        : path.join(options.outputDir || 'src', 'actions', owner, repo, `${actionName}.ts`);
+
+      return {
+        actionPath,
+        actionName,
+        functionName,
+        outputPath
+      };
+    });
+
+    return {
+      orgRepo,
+      ref: finalRef,
+      versionRef: resolvedRef,
+      actions: actionInfos
+    };
+  } finally {
+    // Clean up temp directory
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+}
+
+/**
  * Generates GitHub Action TypeScript files from a GitHub repo and saves them to the output directory.
  * Handles repositories with multiple actions in subdirectories.
  * Creates an organization/repo folder structure and updates index files.
@@ -77,6 +166,7 @@ export interface UpdateError {
  * @param options - Configuration for file generation
  */
 export async function generateActionFiles(context: DotGithubContext, options: GenerateActionFilesOptions): Promise<GenerateActionFilesResult> {
+
   const { orgRepo, ref } = parseOrgRepoRef(options.orgRepoRef);
   const [owner, repo] = orgRepo.split('/');
   if (!owner || !repo) throw new Error('orgRepo must be in the form org/repo');
@@ -116,23 +206,43 @@ export async function generateActionFiles(context: DotGithubContext, options: Ge
 
     console.log(`Found ${actionPaths.length} action(s) in ${orgRepo}: ${actionPaths.join(', ') || 'root'}`);
 
-    // Remove existing actions for this repo
-    const existingActions = context.config.actions.filter(action => action.orgRepo === orgRepo);
-    for (const existingAction of existingActions) {
+    // Remove existing actions for this specific orgRepo/actionPath combination
+    // We need to remove actions that match the specific actionPath being added
+    const actionsToRemove: DotGithubAction[] = [];
+    
+    for (const actionPath of actionPaths) {
+      const existingActions = context.config.actions.filter(action => 
+        action.orgRepo === orgRepo && 
+        (action.actionPath || '') === (actionPath || '')
+      );
+      actionsToRemove.push(...existingActions);
+    }
+    
+    // Remove files for the specific actions being replaced
+    for (const existingAction of actionsToRemove) {
       try {
-        const existingPath = context.resolvePath(existingAction.outputPath);
-        if (fs.existsSync(existingPath)) {
-          fs.unlinkSync(existingPath);
+        if (existingAction.outputPath) {
+          const existingPath = context.resolvePath(existingAction.outputPath);
+          if (fs.existsSync(existingPath)) {
+            fs.unlinkSync(existingPath);
+          }
         }
       } catch (error) {
         console.warn(`Warning: Could not remove existing action files: ${error instanceof Error ? error.message : error}`);
       }
     }
-    // Remove from config
-    context.config.actions = context.config.actions.filter(action => action.orgRepo !== orgRepo);
+    
+    // Remove from config - only remove the specific actions being replaced
+    context.config.actions = context.config.actions.filter(action => 
+      !actionsToRemove.some(toRemove => 
+        action.orgRepo === toRemove.orgRepo && 
+        (action.actionPath || '') === (toRemove.actionPath || '')
+      )
+    );
 
     const generatedActions: GeneratedAction[] = [];
-    const rootActionDir = context.resolvePath('actions');
+    // Use provided outputDir or fall back to config's rootDir + 'actions'
+    const rootActionDir = options.outputDir ? path.resolve(options.outputDir) : context.resolvePath('actions');
     console.log(`Generating action files to ${rootActionDir}`);
     const repoDir = path.join(rootActionDir, owner, repo);
 
@@ -140,10 +250,12 @@ export async function generateActionFiles(context: DotGithubContext, options: Ge
       // Generate types for this action
       const refForCreateStep = useSha ? finalRef : resolvedRef;
       const refForComments = resolvedRef;
-      const result = generateTypesFromActionYmlAtPath(tmpDir, actionPath, orgRepo, refForCreateStep, refForComments);
+      const result = generateTypesFromActionYmlAtPath(tmpDir, actionPath, orgRepo, refForCreateStep, refForComments, options.customActionName);
 
       // Generate filename from action name
-      const actionNameForFile = generateFilenameFromActionName(result.yaml.name);
+      // Use custom action name if provided, otherwise use the action name from YAML
+      const baseActionName = options.customActionName || result.yaml.name;
+      const actionNameForFile = generateFilenameFromActionName(baseActionName);
       const fileName = `${actionNameForFile}.ts`;
 
       // Create directory structure:
@@ -176,18 +288,23 @@ export async function generateActionFiles(context: DotGithubContext, options: Ge
       fs.writeFileSync(filePath, formattedCode, 'utf8');
 
       // Generate function name (camelCase version of action name)
-      const actionName = result.yaml.name.replace(/[^a-zA-Z0-9]/g, ' ');
+      // Use the same baseActionName from above
+      const actionName = baseActionName.replace(/[^a-zA-Z0-9]/g, ' ');
       const ActionName = toProperCase(actionName.replace(/\s+/g, ' '));
       const functionName = ActionName.charAt(0).toLowerCase() + ActionName.slice(1);
 
+      // Convert absolute filePath to relative path from rootDir
+      // const relativeOutputPath = path.relative(context.resolvePath(''), filePath);
+      const relativeOutputPath = context.relativePath(filePath);
+      
       addActionToConfig({
         orgRepo,
         ref: useSha ? finalRef : resolvedRef,
         versionRef: resolvedRef,
-        functionName,
-        outputPath: filePath,
+        actionName: options.customActionName,
+        outputPath: relativeOutputPath,
         actionPath: actionPath || undefined
-      });
+      }, context);
 
       generatedActions.push({
         actionPath,
@@ -253,10 +370,12 @@ export async function removeActionFiles(context: DotGithubContext, options: Remo
     // Remove all action files
     for (const action of actionsToRemove) {
       try {
-        const resolvedPath = context.resolvePath(action.outputPath);
-        if (fs.existsSync(resolvedPath)) {
-          fs.unlinkSync(resolvedPath);
-          removedFiles.push(resolvedPath);
+        if (action.outputPath) {
+          const resolvedPath = context.resolvePath(action.outputPath);
+          if (fs.existsSync(resolvedPath)) {
+            fs.unlinkSync(resolvedPath);
+            removedFiles.push(resolvedPath);
+          }
         }
       } catch (error) {
         console.warn(`Warning: Could not remove action file: ${error instanceof Error ? error.message : error}`);
@@ -301,7 +420,13 @@ export async function removeActionFiles(context: DotGithubContext, options: Remo
   // Save updated config
   writeConfig(context.config);
 
-  const actionNames = actionsToRemove.map(a => a.functionName).join(', ');
+  const actionNames = actionsToRemove.map(a => {
+    if (a.actionName) {
+      const { generateFunctionName } = require('./utils');
+      return generateFunctionName(a.actionName);
+    }
+    return a.orgRepo;
+  }).join(', ');
   console.log(`Removed ${actionsToRemove.length} action(s) from ${orgRepo}`);
 
   return {
@@ -462,9 +587,9 @@ function generateFilenameFromActionName(actionName: string): string {
 }
 
 /**
- * Adds necessary import statements to the generated TypeScript code
+ * Adds necessary import statements to the generated TypeScript code and removes unused imports
  * @param generatedTypes - The generated TypeScript code
- * @returns TypeScript code with import statements
+ * @returns TypeScript code with only necessary import statements
  */
 function addImportsToGeneratedTypes(generatedTypes: string): string {
   // Create a new ts-morph project for code generation
@@ -484,19 +609,94 @@ function addImportsToGeneratedTypes(generatedTypes: string): string {
   const fileName = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.ts`;
   const sourceFile = project.createSourceFile(fileName, generatedTypes);
 
-  // Add import statements
-  sourceFile.addImportDeclaration({
-    moduleSpecifier: '@dotgithub/core',
-    namedImports: ['createStep'],
-  });
+  // Remove all existing import declarations to avoid duplicates
+  const existingImports = sourceFile.getImportDeclarations();
+  existingImports.forEach(importDecl => importDecl.remove());
 
-  sourceFile.addImportDeclaration({
-    moduleSpecifier: '@dotgithub/core',
-    namedImports: ['GitHubStep', 'GitHubStepBase', 'GitHubInputValue'],
-    isTypeOnly: true,
-  });
+  // Analyze the generated code to determine which imports are actually used
+  const usedImports = analyzeUsedImports(sourceFile);
+
+  // Add all value imports together (these are used as values, not type-only)
+  const valueImports = [];
+  if (usedImports.has('GitHubOutputValue')) {
+    valueImports.push('GitHubOutputValue');
+  }
+  if (usedImports.has('GitHubAction')) {
+    valueImports.push('GitHubAction');
+  }
+  
+  if (valueImports.length > 0) {
+    sourceFile.addImportDeclaration({
+      moduleSpecifier: '@dotgithub/core',
+      namedImports: valueImports,
+    });
+  }
+
+  // Add type-only imports that are used
+  const typeImports = ['GitHubStep', 'GitHubStepBase', 'GitHubStepAction', 'GitHubInputValue', 'DotGithubConfig', 'PluginContext'];
+  const usedTypeImports = typeImports.filter(imp => usedImports.has(imp));
+  
+  if (usedTypeImports.length > 0) {
+    sourceFile.addImportDeclaration({
+      moduleSpecifier: '@dotgithub/core',
+      namedImports: usedTypeImports,
+      isTypeOnly: true,
+    });
+  }
+
+  if (usedImports.has('StepChainBuilder')) {
+    sourceFile.addImportDeclaration({
+      moduleSpecifier: '@dotgithub/core',
+      namedImports: ['StepChainBuilder'],
+      isTypeOnly: true,
+    });
+  }
+
+  if (usedImports.has('ActionCollection')) {
+    sourceFile.addImportDeclaration({
+      moduleSpecifier: '@dotgithub/core',
+      namedImports: ['ActionCollection'],
+      isTypeOnly: true,
+    });
+  }
 
   return sourceFile.getFullText();
+}
+
+/**
+ * Analyzes a TypeScript source file to determine which imports are actually used
+ * @param sourceFile - The TypeScript source file to analyze
+ * @returns Set of import names that are actually used in the code
+ */
+function analyzeUsedImports(sourceFile: SourceFile): Set<string> {
+  const usedImports = new Set<string>();
+  
+  // Get all identifiers in the source file
+  const identifiers = sourceFile.getDescendantsOfKind(SyntaxKind.Identifier);
+  
+  for (const identifier of identifiers) {
+    const text = identifier.getText();
+    
+    // Check if this identifier matches any of our potential imports
+    const potentialImports = [
+      'GitHubStep',
+      'GitHubStepBase', 
+      'GitHubStepAction',
+      'GitHubInputValue',
+      'GitHubAction',
+      'GitHubOutputValue',
+      'DotGithubConfig',
+      'PluginContext',
+      'StepChainBuilder',
+      'ActionCollection'
+    ];
+    
+    if (potentialImports.includes(text)) {
+      usedImports.add(text);
+    }
+  }
+  
+  return usedImports;
 }
 
 /**

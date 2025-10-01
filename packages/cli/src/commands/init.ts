@@ -1,20 +1,22 @@
 import { Command } from 'commander';
 import * as fs from 'fs';
 import * as path from 'path';
-import type { DotGithubContext } from '@dotgithub/core';
+import { createConfigFile, writeConfig, createDefaultConfig, type DotGithubContext } from '@dotgithub/core';
 
 export interface InitCommandOptions {
   force?: boolean;
+  output?: string;
 }
 
 export function createInitCommand(createContext: (options?: any) => DotGithubContext): Command {
   return new Command('init')
     .description('Initialize a new GitHub Actions workspace with TypeScript and ESM support')
     .option('--force', 'Overwrite existing files if they exist', false)
+    .option('--output <dir>', 'Output directory for the workspace (default: src)', 'src')
     .action(async (options: InitCommandOptions) => {
       try {
-        await initializeWorkspace(options);
-        console.log('✓ Initialized GitHub Actions workspace in .github/src');
+        await initializeWorkspace(options, createContext);
+        console.log(`✓ Initialized GitHub Actions workspace`);
       } catch (err) {
         console.error('Error:', err instanceof Error ? err.message : String(err));
         process.exit(1);
@@ -22,10 +24,38 @@ export function createInitCommand(createContext: (options?: any) => DotGithubCon
     });
 }
 
-async function initializeWorkspace(options: InitCommandOptions): Promise<void> {
-  const workspaceDir = path.join(process.cwd(), '.github', 'src');
+async function initializeWorkspace(options: InitCommandOptions, createContext: (options?: any) => DotGithubContext): Promise<void> {
+  // Step 1: Create the output directory
+  const outputDir = options.output || 'src';
+  const outputDirPath = path.resolve(outputDir);
   
-  // Create directory structure
+  // Create output directory if it doesn't exist
+  if (!fs.existsSync(outputDirPath)) {
+    fs.mkdirSync(outputDirPath, { recursive: true });
+  }
+
+  // Step 2: Create dotgithub.json in the output directory
+  const configPath = path.join(outputDirPath, 'dotgithub.json');
+  
+  // Check if config already exists
+  if (fs.existsSync(configPath) && !options.force) {
+    throw new Error(`dotgithub.json already exists in ${outputDir}. Use --force to overwrite.`);
+  }
+
+  // Create default config with workspace output directory
+  const defaultConfig = createDefaultConfig();
+  defaultConfig.rootDir = 'src'; // This will be the workspace directory inside the output directory
+  
+  // Write the config file to the output directory
+  fs.writeFileSync(configPath, JSON.stringify(defaultConfig, null, 2) + '\n');
+  console.log(`✓ Created dotgithub.json configuration file in ${outputDir}`);
+
+  // Step 3: Read the config file to get the workspace directory
+  const configContent = fs.readFileSync(configPath, 'utf8');
+  const config = JSON.parse(configContent);
+  const workspaceDir = path.join(outputDirPath, config.rootDir);
+  
+  // Create workspace directory structure
   if (!fs.existsSync(workspaceDir)) {
     fs.mkdirSync(workspaceDir, { recursive: true });
   }
@@ -33,7 +63,7 @@ async function initializeWorkspace(options: InitCommandOptions): Promise<void> {
   // Check if package.json already exists
   const packageJsonPath = path.join(workspaceDir, 'package.json');
   if (fs.existsSync(packageJsonPath) && !options.force) {
-    throw new Error('package.json already exists in .github/src. Use --force to overwrite.');
+    throw new Error(`package.json already exists in ${config.rootDir}. Use --force to overwrite.`);
   }
 
   // Generate package.json
@@ -57,12 +87,13 @@ async function initializeWorkspace(options: InitCommandOptions): Promise<void> {
   }
 
   console.log('Generated files:');
-  console.log('  .github/src/package.json');
-  console.log('  .github/src/tsconfig.json');
-  console.log('  .github/src/index.ts');
+  console.log(`  ${outputDir}/dotgithub.json`);
+  console.log(`  ${workspaceDir}/package.json`);
+  console.log(`  ${workspaceDir}/tsconfig.json`);
+  console.log(`  ${workspaceDir}/index.ts`);
   console.log('');
   console.log('Next steps:');
-  console.log('  cd .github/src');
+  console.log(`  cd ${workspaceDir}`);
   console.log('  npm install');
 }
 

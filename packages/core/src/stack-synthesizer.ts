@@ -2,7 +2,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { GitHubStack } from './constructs/base';
 import { PluginManager } from './plugins/manager';
-import { getProjectRoot } from './config';
+// Removed import - using direct path resolution
 import type { 
   StackConfig, 
   PluginConfig, 
@@ -13,6 +13,7 @@ import type { DotGithubContext } from './context';
 export interface StackSynthesizerOptions {
   context: DotGithubContext;
   projectRoot?: string;
+  outputPath?: string;
 }
 
 export interface SynthesisResult {
@@ -32,13 +33,16 @@ export interface SynthesisResults {
 export class StackSynthesizer {
   private readonly context: DotGithubContext;
   private readonly projectRoot: string;
+  private readonly outputPath: string;
   private readonly pluginManager: PluginManager;
 
   constructor(options: StackSynthesizerOptions) {
     this.context = options.context;
-    this.projectRoot = options.projectRoot || getProjectRoot();
+    this.projectRoot = options.projectRoot || process.cwd();
+    this.outputPath = options.outputPath || path.join(this.projectRoot, '.github');
     this.pluginManager = new PluginManager({
-      projectRoot: this.projectRoot
+      projectRoot: this.projectRoot,
+      context: this.context
     });
   }
 
@@ -102,18 +106,12 @@ export class StackSynthesizer {
     // Generate files from the stack
     const files = stack.synth();
 
-    // Determine output path
-    const outputPath = path.join(
-      this.projectRoot,
-      '.github'
-    );
-
     return {
       stack,
       stackConfig,
       pluginResults,
       files,
-      outputPath
+      outputPath: this.outputPath
     };
   }
 

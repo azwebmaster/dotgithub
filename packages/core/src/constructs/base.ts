@@ -1,6 +1,6 @@
 import type { GitHubWorkflow, GitHubWorkflows } from '../types/workflow';
 import type { DotGitHubResource, DotGitHubResources, DotGitHub } from '../types/common';
-import * as yaml from 'js-yaml';
+import * as yaml from 'yaml';
 
 export interface IConstruct {
   readonly node: ConstructNode;
@@ -79,11 +79,14 @@ export class GitHubStack extends Construct {
     // Generate workflow files
     for (const [workflowId, workflow] of Object.entries(this._workflows)) {
       const filename = `workflows/${workflowId}.yml`;
-      files[filename] = yaml.dump(workflow, {
+      const processedWorkflow = this._processWorkflowForYaml(workflow);
+      files[filename] = yaml.stringify(processedWorkflow, {
         indent: 2,
-        lineWidth: -1,
-        noRefs: true,
-        sortKeys: false
+        lineWidth: 0,
+        minContentWidth: 0,
+        simpleKeys: false,
+        doubleQuotedAsJSON: false,
+        doubleQuotedMinMultiLineLength: 40
       });
     }
     
@@ -91,6 +94,34 @@ export class GitHubStack extends Construct {
     this._synthResourcesRecursive('', this._resources, files);
     
     return files;
+  }
+
+  private _processWorkflowForYaml(workflow: GitHubWorkflow): any {
+    const processed: any = { ...workflow };
+    
+    if (processed.jobs) {
+      for (const [jobId, job] of Object.entries(processed.jobs)) {
+        if (job && typeof job === 'object' && 'steps' in job && Array.isArray(job.steps)) {
+          processed.jobs[jobId] = {
+            ...job,
+            steps: job.steps.map((step: any) => this._processStepForYaml(step))
+          };
+        }
+      }
+    }
+    
+    return processed;
+  }
+
+  private _processStepForYaml(step: any): any {
+    const processed = { ...step };
+    
+    // Remove empty 'with' fields
+    if (processed.with && typeof processed.with === 'object' && Object.keys(processed.with).length === 0) {
+      delete processed.with;
+    }
+    
+    return processed;
   }
 
   private _synthResourcesRecursive(basePath: string, resources: DotGitHubResources, files: Record<string, string>): void {
@@ -103,11 +134,13 @@ export class GitHubStack extends Construct {
           files[fullPath] = resource.content;
         } else {
           // Serialize non-string content (JSON, YAML, etc.)
-          files[fullPath] = yaml.dump(resource.content, {
+          files[fullPath] = yaml.stringify(resource.content, {
             indent: 2,
-            lineWidth: -1,
-            noRefs: true,
-            sortKeys: false
+            lineWidth: 0,
+            minContentWidth: 0,
+            simpleKeys: false,
+            doubleQuotedAsJSON: false,
+            doubleQuotedMinMultiLineLength: 40
           });
         }
       } else if (resource.children) {

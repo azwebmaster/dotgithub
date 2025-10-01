@@ -8,15 +8,22 @@ export function createSynthCommand(createContext: (options?: any) => DotGithubCo
   synthCommand
     .description('Synthesize GitHub workflows from configured stacks and plugins')
     .option('--dry-run', 'preview files without writing them to disk', false)
-    .option('--output <dir>', 'output directory (default: .github)')
+    .option('--output <dir>', 'output directory (default: config outputDir relative to config file)')
     .option('--stack <name>', 'synthesize only the specified stack')
     .option('--verbose', 'show detailed output', false)
     .action(async (options) => {
       try {
         const context = createContext(options);
+        
+        // Determine output path: use --output relative to cwd, or config.outputDir relative to config file if not specified
+        const outputPath = options.output 
+          ? path.resolve(process.cwd(), options.output)
+          : path.join(path.dirname(context.configPath), context.config.outputDir);
+        
         const synthesizer = new StackSynthesizer({
           context,
-          projectRoot: process.cwd()
+          projectRoot: process.cwd(),
+          outputPath
         });
 
         if (options.dryRun) {

@@ -1,10 +1,11 @@
 import * as path from 'path';
 import * as fs from 'fs';
 import type { PluginConfig, PluginModule, DotGitHubPlugin, PluginLoadResult } from './types';
-import { resolveFromOutput } from '../config';
+// Removed import - using direct path resolution
+import type { DotGithubContext } from '../context';
 
 export class PluginResolver {
-  constructor(private readonly projectRoot: string) {}
+  constructor(private readonly projectRoot: string, private readonly context?: DotGithubContext) {}
 
   async resolvePlugin(config: PluginConfig): Promise<PluginLoadResult> {
     let plugin: DotGitHubPlugin;
@@ -32,11 +33,32 @@ export class PluginResolver {
   private isLocalPath(packagePath: string): boolean {
     return packagePath.startsWith('./') || 
            packagePath.startsWith('../') || 
-           path.isAbsolute(packagePath);
+           path.isAbsolute(packagePath) ||
+           // Also consider paths with file extensions as local paths
+           path.extname(packagePath) !== '' ||
+           // Consider paths that don't look like npm package names as local
+           !this.isValidNpmPackageName(packagePath);
+  }
+
+  private isValidNpmPackageName(packageName: string): boolean {
+    // Basic npm package name validation
+    // Package names should be lowercase, can contain hyphens, and should not start with dots
+    return /^[a-z0-9][a-z0-9-]*[a-z0-9]$/.test(packageName) || 
+           /^@[a-z0-9][a-z0-9-]*[a-z0-9]\/[a-z0-9][a-z0-9-]*[a-z0-9]$/.test(packageName);
   }
 
   private async loadLocalPlugin(pluginPath: string): Promise<DotGitHubPlugin> {
-    const resolvedPath = resolveFromOutput(pluginPath);
+    // Resolve plugin path using formula: {configDir}/{rootDir}/{pluginPackage}
+    let resolvedPath: string;
+    if (this.context) {
+      // Use the formula: configDir + rootDir + pluginPackage
+      const configDir = path.dirname(this.context.configPath);
+      const rootDir = this.context.config.rootDir;
+      resolvedPath = path.resolve(configDir, rootDir, pluginPath);
+    } else {
+      // Fallback to old behavior - resolve relative to project root
+      resolvedPath = path.resolve(this.projectRoot, pluginPath);
+    }
     
     if (!fs.existsSync(resolvedPath)) {
       throw new Error(`Local plugin not found at: ${resolvedPath}`);
@@ -81,8 +103,8 @@ export class PluginResolver {
       throw new Error('Plugin module must export either a default export or named "plugin" export');
     }
 
-    if (typeof plugin.apply !== 'function') {
-      throw new Error('Plugin must implement the "apply" method');
+    if (typeof plugin.synthesize !== 'function') {
+      throw new Error('Plugin must implement the "synthesize" method');
     }
 
     if (!plugin.name || typeof plugin.name !== 'string') {

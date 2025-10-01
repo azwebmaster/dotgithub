@@ -101,7 +101,8 @@ updates:
       expect(workflowFile).toBeDefined();
       expect(workflowFile?.name).toBe('ci');
       expect(workflowFile?.content).toContain('export async function ciHandler(context: PluginContext): Promise<void>');
-      expect(workflowFile?.content).toContain('import type { GitHubWorkflow, PluginContext } from \'@dotgithub/core\'');
+      expect(workflowFile?.content).toContain('import { run } from \'@dotgithub/core\'');
+      expect(workflowFile?.content).toContain('import type { PluginContext } from \'@dotgithub/core\'');
 
       // Check resource file generation
       const resourceFile = result.generatedFiles.find(f => f.type === 'resource');
@@ -456,7 +457,8 @@ jobs:
       expect(content).toContain("name: 'Test Workflow'");
       
       // Check imports
-      expect(content).toContain('import type { GitHubWorkflow, PluginContext } from \'@dotgithub/core\'');
+      expect(content).toContain('import { run } from \'@dotgithub/core\'');
+      expect(content).toContain('import type { PluginContext } from \'@dotgithub/core\'');
     });
 
     it('should generate resource functions with correct signature', async () => {
@@ -1063,6 +1065,97 @@ open_collective: # Replace with a single Open Collective name`;
       
       // Verify no incorrect paths (only two levels up)
       expect(workflowContent).not.toMatch(/import.*from '\.\.\/\.\.\/actions\//);
+    });
+
+    it('should use createStep for actions with generateCode: false', async () => {
+      // Create a temporary test directory to avoid local config interference
+      const testGithubDir = path.join(tempDir, '.github');
+      const testWorkflowsDir = path.join(testGithubDir, 'workflows');
+      fs.mkdirSync(testWorkflowsDir, { recursive: true });
+      
+      // Create a test workflow file
+      const testWorkflowContent = `name: Test Workflow
+on:
+  push:
+    branches: ['main']
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - run: npm test
+        name: Run tests`;
+      
+      fs.writeFileSync(path.join(testWorkflowsDir, 'test.yml'), testWorkflowContent);
+      
+      // Create a mock context with actions config where generateCode is false
+      const mockContext = {
+        config: {
+          version: '1.0.0',
+          outputDir: 'src',
+          actions: [
+            {
+              orgRepo: 'actions/checkout',
+              ref: 'v4',
+              versionRef: 'v4',
+              functionName: 'checkout',
+              outputPath: 'actions/actions/checkout.ts',
+              generateCode: false
+            },
+            {
+              orgRepo: 'actions/setup-node',
+              ref: 'v4',
+              versionRef: 'v4',
+              functionName: 'setupNodeJsEnvironment',
+              outputPath: 'actions/actions/setup-node.ts',
+              generateCode: true
+            }
+          ],
+          plugins: [],
+          stacks: [],
+          options: {
+            tokenSource: 'env',
+            formatting: { prettier: true }
+          }
+        },
+        configPath: '',
+        outputPath: '',
+        relativePath: (p: string) => p,
+        resolvePath: (p: string) => p
+      } as unknown as DotGithubContext;
+
+      const result = await createPluginFromFiles({
+        pluginName: 'test-plugin',
+        githubFilesPath: testGithubDir,
+        context: mockContext,
+        outputDir: 'src'
+      });
+
+      // Check the main plugin file for imports - createStep should be imported
+      expect(result.pluginContent).toContain("import { createStep, run } from '@dotgithub/core';");
+      
+      // Find the workflow file content
+      const workflowFile = result.generatedFiles.find(f => f.path.endsWith('workflows/test.ts'));
+      expect(workflowFile).toBeDefined();
+      expect(workflowFile!.content).toBeDefined();
+
+      const workflowContent = workflowFile!.content!;
+      
+      // Verify that setupNodeJsEnvironment is imported (generateCode: true)
+      expect(workflowContent).toContain("import { setupNodeJsEnvironment } from '../../../actions/actions/setup-node.js';");
+      
+      // Verify that checkout is NOT imported (generateCode: false)
+      expect(workflowContent).not.toContain("import { checkout } from");
+      
+      // Verify that createStep is used for actions/checkout
+      expect(workflowContent).toContain('createStep(');
+      expect(workflowContent).toContain('uses: \'actions/checkout\'');
+      
+      // Verify that setupNodeJsEnvironment function is used for actions/setup-node
+      expect(workflowContent).toContain('setupNodeJsEnvironment(');
     });
   });
 });

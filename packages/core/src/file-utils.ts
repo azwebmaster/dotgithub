@@ -3,6 +3,96 @@ import * as path from 'path';
 import * as prettier from 'prettier';
 
 /**
+ * Converts a string to PascalCase
+ */
+function toPascalCase(str: string): string {
+  return str
+    .split(/[-_\s]+/)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join('');
+}
+
+
+/**
+ * Gets all actions in a directory by scanning for .ts files
+ */
+async function getAllActionsInDirectory(orgDir: string): Promise<string[]> {
+  const actions: string[] = [];
+  
+  // Scan for .ts files in the org directory
+  const files = fs.readdirSync(orgDir);
+  for (const file of files) {
+    if (file.endsWith('.ts') && file !== 'index.ts') {
+      const actionName = file.replace('.ts', '');
+      // Only include if the action file actually exists and has the expected exports
+      const actionFilePath = path.join(orgDir, file);
+      if (fs.existsSync(actionFilePath)) {
+        const content = fs.readFileSync(actionFilePath, 'utf8');
+        const ActionName = actionName.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase()).replace(/^./, letter => letter.toUpperCase());
+        // Check if the file exports the action class
+        if (content.includes(`export class ${ActionName}`)) {
+          actions.push(actionName);
+        }
+      }
+    }
+  }
+  
+  return actions;
+}
+
+/**
+ * Generates a full collection class with all actions
+ */
+function generateFullCollectionClass(orgName: string, actions: string[]): string {
+  const imports = actions.map(action => {
+    const ActionName = action.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase()).replace(/^./, letter => letter.toUpperCase());
+    return `import { ${ActionName} } from "./${action}.js";`;
+  }).join('\n');
+  
+  const propertyAssignments = actions.map(action => {
+    const ActionName = action.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase()).replace(/^./, letter => letter.toUpperCase());
+    const propertyName = action.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
+    return `  ${propertyName} = new ${ActionName}(this);`;
+  }).join('\n');
+  
+  return `import { ActionCollection } from '@dotgithub/core';
+${imports}
+
+export class ${toPascalCase(orgName)}Collection extends ActionCollection {
+${propertyAssignments}
+}`;
+}
+
+/**
+ * Generates method bindings for ActionCollection from a folder of actions
+ */
+async function generateActionCollectionMethods(repoFolder: string): Promise<string> {
+  const indexPath = path.join(repoFolder, 'index.ts');
+  
+  if (!fs.existsSync(indexPath)) {
+    return '';
+  }
+  
+  const indexContent = fs.readFileSync(indexPath, 'utf8');
+  
+  // Extract exported class names from the index file
+  const exportMatches = indexContent.match(/export\s+class\s+(\w+)/g);
+  if (!exportMatches) {
+    return '';
+  }
+  
+  const propertyAssignments = exportMatches.map(match => {
+    const nameMatch = match.match(/export\s+class\s+(\w+)/);
+    if (!nameMatch || !nameMatch[1]) return '';
+    const className = nameMatch[1];
+    const propertyName = className.charAt(0).toLowerCase() + className.slice(1);
+    return `  ${propertyName} = new ${className}(this);`;
+  }).join('\n');
+  
+  return propertyAssignments;
+}
+
+/**
  * Formats TypeScript code using prettier
  * @param code - TypeScript code to format
  * @returns Formatted TypeScript code
@@ -25,6 +115,9 @@ export async function formatWithPrettier(code: string): Promise<string> {
  */
 export async function updateOrgIndexFile(orgDir: string, repoName: string): Promise<void> {
   const indexPath = path.join(orgDir, 'index.ts');
+  
+  // Extract org name from the directory path
+  const orgName = path.basename(orgDir);
 
   // Check if this is a single action file (repo.ts) or a folder with multiple actions
   const singleActionFile = path.join(orgDir, `${repoName}.ts`);
@@ -32,30 +125,36 @@ export async function updateOrgIndexFile(orgDir: string, repoName: string): Prom
 
   let exportStatement: string;
   if (fs.existsSync(singleActionFile)) {
-    // Single action at root - export from file directly
-    exportStatement = `export * as ${sanitizeVarName(repoName)} from './${repoName}.js';\n`;
+    // Single action at root - create ActionCollection
+    const ActionName = repoName.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase()).replace(/^./, letter => letter.toUpperCase());
+    const propertyName = repoName.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
+    exportStatement = `import { ActionCollection } from '@dotgithub/core';
+import { ${ActionName} } from './${repoName}.js';
+
+export class ${toPascalCase(orgName)}Collection extends ActionCollection {
+  ${propertyName} = new ${ActionName}(this);
+}
+`;
   } else if (fs.existsSync(repoFolder)) {
-    // Multiple actions or subdirectory action - export from folder index
-    exportStatement = `export * as ${sanitizeVarName(repoName)} from './${repoName}/index.js';\n`;
+    // Multiple actions or subdirectory action - create ActionCollection from folder
+    exportStatement = `import { ActionCollection } from '@dotgithub/core';
+import * as ${sanitizeVarName(repoName)}Actions from './${repoName}/index.js';
+
+export class ${toPascalCase(orgName)}Collection extends ActionCollection {
+  // Bind all action functions to this context
+  ${await generateActionCollectionMethods(repoFolder)}
+}
+`;
   } else {
     // Neither exists, skip
     return;
   }
 
-  if (fs.existsSync(indexPath)) {
-    const existingContent = fs.readFileSync(indexPath, 'utf8');
-    // Check if the export already exists to avoid duplicates (handle both file and folder exports)
-    const fileExportPattern = new RegExp(`export\\s*\\*\\s*as\\s*${sanitizeVarName(repoName)}\\s*from\\s*['"]\\./${repoName}(\\.js)?['"]`);
-    const folderExportPattern = new RegExp(`export\\s*\\*\\s*as\\s*${sanitizeVarName(repoName)}\\s*from\\s*['"]\\./${repoName}/index\\.js['"]`);
-    if (!fileExportPattern.test(existingContent) && !folderExportPattern.test(existingContent)) {
-      const newContent = existingContent + exportStatement;
-      const formattedContent = await formatWithPrettier(newContent);
-      fs.writeFileSync(indexPath, formattedContent, 'utf8');
-    }
-  } else {
-    const formattedContent = await formatWithPrettier(exportStatement);
-    fs.writeFileSync(indexPath, formattedContent, 'utf8');
-  }
+  // Always regenerate the entire collection class to include all actions
+  const allActions = await getAllActionsInDirectory(orgDir);
+  const fullExportStatement = generateFullCollectionClass(orgName, allActions);
+  const formattedContent = await formatWithPrettier(fullExportStatement);
+  fs.writeFileSync(indexPath, formattedContent, 'utf8');
 }
 
 /**
@@ -67,13 +166,13 @@ export async function updateRootIndexFile(outputDir: string, orgName: string): P
   const indexPath = path.join(outputDir, 'index.ts');
   // Convert org name to valid TypeScript identifier (replace hyphens with underscores)
   const validOrgName = orgName.replace(/-/g, '_');
-  const exportStatement = `export * as ${validOrgName} from './${orgName}/index.js';\n`;
+  const exportStatement = `export { ${toPascalCase(orgName)}Collection } from './${orgName}/index.js';\n`;
   
   if (fs.existsSync(indexPath)) {
     const existingContent = fs.readFileSync(indexPath, 'utf8');
-    // Check if the export already exists to avoid duplicates (check for the valid org reference)
-    const exportPattern = new RegExp(`export\\s*\\*\\s*as\\s*${validOrgName}\\s*from\\s*['"]\\./${orgName}/index\\.js['"]`);
-    if (!exportPattern.test(existingContent)) {
+    // Check if the ActionCollection export already exists to avoid duplicates
+    const actionCollectionPattern = new RegExp(`export\\s*{\\s*${toPascalCase(orgName)}Collection`);
+    if (!actionCollectionPattern.test(existingContent)) {
       const newContent = existingContent + exportStatement;
       const formattedContent = await formatWithPrettier(newContent);
       fs.writeFileSync(indexPath, formattedContent, 'utf8');

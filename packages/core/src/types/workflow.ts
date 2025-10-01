@@ -1,5 +1,6 @@
 // Types for GitHub Actions workflow syntax
 
+import type { GitHubInputValue } from "./common";
 import type { GitHubWorkflowEvent, GitHubWorkflowEventName } from "./events";
 
 /**
@@ -54,7 +55,7 @@ export type GitHubJobWith = { [key: string]: any };
  * Input parameters for a workflow step.
  * Maps parameter names to their values for actions or containers.
  */
-export type GitHubStepWith = { [key: string]: any };
+export type GitHubStepWith = { [key: string]: GitHubInputValue };
 
 /**
  * Collection of workflow files.
@@ -399,6 +400,8 @@ export type GitHubStep<T extends GitHubStepWith> = GitHubStepBase & {
   /** Not allowed when using an action. */
   run?: never;
 }
+
+export type GitHubStepAction = GitHubStep<GitHubStepWith>;
 
 /**
  * Configuration for a step that runs shell commands.

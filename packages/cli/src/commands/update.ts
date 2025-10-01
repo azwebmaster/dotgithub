@@ -11,7 +11,7 @@ export function createUpdateCommand(createContext: (options?: any) => DotGithubC
     .option('--no-sha', 'Use the original ref instead of resolving to SHA')
     .action(async (orgRepoRef, options) => {
       try {
-        const context = createContext();
+        const context = createContext(options);
         const result = await updateActionFiles(context, {
           orgRepoRef,
           outputDir: options.output,

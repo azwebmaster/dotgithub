@@ -16,7 +16,7 @@ All commands support these global options:
 
 ### `dotgithub add`
 
-Generate TypeScript types from GitHub Actions and save to output directory.
+Add GitHub Actions to configuration. By default, only looks up action information (SHA, version, etc.) without generating TypeScript code. Use `--generate-code` to create TypeScript files.
 
 **Syntax:**
 ```bash
@@ -30,23 +30,32 @@ dotgithub add <orgRepoRef...> [options]
 - `--output <outputDir>` - Output directory for generated TypeScript files
 - `-t, --token <token>` - GitHub token (overrides env GITHUB_TOKEN)
 - `--no-sha` - Use the original ref instead of resolving to SHA
+- `--generate-code` - Generate TypeScript code files (default is lookup-only)
+- `--lookup-only` - Only lookup action information without generating TypeScript code (default behavior)
+- `--name <name>` - Override the action name for type names and function names (e.g., setupNode)
 
 **Examples:**
 ```bash
-# Add a single action
+# Add a single action (lookup only by default)
 dotgithub add actions/checkout@v4
 
-# Add multiple actions
+# Add multiple actions (lookup only)
 dotgithub add actions/checkout@v4 actions/setup-node@v4
 
+# Generate TypeScript code files
+dotgithub add actions/checkout@v4 --generate-code
+
 # Specify custom output directory
-dotgithub add actions/checkout@v4 --output ./src/actions
+dotgithub add actions/checkout@v4 --generate-code --output ./src/actions
 
 # Use original ref without SHA resolution
 dotgithub add actions/checkout@v4 --no-sha
 
 # Use custom GitHub token
 dotgithub add actions/checkout@v4 --token ghp_xxxxxxxxxxxx
+
+# Override action name for custom type names and function names
+dotgithub add actions/setup-node@v4 --generate-code --name setupNode
 ```
 
 ### `dotgithub update`

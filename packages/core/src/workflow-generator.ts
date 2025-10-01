@@ -1,4 +1,4 @@
-import * as yaml from 'js-yaml';
+import * as yaml from 'yaml';
 import type { GitHubWorkflow, GitHubJob, GitHubStep, GitHubEnv, GitHubPermissions, GitHubPermissionsAll, GitHubStepAny } from './types/workflow';
 
 export interface WorkflowGenerationOptions {
@@ -8,34 +8,34 @@ export interface WorkflowGenerationOptions {
 }
 
 export function generateWorkflowYaml(workflow: GitHubWorkflow, options: WorkflowGenerationOptions = {}): string {
-  const yamlOptions: yaml.DumpOptions = {
+  const yamlOptions: yaml.ToStringOptions = {
     indent: options.indentSize || 2,
-    sortKeys: options.sortKeys || false,
-    skipInvalid: options.skipInvalid || false,
-    lineWidth: -1,
-    noRefs: true,
-    quotingType: '"',
-    forceQuotes: false
+    lineWidth: 0,
+    minContentWidth: 0,
+    simpleKeys: false,
+    doubleQuotedAsJSON: false,
+    doubleQuotedMinMultiLineLength: 40
   };
 
   // const processedWorkflow = processWorkflowForYaml(workflow);
-  
-  return yaml.dump(workflow, yamlOptions);
+
+  return yaml.stringify(workflow, yamlOptions);
 }
+
 
 // function processWorkflowForYaml(workflow: GitHubWorkflow): any {
 //   const processed: any = {};
 
 //   if (workflow.name) processed.name = workflow.name;
 //   if (workflow['run-name']) processed['run-name'] = workflow['run-name'];
-  
+
 //   processed.on = processWorkflowOn(workflow.on);
-  
+
 //   if (workflow.permissions) processed.permissions = processPermissions(workflow.permissions);
 //   if (workflow.env) processed.env = processEnv(workflow.env);
 //   if (workflow.defaults) processed.defaults = workflow.defaults;
 //   if (workflow.concurrency) processed.concurrency = workflow.concurrency;
-  
+
 //   processed.jobs = processJobs(workflow.jobs);
 
 //   return processed;
@@ -44,7 +44,7 @@ export function generateWorkflowYaml(workflow: GitHubWorkflow, options: Workflow
 // function processWorkflowOn(on: any): any {
 //   if (typeof on === 'string') return on;
 //   if (Array.isArray(on)) return on;
-  
+
 //   const processed: any = {};
 //   for (const [event, config] of Object.entries(on)) {
 //     if (config === null || config === undefined) {
@@ -60,10 +60,10 @@ export function generateWorkflowYaml(workflow: GitHubWorkflow, options: Workflow
 //   if (typeof permissions === 'string' || typeof permissions === 'object' && Object.keys(permissions).length === 0) {
 //     return permissions;
 //   }
-  
+
 //   const processed: any = {};
 //   const perms = permissions as GitHubPermissions;
-  
+
 //   if (perms.actions) processed.actions = perms.actions;
 //   if (perms.attestations) processed.attestations = perms.attestations;
 //   if (perms.checks) processed.checks = perms.checks;
@@ -78,7 +78,7 @@ export function generateWorkflowYaml(workflow: GitHubWorkflow, options: Workflow
 //   if (perms.pullRequests) processed['pull-requests'] = perms.pullRequests;
 //   if (perms.securityEvents) processed['security-events'] = perms.securityEvents;
 //   if (perms.statuses) processed.statuses = perms.statuses;
-  
+
 //   return processed;
 // }
 
@@ -92,17 +92,17 @@ export function generateWorkflowYaml(workflow: GitHubWorkflow, options: Workflow
 
 // function processJobs(jobs: { [jobId: string]: GitHubJob }): any {
 //   const processed: any = {};
-  
+
 //   for (const [jobId, job] of Object.entries(jobs)) {
 //     processed[jobId] = processJob(job);
 //   }
-  
+
 //   return processed;
 // }
 
 // function processJob(job: GitHubJob): any {
 //   const processed: any = {};
-  
+
 //   if (job.name) processed.name = job.name;
 //   if (job.permissions) processed.permissions = processPermissions(job.permissions);
 //   if (job.needs) processed.needs = job.needs;
@@ -122,7 +122,7 @@ export function generateWorkflowYaml(workflow: GitHubWorkflow, options: Workflow
 //   if (job.secrets) processed.secrets = job.secrets;
 //   if (job.timeoutMinutes) processed['timeout-minutes'] = job.timeoutMinutes;
 //   if (job.continueOnError) processed['continue-on-error'] = job.continueOnError;
-  
+
 //   return processed;
 // }
 
@@ -132,7 +132,7 @@ export function generateWorkflowYaml(workflow: GitHubWorkflow, options: Workflow
 
 // function processStep(step: GitHubStepAny): any {
 //   const processed: any = {};
-  
+
 //   if (step.id) processed.id = step.id;
 //   if (step.if) processed.if = step.if;
 //   if (step.name) processed.name = step.name;
@@ -144,7 +144,7 @@ export function generateWorkflowYaml(workflow: GitHubWorkflow, options: Workflow
 //   if (step['continue-on-error']) processed['continue-on-error'] = step['continue-on-error'];
 //   if (step['timeout-minutes']) processed['timeout-minutes'] = step['timeout-minutes'];
 //   if (step['working-directory']) processed['working-directory'] = step['working-directory'];
-  
+
 //   return processed;
 // }
 
@@ -152,11 +152,11 @@ export function createWorkflow(config: Partial<GitHubWorkflow>): GitHubWorkflow 
   if (!config.on) {
     throw new Error('Workflow must specify "on" triggers');
   }
-  
+
   if (!config.jobs) {
     throw new Error('Workflow must specify "jobs"');
   }
-  
+
   return {
     on: config.on,
     jobs: config.jobs,

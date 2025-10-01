@@ -9,7 +9,7 @@ export function createRemoveCommand(createContext: (options?: any) => DotGithubC
     .option('--keep-files', 'Remove from tracking but keep generated files')
     .action(async (orgRepoRef, options) => {
       try {
-        const context = createContext();
+        const context = createContext(options);
         const result = await removeActionFiles(context, {
           orgRepoRef,
           keepFiles: options.keepFiles

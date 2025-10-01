@@ -1,76 +1,17 @@
 {
   "version": "1.0.0",
-  "outputDir": "src",
+  "rootDir": "custom-src",
+  "outputDir": "./",
   "actions": [
-    {
-      "orgRepo": "actions/cache",
-      "ref": "0400d5f644dc74513175e3cd8d07132dd4860809",
-      "versionRef": "v4",
-      "functionName": "cache",
-      "outputPath": "actions/actions/cache/cache.ts"
-    },
-    {
-      "orgRepo": "actions/cache",
-      "ref": "0400d5f644dc74513175e3cd8d07132dd4860809",
-      "versionRef": "v4",
-      "functionName": "restoreCache",
-      "outputPath": "actions/actions/cache/restore/restore-cache.ts",
-      "actionPath": "restore"
-    },
-    {
-      "orgRepo": "actions/cache",
-      "ref": "0400d5f644dc74513175e3cd8d07132dd4860809",
-      "versionRef": "v4",
-      "functionName": "saveACache",
-      "outputPath": "actions/actions/cache/save/save-a-cache.ts",
-      "actionPath": "save"
-    },
     {
       "orgRepo": "actions/checkout",
       "ref": "08c6903cd8c0fde910a37f88322edcfb5dd907a8",
       "versionRef": "v5",
-      "functionName": "checkout",
-      "outputPath": "actions/actions/checkout.ts"
-    },
-    {
-      "orgRepo": "actions/setup-node",
-      "ref": "a0853c24544627f65ddf259abe73b1d18a591444",
-      "versionRef": "v5",
-      "functionName": "setupNodeJsEnvironment",
-      "outputPath": "actions/actions/setup-node.ts"
-    },
-    {
-      "orgRepo": "changesets/action",
-      "ref": "8eb63fb4cfc7f9643537c7d39d0b68c835012a19",
-      "versionRef": "v1.5.3",
-      "functionName": "changesets",
-      "outputPath": "actions/changesets/action.ts"
-    },
-    {
-      "orgRepo": "oven-sh/setup-bun",
-      "ref": "735343b667d3e6f658f44d0eca948eb6282f2b76",
-      "versionRef": "v2",
-      "functionName": "setupBun",
-      "outputPath": "actions/oven-sh/setup-bun.ts"
+      "outputPath": "../../test-output/actions/checkout.ts"
     }
   ],
-  "plugins": [
-    {
-      "name": "monorepo",
-      "package": "./plugins/monorepo/index.ts",
-      "config": {},
-      "enabled": true
-    }
-  ],
-  "stacks": [
-    {
-      "name": "main",
-      "plugins": [
-        "monorepo"
-      ],
-      "config": {}
-    }
-  ],
+  "plugins": [],
+  "stacks": [],
   "options": {
     "tokenSource": "env",
     "formatting": {

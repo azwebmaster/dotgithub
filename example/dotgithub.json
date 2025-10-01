@@ -1,0 +1,55 @@
+{
+  "version": "1.0.0",
+  "rootDir": "src",
+  "outputDir": "./",
+  "actions": [
+    {
+      "orgRepo": "actions/checkout",
+      "ref": "08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+      "versionRef": "v5",
+      "outputPath": "actions/actions/checkout.ts"
+    },
+    {
+      "orgRepo": "actions/setup-node",
+      "ref": "a0853c24544627f65ddf259abe73b1d18a591444",
+      "versionRef": "v5",
+      "actionName": "setupNode",
+      "outputPath": "actions/actions/setup-node.ts"
+    }
+  ],
+  "plugins": [
+    {
+      "name": "example",
+      "package": "index.ts",
+      "config": {
+        "timeout": 30,
+        "nodeVersion": "20.4",
+        "actions": {
+          "actions/checkout": "v5",
+          "actions/setup-nodex": "v4x"
+        }
+      },
+      "enabled": true
+    }
+  ],
+  "stacks": [
+    {
+      "name": "main",
+      "plugins": [
+        "example"
+      ],
+      "config": {
+        "environment": "production"
+      },
+      "actions": {
+        "actions/setup-nodex": "v4"
+      }
+    }
+  ],
+  "options": {
+    "tokenSource": "env",
+    "formatting": {
+      "prettier": true
+    }
+  }
+}

@@ -30,19 +30,34 @@ program
 
 // Create context function that can be called by commands
 function createContextForCommand(commandOptions: GlobalCliOptions = {}): DotGithubContext {
-  const configPath = commandOptions.config || program.opts().config || '.github/dotgithub.json';
+  // Get global options from the program
+  const globalOpts = program.opts();
+  const configPath = commandOptions.config || globalOpts.config || '.github/dotgithub.json';
   return DotGithubContext.fromConfig(configPath);
 }
 
-program.addCommand(createInitCommand(createContextForCommand));
-program.addCommand(createAddCommand(createContextForCommand));
-program.addCommand(createUpdateCommand(createContextForCommand));
-program.addCommand(createConfigCommand(createContextForCommand));
-program.addCommand(createRemoveCommand(createContextForCommand));
-program.addCommand(createRegenerateCommand(createContextForCommand));
-program.addCommand(createListCommand(createContextForCommand));
-program.addCommand(createSynthCommand(createContextForCommand));
-program.addCommand(createPluginCommand(createContextForCommand));
+// Create a context function that uses the program instance
+function createContextForCommandWithProgram() {
+  return (commandOptions: GlobalCliOptions = {}): DotGithubContext => {
+    // Get global options from the program after it's been parsed
+    const globalOpts = program.opts();
+    const configPath = commandOptions.config || globalOpts.config || '.github/dotgithub.json';
+    return DotGithubContext.fromConfig(configPath);
+  };
+}
+
+program.addCommand(createInitCommand(createContextForCommandWithProgram()));
+program.addCommand(createAddCommand(createContextForCommandWithProgram()));
+program.addCommand(createUpdateCommand(createContextForCommandWithProgram()));
+program.addCommand(createConfigCommand(createContextForCommandWithProgram()));
+program.addCommand(createRemoveCommand(createContextForCommandWithProgram()));
+program.addCommand(createRegenerateCommand(createContextForCommandWithProgram()));
+program.addCommand(createListCommand(createContextForCommandWithProgram()));
+program.addCommand(createSynthCommand(createContextForCommandWithProgram()));
+program.addCommand(createPluginCommand(createContextForCommandWithProgram()));
+
+// Enable global options to be passed to subcommands
+program.passThroughOptions();
 
 if (require.main === module) {
   program.parse(process.argv);

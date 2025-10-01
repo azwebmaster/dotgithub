@@ -4,8 +4,9 @@ import { dedent } from './utils';
 
 export class GH {
 
-  static run(command: string, step?: Partial<Omit<GitHubStepRun, 'run'>>): GitHubStepRun {
+  static run(name: string, command: string, step?: Partial<Omit<GitHubStepRun, 'run' | 'name'>>): GitHubStepRun {
     return {
+      name,
       run: dedent(command).trim(),
       ...step
     };

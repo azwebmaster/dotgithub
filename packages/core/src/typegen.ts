@@ -1,6 +1,7 @@
 
 import type { GitHubActionInput, GitHubActionOutput, GitHubActionYml, GitHubInputValue } from './types';
-import type { GitHubStepBase } from './types/workflow';
+import type { GitHubStepBase, GitHubStep, GitHubStepAction } from './types/workflow';
+import type { PluginContext } from './plugins/types';
 import { toProperCase } from './utils';
 import { Project, SourceFile, TypeAliasDeclaration, FunctionDeclaration, JSDocTag } from 'ts-morph';
 
@@ -109,6 +110,7 @@ function createFactoryFunction(
  * @param repo - The GitHub repository in the format `owner/repo` (default: `'actions/my-action'`).
  * @param ref - The git reference (branch, tag, or SHA) to use (default: `'main'`).
  * @param versionRef - The user-friendly version reference to use in generated code (defaults to ref if not provided).
+ * @param customActionName - Custom action name to override the YAML name for type names and function names.
  * @returns A string containing the generated TypeScript code.
  *
  * @throws If the YAML definition is missing a `name` property.
@@ -117,11 +119,14 @@ export function generateTypesFromYml(
   yml: GitHubActionYml,
   repo: string = 'actions/my-action',
   ref: string = 'main',
-  versionRef?: string
+  versionRef?: string,
+  customActionName?: string
 ): string {
   if (!yml || !yml.name) throw new Error('Action YAML must have a name');
 
-  const actionName = yml.name.replace(/[^a-zA-Z0-9]/g, ' ');
+  // Use custom action name if provided, otherwise use the action name from YAML
+  const baseActionName = customActionName || yml.name;
+  const actionName = baseActionName.replace(/[^a-zA-Z0-9]/g, ' ');
   const ActionName = toProperCase(actionName.replace(/\s+/g, ' '));
   const actionNameCamel = ActionName.charAt(0).toLowerCase() + ActionName.slice(1);
 
@@ -145,6 +150,17 @@ export function generateTypesFromYml(
   const fileName = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.ts`;
   const sourceFile = project.createSourceFile(fileName);
 
+  // Add required imports
+  sourceFile.addImportDeclaration({
+    moduleSpecifier: "@dotgithub/core",
+    namedImports: ["createStep", "GitHubOutputValue", "GitHubAction", "ActionCollection", "StepChainBuilder"]
+  });
+  sourceFile.addImportDeclaration({
+    moduleSpecifier: "@dotgithub/core",
+    namedImports: ["GitHubStep", "GitHubStepAction", "GitHubInputValue", "PluginContext"],
+    isTypeOnly: true
+  });
+
   // Generate inputs type
   const inputsType = sourceFile.addTypeAlias({
     name: `${ActionName}Inputs`,
@@ -159,61 +175,43 @@ export function generateTypesFromYml(
     });
   }
 
-  // Generate outputs type if present
-  let outputsType: TypeAliasDeclaration | undefined;
-  if (yml.outputs && Object.keys(yml.outputs).length > 0) {
-    outputsType = sourceFile.addTypeAlias({
-      name: `${ActionName}Outputs`,
-      isExported: true,
-      type: buildOutputMembers(yml.outputs as any),
-    });
+  // Outputs will be generated as const object in the class declaration
 
-    outputsType.addJsDoc({
-      description: `Output parameters for the ${yml.name} action`,
-    });
-  }
-
-  // Generate factory function
+  // Generate factory function with overloads for single step and chain support
   const hasRequiredInputs = hasRequiredInputsCheck(yml.inputs as any);
 
-  const factoryFunction = sourceFile.addFunction({
-    name: actionNameCamel,
-    isExported: true,
-    parameters: [
-      {
-        name: 'inputs',
-        type: `${ActionName}Inputs`,
-        hasQuestionToken: !hasRequiredInputs,
-      },
-      {
-        name: 'step',
-        type: 'Partial<GitHubStepBase>',
-        hasQuestionToken: true,
-      },
-      {
-        name: 'ref',
-        type: 'string',
-        hasQuestionToken: true,
-      },
-    ],
-    returnType: `GitHubStep<${ActionName}Inputs>`,
-    statements: [
-      `return createStep("${repo}", { ...step, with: inputs }, ref ?? "${ref}");`,
-    ],
-  });
+  // Generate outputs as const object with GitHubOutputValue instances
+  let outputsConst = '';
+  let outputsTypeName = 'any';
+  if (yml.outputs && Object.keys(yml.outputs).length > 0) {
+    const outputMembers = Object.entries(yml.outputs).map(([key, val]) => {
+      const quotedKey = needsQuoting(key) ? `"${key}"` : key;
+      const comment = val.description ? `  /** ${escapeJSDocComment(val.description)} */\n  ` : '';
+      return `${comment}${quotedKey}: new GitHubOutputValue("${key}"),`;
+    });
+    
+    outputsConst = `export const ${ActionName}Outputs = {\n${outputMembers.join('\n')}\n};`;
+    outputsTypeName = `${ActionName}Outputs`;
+  }
 
-  // Add JSDoc comment for factory function
-  const jsDocDescription = yml.description
-    ? `${escapeJSDocComment(yml.description)}\n\nhttps://github.com/${repo}/tree/${displayRef}`
-    : `Factory function for the ${yml.name} action`;
+  // Generate class extending GitHubAction
+  const classDeclaration = `
+${outputsConst}
 
-  factoryFunction.addJsDoc({
-    description: `${jsDocDescription}
-@param inputs ${hasRequiredInputs ? 'Required input parameters' : 'Optional input parameters'}
-@param step Optional step configuration overrides
-@param ref Optional git reference (defaults to the version used for generation)
-@returns A GitHub step configuration`,
-  });
+export type ${ActionName}OutputsType = typeof ${ActionName}Outputs;
+
+export class ${ActionName} extends GitHubAction<${ActionName}Inputs, ${ActionName}OutputsType> {
+  protected uses = "${repo}";
+  protected fallbackRef = "${ref}";
+  protected outputs = ${ActionName}Outputs;
+
+  constructor(collection: ActionCollection) {
+    super(collection);
+  }
+}`;
+
+  // Add the class declaration to the source file
+  sourceFile.addStatements(classDeclaration);
 
   return sourceFile.getFullText();
 }

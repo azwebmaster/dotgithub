@@ -1,0 +1,23 @@
+{
+  "version": "1.0.0",
+  "rootDir": "custom-src",
+  "outputDir": "./",
+  "actions": [
+    {
+      "orgRepo": "actions/checkout",
+      "ref": "08eba0b27e820071cde6df949e0beb9ba4906955",
+      "versionRef": "v4",
+      "functionName": "Checkout",
+      "outputPath": "../../test-custom-config/custom-src/actions/actions/actions/checkout/checkout.ts",
+      "generateCode": false
+    }
+  ],
+  "plugins": [],
+  "stacks": [],
+  "options": {
+    "tokenSource": "env",
+    "formatting": {
+      "prettier": true
+    }
+  }
+}

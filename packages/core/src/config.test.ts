@@ -16,6 +16,7 @@ import {
   setConfigPath,
   createConfigFile
 } from './config';
+import { DotGithubContext } from './context';
 
 describe('config', () => {
   let tempDir: string;
@@ -113,7 +114,8 @@ describe('config', () => {
       const expectedRelativePath = path.relative(outputDir, absoluteOutputPath); // Should be 'actions/checkout/checkout.ts'
       
       // Ensure the config file exists in the temp directory by calling readConfig() which will create it
-      readConfig();
+      const config = readConfig();
+      const context = new DotGithubContext({ config, configPath: getConfigPath() });
       
       addActionToConfig({
         orgRepo: 'actions/checkout',
@@ -121,7 +123,7 @@ describe('config', () => {
         versionRef: 'v4',
         functionName: 'checkout',
         outputPath: absoluteOutputPath
-      }, 'src');
+      }, context);
 
       const actions = getActionsFromConfig();
       expect(actions).toHaveLength(1);
@@ -149,7 +151,8 @@ describe('config', () => {
       const expectedRelativePath = path.relative(outputDir, updatedOutputPath);
       
       // Ensure the config file exists in the temp directory
-      readConfig();
+      const config = readConfig();
+      const context = new DotGithubContext({ config, configPath: getConfigPath() });
       
       // Add initial action
       addActionToConfig({
@@ -158,7 +161,7 @@ describe('config', () => {
         versionRef: 'v4',
         functionName: 'checkout',
         outputPath: initialOutputPath
-      }, 'src');
+      }, context);
 
       // Update same action
       addActionToConfig({
@@ -167,7 +170,7 @@ describe('config', () => {
         versionRef: 'v4',
         functionName: 'checkoutV4',
         outputPath: updatedOutputPath
-      }, 'src');
+      }, context);
 
       const actions = getActionsFromConfig();
       expect(actions).toHaveLength(1);
@@ -188,7 +191,8 @@ describe('config', () => {
       const expectedSetupNodePath = path.relative(outputDir, setupNodePath);
       
       // Ensure the config file exists in the temp directory
-      readConfig();
+      const config = readConfig();
+      const context = new DotGithubContext({ config, configPath: getConfigPath() });
       
       addActionToConfig({
         orgRepo: 'actions/setup-node',
@@ -196,7 +200,7 @@ describe('config', () => {
         versionRef: 'v3',
         functionName: 'setupNode',
         outputPath: setupNodePath
-      }, 'src');
+      }, context);
 
       addActionToConfig({
         orgRepo: 'actions/checkout',
@@ -204,7 +208,7 @@ describe('config', () => {
         versionRef: 'v4',
         functionName: 'checkout',
         outputPath: checkoutPath
-      }, 'src');
+      }, context);
 
       const actions = getActionsFromConfig();
       expect(actions).toHaveLength(2);
@@ -222,13 +226,16 @@ describe('config', () => {
       // Add test actions - only one per orgRepo since we now enforce this
       const configDir = path.join(tempDir, '.github');
       const outputDir = path.join(configDir, 'src'); // outputDir 'src' relative to config file
+      const config = readConfig();
+      const context = new DotGithubContext({ config, configPath: getConfigPath() });
+      
       addActionToConfig({
         orgRepo: 'actions/checkout',
         ref: 'abc123def456',
         versionRef: 'v4',
         functionName: 'checkout',
         outputPath: path.join(outputDir, 'actions', 'checkout', 'checkout.ts')
-      });
+      }, context);
 
       addActionToConfig({
         orgRepo: 'actions/setup-node',
@@ -236,7 +243,7 @@ describe('config', () => {
         versionRef: 'v3',
         functionName: 'setupNode',
         outputPath: path.join(outputDir, 'actions', 'setup-node', 'setup-node.ts')
-      });
+      }, context);
 
       addActionToConfig({
         orgRepo: 'actions/cache',
@@ -244,7 +251,7 @@ describe('config', () => {
         versionRef: 'v3',
         functionName: 'cache',
         outputPath: path.join(outputDir, 'actions', 'cache', 'cache.ts')
-      }, 'src');
+      }, context);
     });
 
     it('removes action by orgRepo', () => {
@@ -270,6 +277,101 @@ describe('config', () => {
       
       expect(removed).toBe(false);
       expect(getActionsFromConfig()).toHaveLength(3); // No actions removed
+    });
+  });
+
+  describe('action matching by orgRepo and actionPath', () => {
+    beforeEach(() => {
+      // Clear existing actions and add test actions with different actionPaths
+      const configDir = path.join(tempDir, '.github');
+      const outputDir = path.join(configDir, 'src');
+      const config = readConfig();
+      const context = new DotGithubContext({ config, configPath: getConfigPath() });
+      
+      // Clear existing actions and save the config
+      context.config.actions = [];
+      writeConfig(context.config, context.configPath);
+      
+      // Add actions from the same orgRepo but different actionPaths
+      addActionToConfig({
+        orgRepo: 'actions/checkout',
+        ref: 'abc123def456',
+        versionRef: 'v4',
+        actionName: 'checkout',
+        outputPath: path.join(outputDir, 'actions', 'actions', 'checkout', 'checkout.ts'),
+        actionPath: '' // Root action
+      }, context);
+
+      addActionToConfig({
+        orgRepo: 'actions/checkout',
+        ref: 'def456ghi789',
+        versionRef: 'v3',
+        actionName: 'checkout-v3',
+        outputPath: path.join(outputDir, 'actions', 'actions', 'checkout', 'v3', 'checkout-v3.ts'),
+        actionPath: 'v3' // Subdirectory action
+      }, context);
+
+      addActionToConfig({
+        orgRepo: 'actions/setup-node',
+        ref: 'ghi789abc123',
+        versionRef: 'v3',
+        actionName: 'setupNode',
+        outputPath: path.join(outputDir, 'actions', 'actions', 'setup-node', 'setup-node.ts'),
+        actionPath: '' // Root action
+      }, context);
+    });
+
+    it('should match actions by both orgRepo and actionPath', () => {
+      const actions = getActionsFromConfig();
+      expect(actions).toHaveLength(3);
+      
+      // Should have two actions from actions/checkout with different actionPaths
+      const checkoutActions = actions.filter(a => a.orgRepo === 'actions/checkout');
+      expect(checkoutActions).toHaveLength(2);
+      
+      const rootCheckout = checkoutActions.find(a => a.actionPath === '');
+      const v3Checkout = checkoutActions.find(a => a.actionPath === 'v3');
+      
+      expect(rootCheckout).toBeDefined();
+      expect(v3Checkout).toBeDefined();
+      expect(rootCheckout?.actionName).toBe('checkout');
+      expect(v3Checkout?.actionName).toBe('checkout-v3');
+    });
+
+    it('should update specific action without affecting others from same orgRepo', () => {
+      const configDir = path.join(tempDir, '.github');
+      const outputDir = path.join(configDir, 'src');
+      const config = readConfig();
+      const context = new DotGithubContext({ config, configPath: getConfigPath() });
+      
+      // Update only the root checkout action
+      addActionToConfig({
+        orgRepo: 'actions/checkout',
+        ref: 'new123ref456',
+        versionRef: 'v5',
+        actionName: 'checkout-v5',
+        outputPath: path.join(outputDir, 'actions', 'actions', 'checkout', 'checkout-v5.ts'),
+        actionPath: '' // Root action - should update existing root action
+      }, context);
+
+      const actions = getActionsFromConfig();
+      expect(actions).toHaveLength(3); // Should still have 3 actions
+      
+      const checkoutActions = actions.filter(a => a.orgRepo === 'actions/checkout');
+      expect(checkoutActions).toHaveLength(2); // Should still have 2 checkout actions
+      
+      const rootCheckout = checkoutActions.find(a => a.actionPath === '');
+      const v3Checkout = checkoutActions.find(a => a.actionPath === 'v3');
+      
+      // Root action should be updated
+      expect(rootCheckout?.actionName).toBe('checkout-v5');
+      expect(rootCheckout?.versionRef).toBe('v5');
+      expect(rootCheckout?.ref).toBe('new123ref456');
+      
+      // V3 action should remain unchanged
+      expect(v3Checkout?.actionName).toBe('checkout-v3');
+      expect(v3Checkout?.versionRef).toBe('v3');
+      expect(v3Checkout?.ref).toBe('def456ghi789');
     });
   });
 

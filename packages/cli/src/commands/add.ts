@@ -4,23 +4,26 @@ import { generateActionFiles, type DotGithubContext } from '@dotgithub/core';
 export function createAddCommand(createContext: (options?: any) => DotGithubContext): Command {
   return new Command('add')
     .argument('<orgRepoRef...>', 'One or more GitHub repository references (e.g., actions/checkout@v4, actions/setup-node@v4)')
-    .description('Generate TypeScript types from one or more GitHub Actions and save to output directory')
+    .description('Add GitHub Actions to configuration and generate TypeScript files')
     .option('--output <outputDir>', 'Output directory for generated TypeScript files (uses config default if not specified)')
     .option('-t, --token <token>', 'GitHub token (overrides env GITHUB_TOKEN)')
     .option('--no-sha', 'Use the original ref instead of resolving to SHA')
+    .option('--name <name>', 'Override the action name for type names and function names (e.g., setupNode)')
     .action(async (orgRepoRefs, options) => {
       try {
-        const context = createContext();
+        const context = createContext(options);
         const totalActions: any[] = [];
 
         // Process each action reference
         for (const orgRepoRef of orgRepoRefs) {
           console.log(`\nProcessing ${orgRepoRef}...`);
+
           const result = await generateActionFiles(context, {
             orgRepoRef,
             outputDir: options.output,
             token: options.token,
-            useSha: options.sha !== false  // Default to true unless --no-sha is explicitly used
+            useSha: options.sha !== false,  // Default to true unless --no-sha is explicitly used
+            customActionName: options.name
           });
 
           // Handle multiple actions in the result

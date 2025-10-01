@@ -43,12 +43,12 @@ export function createRegenerateCommand(createContext: (options?: any) => DotGit
           for (const action of allActions) {
             try {
               const [owner] = action.orgRepo.split('/');
-              const outputDir = config.outputDir;
+              const outputDir = config.rootDir;
               const orgDir = path.join(outputDir, owner!);
               
               // We need to calculate what the filename should be
               // For pruning purposes, we'll use a simplified approach and just track the output paths from config
-              if (fs.existsSync(action.resolvedOutputPath)) {
+              if (action.resolvedOutputPath && fs.existsSync(action.resolvedOutputPath)) {
                 expectedFiles.add(path.resolve(action.resolvedOutputPath));
               }
               
@@ -71,16 +71,18 @@ export function createRegenerateCommand(createContext: (options?: any) => DotGit
               action.orgRepo,
               action.ref,
               options.token,
-              action.versionRef
+              action.versionRef,
+              action.actionName
             );
 
-            // Generate filename from action name
-            const actionNameForFile = generateFilenameFromActionName(result.yaml.name);
+            // Generate filename from action name (use stored actionName if available, otherwise use YAML name)
+            const baseActionName = action.actionName || result.yaml.name;
+            const actionNameForFile = generateFilenameFromActionName(baseActionName);
             const fileName = `${actionNameForFile}.ts`;
 
             // Determine output path
             const [owner] = action.orgRepo.split('/');
-            const outputDir = config.outputDir;
+            const outputDir = config.rootDir;
             const orgDir = path.join(outputDir, owner!); // Non-null assertion since split('/') will always have at least one element
             const filePath = path.join(orgDir, fileName);
 
@@ -115,7 +117,7 @@ export function createRegenerateCommand(createContext: (options?: any) => DotGit
 
         // Clean up orphaned files only if --prune flag is provided
         if (options.prune) {
-          await cleanupOrphanedFiles(config.outputDir, expectedFiles, generatedIndexFiles);
+          await cleanupOrphanedFiles(config.rootDir, expectedFiles, generatedIndexFiles);
         }
 
         console.log(`Successfully regenerated ${actions.length} action(s)${options.prune ? ' and cleaned up orphaned files' : ''}`);

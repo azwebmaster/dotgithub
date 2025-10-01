@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import * as yaml from 'js-yaml';
+import * as yaml from 'yaml';
 import { format } from 'prettier';
 import { cloneRepo } from './git';
 import { getDefaultBranch } from './github';
@@ -44,11 +44,18 @@ interface ActionConfig {
   orgRepo: string;
   functionName: string;
   outputPath: string;
+  ref?: string;
+  generateCode?: boolean;
 }
 
 interface ActionImport {
   functionName: string;
   outputPath: string;
+}
+
+interface CoreFunctionUsage {
+  createStep: boolean;
+  run: boolean;
 }
 
 interface Config {
@@ -184,9 +191,29 @@ export async function createPluginFromFiles(options: CreatePluginFromFilesOption
   }
 
   // Generate plugin content (now with updated config that includes auto-added actions)
+  // Filter actions to only include those with functionName for code generation
+  const configForPlugin: Config = {
+    actions: configToUse.actions
+      .filter(action => action.generateCode !== false && action.outputPath)
+      .map(action => {
+        const { generateFunctionName } = require('./utils');
+        const functionName = action.actionName ? generateFunctionName(action.actionName) : action.orgRepo;
+        return {
+          orgRepo: action.orgRepo,
+          ref: action.ref,
+          versionRef: action.versionRef,
+          functionName,
+          outputPath: action.outputPath!,
+          actionPath: action.actionPath,
+          generateCode: action.generateCode
+        };
+      }),
+    outputDir: configToUse.outputDir
+  };
+  
   let pluginResult: { mainContent: string; generatedFiles: GeneratedPluginFile[] };
   try {
-    pluginResult = await generatePluginCode(pluginName, description, files, outputDir, configToUse);
+    pluginResult = await generatePluginCode(pluginName, description, files, outputDir, configForPlugin);
   } catch (error) {
     throw new Error(`Failed to generate plugin code: ${error instanceof Error ? error.message : error}`);
   }
@@ -214,7 +241,26 @@ export async function generatePluginFromGitHubFiles(options: GeneratePluginFromG
   if (isGitHubFileUrl(source)) {
     // Handle GitHub file URL
     const { content, filename } = await downloadGitHubFile(source);
-    result = await createPluginFromSingleFile(pluginName, filename, content, description, finalOutputDir, context.config);
+    // Filter actions to only include those with outputPath for code generation
+    const configForPlugin: Config = {
+      actions: context.config.actions
+        .filter(action => action.generateCode !== false && action.outputPath)
+        .map(action => {
+          const { generateFunctionName } = require('./utils');
+          const functionName = action.actionName ? generateFunctionName(action.actionName) : action.orgRepo;
+          return {
+            orgRepo: action.orgRepo,
+            ref: action.ref,
+            versionRef: action.versionRef,
+            functionName,
+            outputPath: action.outputPath!,
+            actionPath: action.actionPath,
+            generateCode: action.generateCode
+          };
+        }),
+      outputDir: context.config.outputDir
+    };
+    result = await createPluginFromSingleFile(pluginName, filename, content, description, finalOutputDir, configForPlugin);
   } else if (isGitHubRepo(source)) {
     // Clone GitHub repo and extract .github files
     const { orgRepo, ref } = parseGitHubRepo(source);
@@ -537,14 +583,15 @@ function formatFunctionCallToCode(value: FunctionCallObject, indent: number): st
   const hasInputs = Object.keys(inputs).length > 0;
   const hasStepOptions = Object.keys(stepOptions).length > 0;
 
-  // Special handling for run function - it takes script as first param, step options as second
+  // Special handling for run function - it takes name as first param, script as second, step options as third
   if (value.__functionName === 'run') {
     const script = inputs.script;
+    const name = inputs.name || 'Run';
     if (!hasStepOptions) {
-      return `run(${JSON.stringify(script)})`;
+      return `run(${JSON.stringify(name)}, ${JSON.stringify(script)})`;
     } else {
       const stepOptionsCode = valueToCodeString(stepOptions, indent);
-      return `run(${JSON.stringify(script)}, ${stepOptionsCode})`;
+      return `run(${JSON.stringify(name)}, ${JSON.stringify(script)}, ${stepOptionsCode})`;
     }
   }
 
@@ -612,9 +659,10 @@ function valueToCodeString(value: any, indent = 0): string {
  * @param workflow - The workflow schema to process
  * @param config - Configuration containing action mappings
  * @param actionImports - Set to collect required action imports
+ * @param coreFunctionUsage - Object to track usage of core functions like createStep and run
  * @returns Processed workflow schema with function calls
  */
-function processWorkflowForGeneration(workflow: WorkflowSchema, config: Config | null, actionImports: Set<ActionImport>): WorkflowSchema {
+function processWorkflowForGeneration(workflow: WorkflowSchema, config: Config | null, actionImports: Set<ActionImport>, coreFunctionUsage: CoreFunctionUsage): WorkflowSchema {
   if (!config || !config.actions || !workflow.jobs) {
     return workflow;
   }
@@ -626,7 +674,7 @@ function processWorkflowForGeneration(workflow: WorkflowSchema, config: Config |
     if (!job.steps) continue;
     
     const processedSteps = job.steps.map((step: StepSchema | FunctionCallObject) => {
-      return processStepForGeneration(step as StepSchema, config, actionImports);
+      return processStepForGeneration(step as StepSchema, config, actionImports, coreFunctionUsage);
     });
     
     processedWorkflow.jobs[jobId] = {
@@ -644,12 +692,16 @@ function processWorkflowForGeneration(workflow: WorkflowSchema, config: Config |
  * @param step - The workflow step to process
  * @param config - Configuration containing action mappings
  * @param actionImports - Set to collect required action imports
+ * @param coreFunctionUsage - Object to track usage of core functions like createStep and run
  * @returns Either the original step or a function call object
  */
-function processStepForGeneration(step: StepSchema, config: Config, actionImports: Set<ActionImport>): StepSchema | FunctionCallObject {
+function processStepForGeneration(step: StepSchema, config: Config, actionImports: Set<ActionImport>, coreFunctionUsage: CoreFunctionUsage): StepSchema | FunctionCallObject {
   // Handle run steps - convert to run() function call
   if (step.run) {
     const { run: script, ...stepOptions } = step;
+    
+    // Track that run function is used
+    coreFunctionUsage.run = true;
     
     // Create a special object that represents the run function call
     const runCallStep: FunctionCallObject = {
@@ -680,11 +732,37 @@ function processStepForGeneration(step: StepSchema, config: Config, actionImport
     return step;
   }
 
-  // Add function name and output path to imports
+  // Check if action is enabled for code generation
+  if (action.generateCode === false) {
+    // Use createStep for actions that are not enabled for code generation
+    const { uses, with: inputs, ...stepOptions } = step;
+    
+    // Track that createStep function is used
+    coreFunctionUsage.createStep = true;
+    
+    // Create a special object that represents the createStep function call
+    const createStepCall: FunctionCallObject = {
+      ...stepOptions,
+      __functionCall: true,
+      __functionName: 'createStep',
+      __functionInputs: { 
+        uses: orgRepo, 
+        step: { with: inputs },
+        ref: action.ref 
+      }
+    };
+    
+    return createStepCall;
+  }
+
+  // Add function name and output path to imports for generated action functions
   // Use the functionName as a key to avoid duplicates
-  const existing = Array.from(actionImports).find(item => item.functionName === action.functionName);
-  if (!existing) {
-    actionImports.add({ functionName: action.functionName, outputPath: action.outputPath });
+  // Only add if the action has the required fields for code generation
+  if (action.functionName && action.outputPath) {
+    const existing = Array.from(actionImports).find(item => item.functionName === action.functionName);
+    if (!existing) {
+      actionImports.add({ functionName: action.functionName, outputPath: action.outputPath });
+    }
   }
   
   // Replace uses step with function call
@@ -699,7 +777,7 @@ function processStepForGeneration(step: StepSchema, config: Config, actionImport
   const functionCallStep: FunctionCallObject = {
     ...stepOptions,
     __functionCall: true,
-    __functionName: action.functionName,
+    __functionName: action.functionName!,
     __functionInputs: formattedInputs
   };
   
@@ -779,10 +857,11 @@ function generateWorkflowImports(actionImports: Set<ActionImport>, outputDir?: s
  * Generates import statements for the plugin based on files and actions
  * @param hasWorkflows - Whether the plugin has workflow files
  * @param actionImports - Set of action function names to import
+ * @param coreFunctionUsage - Object tracking usage of core functions like createStep and run
  * @param outputDir - Directory where the plugin will be output
  * @returns Import statements as a string
  */
-function generateImports(hasWorkflows: boolean, actionImports: Set<ActionImport>, outputDir?: string): string {
+function generateImports(hasWorkflows: boolean, actionImports: Set<ActionImport>, coreFunctionUsage: CoreFunctionUsage, outputDir?: string): string {
   // Create a new ts-morph project for code generation
   const project = new Project({
     useInMemoryFileSystem: true,
@@ -806,6 +885,22 @@ function generateImports(hasWorkflows: boolean, actionImports: Set<ActionImport>
     namedImports: ['DotGitHubPlugin', 'PluginContext'],
     isTypeOnly: true,
   });
+  
+  // Add core function imports if they are used
+  const coreFunctionImports: string[] = [];
+  if (coreFunctionUsage.createStep) {
+    coreFunctionImports.push('createStep');
+  }
+  if (coreFunctionUsage.run) {
+    coreFunctionImports.push('run');
+  }
+  
+  if (coreFunctionImports.length > 0) {
+    sourceFile.addImportDeclaration({
+      moduleSpecifier: '@dotgithub/core',
+      namedImports: coreFunctionImports,
+    });
+  }
   
   // Add GitHubWorkflows import if we have workflows
   if (hasWorkflows) {
@@ -875,9 +970,10 @@ async function generateWorkflowFiles(
   actionImports: Set<ActionImport>,
   pluginName: string,
   outputDir: string
-): Promise<{ generatedFiles: GeneratedPluginFile[]; allActionImports: Set<ActionImport> }> {
+): Promise<{ generatedFiles: GeneratedPluginFile[]; allActionImports: Set<ActionImport>; coreFunctionUsage: CoreFunctionUsage }> {
   const generatedFiles: GeneratedPluginFile[] = [];
   const allActionImports: Set<ActionImport> = new Set();
+  const coreFunctionUsage: CoreFunctionUsage = { createStep: false, run: false };
   
   for (const file of workflowFiles) {
     const workflowName = path.basename(file.relativePath, path.extname(file.relativePath));
@@ -885,12 +981,21 @@ async function generateWorkflowFiles(
     const filePath = path.join(outputDir, 'workflows', fileName);
     
     try {
-      const parsedWorkflow = yaml.load(file.content) as any;
+      const parsedWorkflow = yaml.parse(file.content) as any;
       
       // Create a separate actionImports set for this specific workflow
       const workflowActionImports: Set<ActionImport> = new Set();
-      const processedWorkflow = processWorkflowForGeneration(parsedWorkflow, config, workflowActionImports);
+      const workflowCoreFunctionUsage: CoreFunctionUsage = { createStep: false, run: false };
+      const processedWorkflow = processWorkflowForGeneration(parsedWorkflow, config, workflowActionImports, workflowCoreFunctionUsage);
       const workflowCode = valueToCodeString(processedWorkflow, 0);
+      
+      // Merge core function usage
+      if (workflowCoreFunctionUsage.createStep) {
+        coreFunctionUsage.createStep = true;
+      }
+      if (workflowCoreFunctionUsage.run) {
+        coreFunctionUsage.run = true;
+      }
       
       // Add this workflow's actions to the overall collection
       for (const actionImport of workflowActionImports) {
@@ -953,7 +1058,7 @@ export async function ${toCamelCase(workflowName)}Handler(context: PluginContext
     }
   }
   
-  return { generatedFiles, allActionImports };
+  return { generatedFiles, allActionImports, coreFunctionUsage };
 }
 
 /**
@@ -981,7 +1086,7 @@ async function generateResourceFiles(
     let resourceCode: string;
     if (file.relativePath.endsWith('.yml') || file.relativePath.endsWith('.yaml')) {
       try {
-        const parsedYaml = yaml.load(file.content) as any;
+        const parsedYaml = yaml.parse(file.content) as any;
         resourceCode = valueToCodeString(parsedYaml, 0);
       } catch (error) {
         console.warn(`Warning: Could not parse YAML in ${file.relativePath}, using as string:`, error);
@@ -1115,8 +1220,8 @@ async function generateClassDefinition(
     }
   }
   
-  // Generate main apply method that calls the other two
-  const applyMethod = `  async apply(context: PluginContext): Promise<void> {
+  // Generate main synthesize method that calls the other two
+  const synthesizeMethod = `  async synthesize(context: PluginContext): Promise<void> {
     await this.applyWorkflows(context);
     await this.applyResources(context);
   }`;
@@ -1142,7 +1247,7 @@ ${applyWorkflowsMethod}
 
 ${applyResourcesMethod}
 
-${applyMethod}
+${synthesizeMethod}
 }
 
 // Export as default for easier importing
@@ -1175,7 +1280,7 @@ async function generatePluginCode(pluginName: string, description: string, files
   const resolvedOutputDir = outputDir ? path.resolve(outputDir) : '';
   const pluginDir = resolvedOutputDir ? path.join(resolvedOutputDir, pluginName.replace(/[^a-zA-Z0-9-]/g, '-').toLowerCase()) : '';
   
-  const { generatedFiles: workflowFiles_generated, allActionImports } = await generateWorkflowFiles(workflowFiles, config, actionImports, pluginName, pluginDir);
+  const { generatedFiles: workflowFiles_generated, allActionImports, coreFunctionUsage } = await generateWorkflowFiles(workflowFiles, config, actionImports, pluginName, pluginDir);
   const resourceFiles_generated = await generateResourceFiles(otherFiles, pluginName, pluginDir);
   
   // Generate workflow methods for the main plugin file using all collected actions
@@ -1187,7 +1292,7 @@ async function generatePluginCode(pluginName: string, description: string, files
   // Generate imports for the main plugin file using all collected actions
   const hasWorkflows = workflowFiles.length > 0;
   const hasOtherFiles = otherFiles.length > 0;
-  const imports = generateImports(hasWorkflows, allActionImports, outputDir);
+  const imports = generateImports(hasWorkflows, allActionImports, coreFunctionUsage, outputDir);
   
   // Generate complete class definition
   const mainContent = await generateClassDefinition(
@@ -1342,7 +1447,7 @@ function extractActionsFromWorkflows(workflowFiles: FileEntry[]): Set<string> {
   
   for (const file of workflowFiles) {
     try {
-      const workflow = yaml.load(file.content) as any;
+      const workflow = yaml.parse(file.content) as any;
       if (!workflow || !workflow.jobs) continue;
       
       // Extract actions from all jobs and steps

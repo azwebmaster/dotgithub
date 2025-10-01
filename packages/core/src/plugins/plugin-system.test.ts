@@ -12,7 +12,7 @@ const ciPlugin: DotGitHubPlugin = {
       throw new Error('packageManager must be one of: npm, yarn, pnpm, bun');
     }
   },
-  apply(context) {
+  synthesize(context) {
     const { stack, config } = context;
     const nodeVersions = config.nodeVersions || ['18', '20'];
     const packageManager = config.packageManager || 'npm';
@@ -67,7 +67,7 @@ const releasePlugin: DotGitHubPlugin = {
   name: 'release',
   description: 'Release automation plugin',
   dependencies: ['ci'],
-  apply(context) {
+  synthesize(context) {
     const { stack } = context;
     
     stack.addWorkflow('release', {
@@ -255,7 +255,7 @@ describe('Plugin System', () => {
           projectRoot: '/tmp'
         };
 
-        ciPlugin.apply(context);
+        ciPlugin.synthesize(context);
 
         const workflows = stack.workflows;
         expect(Object.keys(workflows)).toContain('ci');
@@ -286,7 +286,7 @@ describe('Plugin System', () => {
           projectRoot: '/tmp'
         };
 
-        ciPlugin.apply(context);
+        ciPlugin.synthesize(context);
 
         const ciWorkflow = stack.workflows.ci;
         const testJob = ciWorkflow.jobs.test;
@@ -313,7 +313,7 @@ describe('Plugin System', () => {
     describe('Release Plugin', () => {
       it('should create release workflow with default settings', () => {
         // First apply CI plugin to satisfy dependency
-        ciPlugin.apply({
+        ciPlugin.synthesize({
           stack,
           config: {},
           stackConfig: { name: 'test', plugins: ['ci', 'release'] },
@@ -327,7 +327,7 @@ describe('Plugin System', () => {
           projectRoot: '/tmp'
         };
 
-        releasePlugin.apply(context);
+        releasePlugin.synthesize(context);
 
         const workflows = stack.workflows;
         expect(Object.keys(workflows)).toContain('release');

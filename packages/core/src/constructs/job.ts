@@ -1,6 +1,7 @@
 import { Construct } from "./base";
 import { createStep } from "../actions";
 import type { WorkflowConstruct } from "./workflow";
+import type { DotGithubConfig } from "../config";
 import type {
   GitHubJob,
   GitHubSteps,
@@ -13,11 +14,13 @@ import type {
 
 export class JobConstruct extends Construct {
   private readonly _job: GitHubJob;
+  private readonly _config?: DotGithubConfig;
 
-  constructor(scope: WorkflowConstruct, id: string, job: GitHubJob = {}) {
+  constructor(scope: WorkflowConstruct, id: string, job: GitHubJob = {}, config?: DotGithubConfig) {
     super(scope, id);
 
     this._job = job;
+    this._config = config;
     scope.addJob(id, this);
 
   }
@@ -42,7 +45,7 @@ export class JobConstruct extends Construct {
   ): this {
     const actionStep = createStep(uses, {
       with: inputs, ...step
-    }, ref);
+    }, ref, undefined);
     return this.addStep(actionStep);
   }
 

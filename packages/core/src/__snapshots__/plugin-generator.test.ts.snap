@@ -254,7 +254,8 @@ export default new ResourceOnlyPluginPlugin();
 `;
 
 exports[`Plugin Generator > Snapshot Tests > should generate consistent plugin structure with only workflows > release-workflow-content 1`] = `
-"import type { GitHubWorkflow, PluginContext } from '@dotgithub/core';
+"import { run } from '@dotgithub/core';
+import type { PluginContext } from '@dotgithub/core';
 
 /**
  * release workflow handler
@@ -438,7 +439,8 @@ export default new SnapshotTestPluginPlugin();
 `;
 
 exports[`Plugin Generator > Snapshot Tests > should generate consistent plugin structure with workflows and resources > workflow-file-content 1`] = `
-"import type { GitHubWorkflow, PluginContext } from '@dotgithub/core';
+"import { run } from '@dotgithub/core';
+import type { PluginContext } from '@dotgithub/core';
 
 /**
  * ci workflow handler
@@ -598,7 +600,8 @@ export default new SpecialCharsPluginPlugin();
 `;
 
 exports[`Plugin Generator > Snapshot Tests > should generate consistent plugin with special characters in names > special-workflow-content 1`] = `
-"import type { GitHubWorkflow, PluginContext } from '@dotgithub/core';
+"import { run } from '@dotgithub/core';
+import type { PluginContext } from '@dotgithub/core';
 
 /**
  * test-workflow_special workflow handler

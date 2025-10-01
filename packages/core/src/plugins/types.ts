@@ -1,24 +1,22 @@
 import type { GitHubStack } from '../constructs/base';
+import type { 
+  PluginConfig, 
+  StackConfig, 
+  PluginContext,
+  PluginLoadResult, 
+  PluginExecutionResult,
+  PluginDescription
+} from './schemas';
 
-export interface PluginConfig {
-  name: string;
-  package: string;
-  config?: Record<string, any>;
-  enabled?: boolean;
-}
-
-export interface StackConfig {
-  name: string;
-  plugins: string[];
-  config?: Record<string, any>;
-}
-
-export interface PluginContext {
-  stack: GitHubStack;
-  config: Record<string, any>;
-  stackConfig: StackConfig;
-  projectRoot: string;
-}
+// Re-export types for backward compatibility
+export type { 
+  PluginConfig, 
+  StackConfig, 
+  PluginContext,
+  PluginLoadResult, 
+  PluginExecutionResult,
+  PluginDescription
+} from './schemas';
 
 export abstract class DotGitHubPlugin {
   readonly name: string;
@@ -33,25 +31,18 @@ export abstract class DotGitHubPlugin {
   
   validate?(context: PluginContext): Promise<void> | void;
 
-  apply(context: PluginContext): Promise<void> | void {
+  synthesize(context: PluginContext): Promise<void> | void {
     // Default implementation does nothing
   }
+
+  /**
+   * Optional method to describe the plugin including its configuration schema
+   * This method should return comprehensive information about the plugin
+   */
+  describe?(): PluginDescription | Promise<PluginDescription>;
 }
 
 export interface PluginModule {
   default?: DotGitHubPlugin;
   plugin?: DotGitHubPlugin;
-}
-
-export interface PluginLoadResult {
-  plugin: DotGitHubPlugin;
-  config: PluginConfig;
-  resolved: boolean;
-}
-
-export interface PluginExecutionResult {
-  plugin: DotGitHubPlugin;
-  success: boolean;
-  error?: Error;
-  duration: number;
 }
