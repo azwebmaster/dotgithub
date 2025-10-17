@@ -1,6 +1,12 @@
 import type { GitHubStack } from '../constructs/base.js';
 import { StepChainBuilder } from './actions-helper.js';
-import type { GitHubStepAny, GitHubStep, GitHubStepWith, GitHubStepAction, GitHubSteps } from '../types/workflow.js';
+import type {
+  GitHubStepAny,
+  GitHubStep,
+  GitHubStepWith,
+  GitHubStepAction,
+  GitHubSteps,
+} from '../types/workflow.js';
 import type { ActionConstructProps } from '../constructs/action.js';
 import { createStep, createStep as createStepFunction } from '../actions.js';
 
@@ -25,20 +31,31 @@ export class GitHubOutputValue {
 
 export class ActionInvocationResult<TOutputs> {
   constructor(steps: GitHubSteps, outputs: TOutputs) {
-    this.steps = steps;
-    this.outputs = outputs;
+    this._steps = steps;
+    this._outputs = outputs;
   }
-  steps: GitHubSteps;
-  outputs: TOutputs;
+  private _steps: GitHubSteps;
+  private _outputs: TOutputs;
+
   /**
    * Chains another step after this action, providing access to the outputs
    * @param stepFactory Function that receives the outputs from this action and returns a new step
    * @returns A new ActionInvocationResult for further chaining
    */
-  then(stepFactory: (outputs: TOutputs) => GitHubStepAny): ActionInvocationResult<TOutputs> {
-    const newStep = stepFactory(this.outputs);
-    this.steps.push(newStep);
+  then(
+    stepFactory: (outputs: TOutputs) => GitHubStepAny
+  ): ActionInvocationResult<TOutputs> {
+    const newStep = stepFactory(this._outputs);
+    this._steps.push(newStep);
     return this;
+  }
+
+  toSteps(): GitHubSteps {
+    return this._steps;
+  }
+
+  outputs(): TOutputs {
+    return this._outputs;
   }
 }
 
@@ -59,8 +76,6 @@ export type GitHubOutputValues<T> = Record<keyof T, GitHubOutputValue>;
 //   protected getContext(): PluginContext {
 //     return this.collection.getContext();
 //   }
-
-
 
 //   /**
 //    * Generates a deterministic step ID based on step properties
@@ -166,17 +181,38 @@ export abstract class ActionCollection {
 
   private createStep<TInputs extends GitHubStepWith>(
     uses: string,
-    step?: Partial<Omit<GitHubStep<TInputs>, "uses">>,
+    step?: Partial<Omit<GitHubStep<TInputs>, 'uses'>>,
     ref?: string,
     fallbackRef?: string
   ): GitHubStep<TInputs> {
     return createStepFunction(uses, step, ref, this.getStack(), fallbackRef);
   }
 
-
-  invokeAction<TInputs extends GitHubStepWith, TOutputs>({ uses, inputs, stepOptions, ref, fallbackRef, outputs }: { uses: string, inputs?: TInputs, stepOptions?: Partial<Omit<GitHubStep<TInputs>, "uses">>, ref?: string, fallbackRef?: string, outputs?: TOutputs }): ActionInvocationResult<TOutputs> {
-    const step = this.createStep(uses, { with: inputs, ...stepOptions }, ref, fallbackRef);
-    return new ActionInvocationResult([step], this.createOutputs<TOutputs>(step.id!, outputs ?? {} as TOutputs));
+  invokeAction<TInputs extends GitHubStepWith, TOutputs>({
+    uses,
+    inputs,
+    stepOptions,
+    ref,
+    fallbackRef,
+    outputs,
+  }: {
+    uses: string;
+    inputs?: TInputs;
+    stepOptions?: Partial<Omit<GitHubStep<TInputs>, 'uses'>>;
+    ref?: string;
+    fallbackRef?: string;
+    outputs?: TOutputs;
+  }): ActionInvocationResult<TOutputs> {
+    const step = this.createStep(
+      uses,
+      { with: inputs, ...stepOptions },
+      ref,
+      fallbackRef
+    );
+    return new ActionInvocationResult(
+      [step],
+      this.createOutputs<TOutputs>(step.id!, outputs ?? ({} as TOutputs))
+    );
   }
 
   /**
@@ -187,7 +223,11 @@ export abstract class ActionCollection {
    * @returns A new instance of the action construct
    */
   createActionConstruct<T extends any>(
-    ActionConstructClass: new (scope: any, id: string, props: ActionConstructProps<any>) => T,
+    ActionConstructClass: new (
+      scope: any,
+      id: string,
+      props: ActionConstructProps<any>
+    ) => T,
     id: string,
     props: ActionConstructProps<any>
   ): T {

@@ -1,10 +1,10 @@
 import { SharedWorkflowConstruct } from '../constructs/shared-workflow.js';
 import type { GitHubStack } from '../constructs/base.js';
-import type { 
-  GitHubWorkflowInputs, 
+import type {
+  GitHubWorkflowInputs,
   GitHubReusableWorkflow,
   GitHubJob,
-  GitHubJobWith 
+  GitHubJobWith,
 } from '../types/workflow.js';
 import type { GitHubInputValue } from '../types/common.js';
 
@@ -31,12 +31,7 @@ export class SharedWorkflowHelper {
     inputs: T,
     workflow: Omit<GitHubReusableWorkflow, 'on'>
   ): SharedWorkflowConstruct<T> {
-    return new SharedWorkflowConstruct<T>(
-      this._stack,
-      id,
-      inputs,
-      workflow
-    );
+    return new SharedWorkflowConstruct<T>(this._stack, id, inputs, workflow);
   }
 
   /**
@@ -66,9 +61,9 @@ export class SharedWorkflowHelper {
           steps: jobConfig.steps,
           outputs: jobConfig.outputs,
           env: jobConfig.env,
-          permissions: jobConfig.permissions
-        }
-      }
+          permissions: jobConfig.permissions,
+        },
+      },
     };
 
     return this.create(id, inputs, workflow);
@@ -89,20 +84,20 @@ export class SharedWorkflowHelper {
     const defaultSteps = [
       {
         name: 'Checkout',
-        uses: 'actions/checkout@v4'
+        uses: 'actions/checkout@v4',
       },
       {
         name: 'Setup Node.js',
         uses: 'actions/setup-node@v4',
         with: {
           'node-version': '${{ inputs.nodeVersion || "20" }}',
-          'cache': 'npm'
-        }
+          cache: 'npm',
+        },
       },
       {
         name: 'Install dependencies',
-        run: '${{ inputs.installCommand || "npm ci" }}'
-      }
+        run: '${{ inputs.installCommand || "npm ci" }}',
+      },
     ];
 
     const steps = [
@@ -110,14 +105,14 @@ export class SharedWorkflowHelper {
       ...customSteps,
       {
         name: 'Run tests',
-        run: '${{ inputs.testCommand || "npm test" }}'
-      }
+        run: '${{ inputs.testCommand || "npm test" }}',
+      },
     ];
 
     return this.createSimple(id, inputs, {
       name: `Node.js Test - ${id}`,
       'runs-on': '${{ inputs.runsOn || "ubuntu-latest" }}',
-      steps
+      steps,
     });
   }
 
@@ -136,21 +131,22 @@ export class SharedWorkflowHelper {
     const defaultSteps = [
       {
         name: 'Checkout',
-        uses: 'actions/checkout@v4'
+        uses: 'actions/checkout@v4',
       },
       {
         name: 'Setup Node.js',
         uses: 'actions/setup-node@v4',
         with: {
           'node-version': '${{ inputs.nodeVersion || "20" }}',
-          'cache': 'npm',
-          'registry-url': '${{ inputs.registryUrl || "https://registry.npmjs.org/" }}'
-        }
+          cache: 'npm',
+          'registry-url':
+            '${{ inputs.registryUrl || "https://registry.npmjs.org/" }}',
+        },
       },
       {
         name: 'Install dependencies',
-        run: '${{ inputs.installCommand || "npm ci" }}'
-      }
+        run: '${{ inputs.installCommand || "npm ci" }}',
+      },
     ];
 
     const steps = [
@@ -158,22 +154,22 @@ export class SharedWorkflowHelper {
       ...customSteps,
       {
         name: 'Build',
-        run: '${{ inputs.buildCommand || "npm run build" }}'
+        run: '${{ inputs.buildCommand || "npm run build" }}',
       },
       {
         name: 'Publish',
         if: '${{ inputs.publishCondition || "github.ref == \'refs/heads/main\'" }}',
         run: '${{ inputs.publishCommand || "npm publish" }}',
         env: {
-          NODE_AUTH_TOKEN: '${{ inputs.npmToken || secrets.NPM_TOKEN }}'
-        }
-      }
+          NODE_AUTH_TOKEN: '${{ inputs.npmToken || secrets.NPM_TOKEN }}',
+        },
+      },
     ];
 
     return this.createSimple(id, inputs, {
       name: `Build and Publish - ${id}`,
       'runs-on': '${{ inputs.runsOn || "ubuntu-latest" }}',
-      steps
+      steps,
     });
   }
 }

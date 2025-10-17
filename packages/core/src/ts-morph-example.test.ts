@@ -1,5 +1,9 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { TypeScriptGenerator, createExampleActionModule, createExamplePlugin } from './ts-morph-example.js';
+import {
+  TypeScriptGenerator,
+  createExampleActionModule,
+  createExamplePlugin,
+} from './ts-morph-example.js';
 
 describe('TypeScriptGenerator', () => {
   let generator: TypeScriptGenerator;
@@ -18,7 +22,10 @@ describe('TypeScriptGenerator', () => {
         fetchDepth: 'number',
       };
 
-      const result = generator.generateActionInputsInterface('actions/checkout', inputs);
+      const result = generator.generateActionInputsInterface(
+        'actions/checkout',
+        inputs
+      );
 
       expect(result).toContain('export interface ActionsCheckoutInputs');
       expect(result).toContain('repository?: string');
@@ -27,7 +34,9 @@ describe('TypeScriptGenerator', () => {
       expect(result).toContain('clean?: string');
       expect(result).toContain('fetchDepth?: string');
       expect(result).toContain('/**');
-      expect(result).toContain('Input parameters for the actions/checkout action');
+      expect(result).toContain(
+        'Input parameters for the actions/checkout action'
+      );
     });
   });
 
@@ -38,13 +47,18 @@ describe('TypeScriptGenerator', () => {
         ref: 'string',
       };
 
-      const result = generator.generateActionFactoryFunction('actions/checkout', inputs);
+      const result = generator.generateActionFactoryFunction(
+        'actions/checkout',
+        inputs
+      );
 
       expect(result).toContain('export function actionsCheckout');
       expect(result).toContain('inputs?: ActionsCheckoutInputs | undefined');
       expect(result).toContain('return createStep("actions/checkout"');
       expect(result).toContain('/**');
-      expect(result).toContain('Creates a step for the actions/checkout action');
+      expect(result).toContain(
+        'Creates a step for the actions/checkout action'
+      );
     });
   });
 
@@ -57,7 +71,9 @@ describe('TypeScriptGenerator', () => {
 
       const result = generator.generateActionModule('actions/checkout', inputs);
 
-      expect(result).toContain('import { GitHubStep, createStep } from "@dotgithub/core"');
+      expect(result).toContain(
+        'import { GitHubStep, createStep } from "@dotgithub/core"'
+      );
       expect(result).toContain('export interface ActionsCheckoutInputs');
       expect(result).toContain('export function actionsCheckout');
       expect(result).toContain('return createStep("actions/checkout"');
@@ -75,7 +91,9 @@ describe('TypeScriptGenerator', () => {
 
       const result = generator.generatePluginClass('example', workflows);
 
-      expect(result).toContain('import { DotGitHubPlugin, PluginContext } from "@dotgithub/core"');
+      expect(result).toContain(
+        'import { DotGitHubPlugin, PluginContext } from "@dotgithub/core"'
+      );
       expect(result).toContain('export class ExamplePlugin');
       expect(result).toContain('implements DotGitHubPlugin');
       expect(result).toContain("name: string = 'example'");
@@ -88,7 +106,9 @@ describe('TypeScriptGenerator', () => {
     it('should convert strings to PascalCase', () => {
       // Access private method through type assertion for testing
       const generator = new TypeScriptGenerator() as any;
-      expect(generator.toPascalCase('actions/checkout')).toBe('ActionsCheckout');
+      expect(generator.toPascalCase('actions/checkout')).toBe(
+        'ActionsCheckout'
+      );
       expect(generator.toPascalCase('my-action')).toBe('MyAction');
       expect(generator.toPascalCase('my_action')).toBe('MyAction');
     });
@@ -115,7 +135,7 @@ describe('TypeScriptGenerator', () => {
     it('should format generated code', () => {
       const unformattedCode = `export interface Test{name:string;value:number;}`;
       const formattedCode = generator.formatCode(unformattedCode);
-      
+
       expect(formattedCode).toContain('export interface Test {');
       expect(formattedCode).toContain('name: string;');
       expect(formattedCode).toContain('value: number;');
@@ -126,8 +146,10 @@ describe('TypeScriptGenerator', () => {
 describe('Example functions', () => {
   it('should create example action module', () => {
     const result = createExampleActionModule();
-    
-    expect(result).toContain('import { GitHubStep, createStep } from "@dotgithub/core"');
+
+    expect(result).toContain(
+      'import { GitHubStep, createStep } from "@dotgithub/core"'
+    );
     expect(result).toContain('export interface ActionsCheckoutInputs');
     expect(result).toContain('export function actionsCheckout');
     expect(result).toContain('repository?: string');
@@ -139,8 +161,10 @@ describe('Example functions', () => {
 
   it('should create example plugin', () => {
     const result = createExamplePlugin();
-    
-    expect(result).toContain('import { DotGitHubPlugin, PluginContext } from "@dotgithub/core"');
+
+    expect(result).toContain(
+      'import { DotGitHubPlugin, PluginContext } from "@dotgithub/core"'
+    );
     expect(result).toContain('export class ExamplePlugin');
     expect(result).toContain('implements DotGitHubPlugin');
     expect(result).toContain("name: string = 'example'");

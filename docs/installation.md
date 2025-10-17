@@ -82,16 +82,19 @@ DotGitHub requires a GitHub token for accessing GitHub Actions metadata. Set up 
 Set the token as an environment variable:
 
 #### Linux/macOS
+
 ```bash
 export GITHUB_TOKEN=ghp_your_token_here
 ```
 
 #### Windows (Command Prompt)
+
 ```cmd
 set GITHUB_TOKEN=ghp_your_token_here
 ```
 
 #### Windows (PowerShell)
+
 ```powershell
 $env:GITHUB_TOKEN="ghp_your_token_here"
 ```
@@ -101,16 +104,19 @@ $env:GITHUB_TOKEN="ghp_your_token_here"
 Add the environment variable to your shell profile:
 
 #### Bash (~/.bashrc or ~/.bash_profile)
+
 ```bash
 echo 'export GITHUB_TOKEN=ghp_your_token_here' >> ~/.bashrc
 ```
 
 #### Zsh (~/.zshrc)
+
 ```bash
 echo 'export GITHUB_TOKEN=ghp_your_token_here' >> ~/.zshrc
 ```
 
 #### Fish (~/.config/fish/config.fish)
+
 ```fish
 set -gx GITHUB_TOKEN ghp_your_token_here
 ```
@@ -126,6 +132,7 @@ dotgithub init
 ```
 
 This creates:
+
 - `src/dotgithub.json` - Configuration file
 - `src/package.json` - Node.js package file
 - `src/tsconfig.json` - TypeScript configuration
@@ -201,6 +208,7 @@ code --install-extension esbenp.prettier-vscode
 ### TypeScript Support
 
 DotGitHub generates TypeScript files with full type safety. Your IDE should automatically provide:
+
 - IntelliSense for action inputs/outputs
 - Type checking for workflow definitions
 - Auto-completion for action parameters
@@ -243,6 +251,7 @@ node --version
 ```
 
 If you need to manage multiple Node.js versions, consider using:
+
 - [nvm](https://github.com/nvm-sh/nvm) (Linux/macOS)
 - [nvm-windows](https://github.com/coreybutler/nvm-windows) (Windows)
 
@@ -269,16 +278,19 @@ After installation, you can:
 To remove DotGitHub:
 
 ### Global Installation
+
 ```bash
 npm uninstall -g @dotgithub/cli
 ```
 
 ### Project Installation
+
 ```bash
 npm uninstall @dotgithub/cli
 ```
 
 ### Remove Configuration
+
 ```bash
 rm -rf src/dotgithub.json src/package.json src/tsconfig.json src/index.ts
 ```

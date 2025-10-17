@@ -19,7 +19,14 @@ export interface GenerateTypesResult {
  * @param versionRef user-friendly version reference to use in generated code
  * @param customActionName custom action name to override the YAML name
  */
-export async function generateTypesFromActionYml(orgRepo: string, ref?: string, token?: string, versionRef?: string, customActionName?: string, actionPath?: string): Promise<GenerateTypesResult> {
+export async function generateTypesFromActionYml(
+  orgRepo: string,
+  ref?: string,
+  token?: string,
+  versionRef?: string,
+  customActionName?: string,
+  actionPath?: string
+): Promise<GenerateTypesResult> {
   const [owner, repo] = orgRepo.split('/');
   if (!owner || !repo) throw new Error('orgRepo must be in the form org/repo');
   token = token || process.env.GITHUB_TOKEN;
@@ -31,23 +38,37 @@ export async function generateTypesFromActionYml(orgRepo: string, ref?: string, 
     cloneRefToUse = defaultBranch;
     if (!ref) ref = defaultBranch;
   }
-  
+
   if (!ref) {
     ref = cloneRefToUse;
   }
 
   const tmpDir = createTempDir();
   await cloneRepoToTemp(owner, repo, cloneRefToUse, token, tmpDir);
-  
+
   if (actionPath) {
     // Use generateTypesFromActionYmlAtPath for actions with actionPath
-    const result = generateTypesFromActionYmlAtPath(tmpDir, actionPath, orgRepo, ref, versionRef, customActionName);
+    const result = generateTypesFromActionYmlAtPath(
+      tmpDir,
+      actionPath,
+      orgRepo,
+      ref,
+      versionRef,
+      customActionName
+    );
     cleanupTempDir(tmpDir);
     return result;
   } else {
     // Use the original logic for actions without actionPath
     const yml = readActionYml(tmpDir);
-    const type = generateTypesFromYml(yml, orgRepo, ref, versionRef, customActionName, undefined);
+    const type = generateTypesFromYml(
+      yml,
+      orgRepo,
+      ref,
+      versionRef,
+      customActionName,
+      undefined
+    );
     cleanupTempDir(tmpDir);
     return { yaml: yml, type };
   }
@@ -57,7 +78,13 @@ function createTempDir(): string {
   return fs.mkdtempSync(os.tmpdir() + '/action-yml-');
 }
 
-async function cloneRepoToTemp(owner: string, repo: string, ref: string | undefined, token: string | undefined, tmpDir: string) {
+async function cloneRepoToTemp(
+  owner: string,
+  repo: string,
+  ref: string | undefined,
+  token: string | undefined,
+  tmpDir: string
+) {
   const url = token
     ? `https://${token}:x-oauth-basic@github.com/${owner}/${repo}.git`
     : `https://github.com/${owner}/${repo}.git`;
@@ -90,13 +117,17 @@ export function findAllActionsInRepo(repoDir: string): string[] {
     // Search subdirectories (skip .git and node_modules)
     const entries = fs.readdirSync(dir, { withFileTypes: true });
     for (const entry of entries) {
-      if (entry.isDirectory() &&
-          entry.name !== '.git' &&
-          entry.name !== 'node_modules' &&
-          entry.name !== '.github' &&
-          !entry.name.startsWith('.')) {
+      if (
+        entry.isDirectory() &&
+        entry.name !== '.git' &&
+        entry.name !== 'node_modules' &&
+        entry.name !== '.github' &&
+        !entry.name.startsWith('.')
+      ) {
         const subDir = path.join(dir, entry.name);
-        const subRelativePath = relativePath ? path.join(relativePath, entry.name) : entry.name;
+        const subRelativePath = relativePath
+          ? path.join(relativePath, entry.name)
+          : entry.name;
         searchDirectory(subDir, subRelativePath);
       }
     }
@@ -127,6 +158,13 @@ export function generateTypesFromActionYmlAtPath(
   const yml = readActionYml(actionDir);
   // For actions in subdirectories, include the action path in the repo string
   const repoForUses = actionPath ? `${orgRepo}/${actionPath}` : orgRepo;
-  const type = generateTypesFromYml(yml, repoForUses, ref, versionRef, customActionName, actionPath);
+  const type = generateTypesFromYml(
+    yml,
+    repoForUses,
+    ref,
+    versionRef,
+    customActionName,
+    actionPath
+  );
   return { yaml: yml, type };
 }

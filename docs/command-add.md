@@ -85,6 +85,7 @@ Actions are specified in the format: `org/repo@ref`
 - `ref` - Git reference (tag, branch, or commit SHA)
 
 Examples:
+
 - `actions/checkout@v4` - Latest v4 tag
 - `actions/setup-node@v4.1.0` - Specific version
 - `actions/checkout@main` - Latest from main branch
@@ -102,23 +103,26 @@ const { checkout, setupNode } = new Actions(stack, 'actions');
 // Type-safe usage with IntelliSense
 checkout('Checkout code', {
   'fetch-depth': 1,
-  'submodules': 'recursive'
+  submodules: 'recursive',
 }).toStep();
 ```
 
 ## Authentication
 
 The command requires a GitHub token for:
+
 - Accessing private repositories
 - Higher rate limits for public repositories
 
 Set your token via:
+
 - Environment variable: `GITHUB_TOKEN`
 - Command option: `--token <token>`
 
 ## Error handling
 
 The command will fail if:
+
 - The repository doesn't exist
 - The specified ref doesn't exist
 - The repository doesn't contain a valid `action.yml`

@@ -21,6 +21,7 @@ dotgithub list
 ```
 
 Output example:
+
 ```
 Found 3 tracked actions:
   📦 actions/checkout
@@ -53,6 +54,7 @@ For each tracked action, the command displays:
 ## When to use
 
 Use this command to:
+
 - **Audit dependencies** - See all actions your project uses
 - **Verify additions** - Confirm actions were added correctly
 - **Debug issues** - Check if actions are properly tracked
@@ -69,6 +71,7 @@ Use this command to:
 ## Error handling
 
 The command will fail if:
+
 - No `dotgithub.json` configuration file exists
 - Configuration file is invalid or corrupted
 - Actions array is missing from configuration
@@ -76,6 +79,7 @@ The command will fail if:
 ## Empty state
 
 If no actions are tracked, the command displays:
+
 ```
 No actions are currently tracked.
 ```

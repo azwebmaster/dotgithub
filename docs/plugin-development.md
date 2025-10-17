@@ -52,6 +52,7 @@ export default new MyPlugin();
 ### Required Properties
 
 #### name
+
 Unique identifier for your plugin. Use kebab-case naming.
 
 ```typescript
@@ -59,6 +60,7 @@ readonly name = 'my-awesome-plugin';
 ```
 
 #### version
+
 Plugin version following semantic versioning.
 
 ```typescript
@@ -66,6 +68,7 @@ readonly version = '1.2.3';
 ```
 
 #### description
+
 Human-readable description of what the plugin does.
 
 ```typescript
@@ -85,7 +88,7 @@ validate(stack: GitHubStack): void {
     testCommand: z.string().default('npm test'),
     environment: z.enum(['development', 'staging', 'production'])
   });
-  
+
   try {
     schema.parse(stack.config);
   } catch (error) {
@@ -145,22 +148,24 @@ export class ConfigurablePlugin implements DotGitHubPlugin {
   private readonly configSchema = z.object({
     // Required fields
     environment: z.enum(['development', 'staging', 'production']),
-    
+
     // Optional fields with defaults
     nodeVersion: z.string().default('18'),
     testCommand: z.string().default('npm test'),
     timeout: z.number().min(1).max(60).default(10),
-    
+
     // Complex validation
     retries: z.number().min(0).max(5).default(3),
     parallel: z.boolean().default(false),
-    
+
     // Nested objects
-    deploy: z.object({
-      enabled: z.boolean().default(false),
-      region: z.string().default('us-east-1'),
-      bucket: z.string().optional()
-    }).optional()
+    deploy: z
+      .object({
+        enabled: z.boolean().default(false),
+        region: z.string().default('us-east-1'),
+        bucket: z.string().optional(),
+      })
+      .optional(),
   });
 
   validate(stack: GitHubStack): void {
@@ -169,7 +174,7 @@ export class ConfigurablePlugin implements DotGitHubPlugin {
 
   async synthesize(stack: GitHubStack): Promise<void> {
     const config = this.configSchema.parse(stack.config);
-    
+
     // Use validated configuration
     console.log(`Environment: ${config.environment}`);
     console.log(`Node version: ${config.nodeVersion}`);
@@ -180,6 +185,7 @@ export class ConfigurablePlugin implements DotGitHubPlugin {
 ### Configuration Examples
 
 #### Basic Configuration
+
 ```json
 {
   "plugins": [
@@ -198,6 +204,7 @@ export class ConfigurablePlugin implements DotGitHubPlugin {
 ```
 
 #### Advanced Configuration
+
 ```json
 {
   "plugins": [
@@ -232,7 +239,7 @@ import { WorkflowConstruct, JobConstruct } from '@dotgithub/core';
 async synthesize(stack: GitHubStack): Promise<void> {
   const wf = new WorkflowConstruct(stack, 'ci', {
     name: 'CI Workflow',
-    on: { 
+    on: {
       push: { branches: ['main'] },
       pull_request: {}
     },
@@ -287,22 +294,22 @@ async synthesize(stack: GitHubStack): Promise<void> {
         'fetch-depth': 1,
         'submodules': 'recursive'
       }).toStep(),
-      
+
       setupNode('Setup Node.js', {
         'node-version': '18',
         'cache': 'npm'
       }).toStep(),
-      
+
       {
         name: 'Install dependencies',
         run: 'npm ci'
       },
-      
+
       {
         name: 'Run tests',
         run: 'npm test'
       },
-      
+
       uploadArtifact('Upload test results', {
         name: 'test-results',
         path: 'test-results/'
@@ -315,30 +322,32 @@ async synthesize(stack: GitHubStack): Promise<void> {
 ### Advanced Job Configuration
 
 #### Matrix Builds
+
 ```typescript
 new JobConstruct(wf, 'test', {
   'runs-on': 'ubuntu-latest',
   strategy: {
     matrix: {
       'node-version': ['16', '18', '20'],
-      'os': ['ubuntu-latest', 'windows-latest', 'macos-latest']
+      os: ['ubuntu-latest', 'windows-latest', 'macos-latest'],
     },
     failFast: false,
-    maxParallel: 3
+    maxParallel: 3,
   },
   steps: [
     setupNode('Setup Node.js', {
-      'node-version': '${{ matrix.node-version }}'
+      'node-version': '${{ matrix.node-version }}',
     }).toStep(),
     {
       name: 'Test on ${{ matrix.os }}',
-      run: 'npm test'
-    }
-  ]
+      run: 'npm test',
+    },
+  ],
 });
 ```
 
 #### Job Dependencies
+
 ```typescript
 // Build job
 new JobConstruct(wf, 'build', {
@@ -348,9 +357,9 @@ new JobConstruct(wf, 'build', {
     setupNode('Setup Node').toStep(),
     {
       name: 'Build',
-      run: 'npm run build'
-    }
-  ]
+      run: 'npm run build',
+    },
+  ],
 });
 
 // Test job (depends on build)
@@ -362,9 +371,9 @@ new JobConstruct(wf, 'test', {
     setupNode('Setup Node').toStep(),
     {
       name: 'Test',
-      run: 'npm test'
-    }
-  ]
+      run: 'npm test',
+    },
+  ],
 });
 
 // Deploy job (depends on both)
@@ -375,13 +384,14 @@ new JobConstruct(wf, 'deploy', {
   steps: [
     {
       name: 'Deploy',
-      run: 'npm run deploy'
-    }
-  ]
+      run: 'npm run deploy',
+    },
+  ],
 });
 ```
 
 #### Conditional Jobs
+
 ```typescript
 new JobConstruct(wf, 'deploy', {
   'runs-on': 'ubuntu-latest',
@@ -389,9 +399,9 @@ new JobConstruct(wf, 'deploy', {
   steps: [
     {
       name: 'Deploy to production',
-      run: 'npm run deploy:prod'
-    }
-  ]
+      run: 'npm run deploy:prod',
+    },
+  ],
 });
 ```
 
@@ -454,17 +464,17 @@ new JobConstruct(wf, 'test', {
   env: {
     NODE_ENV: 'test',
     CI: 'true',
-    COVERAGE: 'true'
+    COVERAGE: 'true',
   },
   steps: [
     {
       name: 'Run tests with coverage',
       run: 'npm run test:coverage',
       env: {
-        COVERAGE_THRESHOLD: '80'
-      }
-    }
-  ]
+        COVERAGE_THRESHOLD: '80',
+      },
+    },
+  ],
 });
 ```
 
@@ -479,10 +489,10 @@ new JobConstruct(wf, 'deploy', {
       run: 'npm run deploy',
       env: {
         DEPLOY_TOKEN: '${{ secrets.DEPLOY_TOKEN }}',
-        ENVIRONMENT: '${{ vars.ENVIRONMENT }}'
-      }
-    }
-  ]
+        ENVIRONMENT: '${{ vars.ENVIRONMENT }}',
+      },
+    },
+  ],
 });
 ```
 
@@ -494,20 +504,20 @@ import { createStep, run } from '@dotgithub/core';
 const steps = [
   checkout('Checkout').toStep(),
   setupNode('Setup Node').toStep(),
-  
+
   // Custom step
   createStep('Custom step', 'echo "Hello from custom step"', {
     env: {
-      CUSTOM_VAR: 'custom-value'
-    }
+      CUSTOM_VAR: 'custom-value',
+    },
   }),
-  
+
   // Run step with options
   run('Run tests', 'npm test', {
     shell: 'bash',
     continueOnError: false,
-    timeoutMinutes: 10
-  })
+    timeoutMinutes: 10,
+  }),
 ];
 ```
 
@@ -529,9 +539,9 @@ describe('MyPlugin', () => {
       name: 'test',
       config: {
         environment: 'production',
-        nodeVersion: '18'
+        nodeVersion: '18',
       },
-      plugins: []
+      plugins: [],
     };
 
     expect(() => plugin.validate(stack)).not.toThrow();
@@ -541,9 +551,9 @@ describe('MyPlugin', () => {
     const stack = {
       name: 'test',
       config: {
-        environment: 'invalid'
+        environment: 'invalid',
       },
-      plugins: []
+      plugins: [],
     };
 
     expect(() => plugin.validate(stack)).toThrow();
@@ -551,7 +561,7 @@ describe('MyPlugin', () => {
 
   it('should return correct metadata', () => {
     const description = plugin.describe();
-    
+
     expect(description.name).toBe('my-plugin');
     expect(description.version).toBe('1.0.0');
     expect(description.description).toBe('My custom plugin');
@@ -574,13 +584,13 @@ describe('MyPlugin Integration', () => {
       name: 'test',
       config: {
         environment: 'production',
-        nodeVersion: '18'
+        nodeVersion: '18',
       },
-      plugins: []
+      plugins: [],
     };
 
     await plugin.synthesize(stack);
-    
+
     // Verify workflow was generated correctly
     // This would require access to the generated workflow content
   });
@@ -594,6 +604,7 @@ describe('MyPlugin Integration', () => {
 Create an NPM package for your plugin:
 
 #### package.json
+
 ```json
 {
   "name": "@yourorg/dotgithub-plugin-nodejs",
@@ -601,15 +612,8 @@ Create an NPM package for your plugin:
   "description": "DotGitHub plugin for Node.js projects",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "files": [
-    "dist"
-  ],
-  "keywords": [
-    "dotgithub",
-    "plugin",
-    "nodejs",
-    "ci"
-  ],
+  "files": ["dist"],
+  "keywords": ["dotgithub", "plugin", "nodejs", "ci"],
   "author": "Your Name",
   "license": "MIT",
   "dependencies": {
@@ -624,6 +628,7 @@ Create an NPM package for your plugin:
 ```
 
 #### Build Script
+
 ```json
 {
   "scripts": {
@@ -697,12 +702,12 @@ For local development, reference the plugin directly:
 
 ```typescript
 import { z } from 'zod';
-import { 
-  DotGitHubPlugin, 
-  GitHubStack, 
-  WorkflowConstruct, 
-  JobConstruct, 
-  Actions 
+import {
+  DotGitHubPlugin,
+  GitHubStack,
+  WorkflowConstruct,
+  JobConstruct,
+  Actions,
 } from '@dotgithub/core';
 
 export class NodeJSPlugin implements DotGitHubPlugin {
@@ -717,15 +722,19 @@ export class NodeJSPlugin implements DotGitHubPlugin {
     buildCommand: z.string().default('npm run build'),
     deployCommand: z.string().optional(),
     coverage: z.boolean().default(true),
-    matrix: z.object({
-      nodeVersions: z.array(z.string()).default(['16', '18', '20']),
-      os: z.array(z.string()).default(['ubuntu-latest'])
-    }).default({}),
-    deploy: z.object({
-      enabled: z.boolean().default(false),
-      environment: z.string().optional(),
-      region: z.string().default('us-east-1')
-    }).optional()
+    matrix: z
+      .object({
+        nodeVersions: z.array(z.string()).default(['16', '18', '20']),
+        os: z.array(z.string()).default(['ubuntu-latest']),
+      })
+      .default({}),
+    deploy: z
+      .object({
+        enabled: z.boolean().default(false),
+        environment: z.string().optional(),
+        region: z.string().default('us-east-1'),
+      })
+      .optional(),
   });
 
   validate(stack: GitHubStack): void {
@@ -744,21 +753,24 @@ export class NodeJSPlugin implements DotGitHubPlugin {
       category: 'ci',
       tags: ['nodejs', 'ci', 'testing', 'deployment'],
       minDotGithubVersion: '1.0.0',
-      configSchema: this.configSchema
+      configSchema: this.configSchema,
     };
   }
 
   async synthesize(stack: GitHubStack): Promise<void> {
     const config = this.configSchema.parse(stack.config);
-    const { checkout, setupNode, uploadArtifact } = new Actions(stack, 'actions');
+    const { checkout, setupNode, uploadArtifact } = new Actions(
+      stack,
+      'actions'
+    );
 
     const wf = new WorkflowConstruct(stack, 'ci', {
       name: 'Node.js CI/CD',
-      on: { 
+      on: {
         push: { branches: ['main'] },
-        pull_request: {}
+        pull_request: {},
       },
-      jobs: {}
+      jobs: {},
     });
 
     // Test job with matrix
@@ -767,35 +779,39 @@ export class NodeJSPlugin implements DotGitHubPlugin {
       strategy: {
         matrix: {
           'node-version': config.matrix.nodeVersions,
-          'os': config.matrix.os
-        }
+          os: config.matrix.os,
+        },
       },
       steps: [
         checkout('Checkout code').toStep(),
         setupNode('Setup Node.js', {
           'node-version': '${{ matrix.node-version }}',
-          'cache': 'npm'
+          cache: 'npm',
         }).toStep(),
         {
           name: 'Install dependencies',
-          run: 'npm ci'
+          run: 'npm ci',
         },
         {
           name: 'Run tests',
           run: config.testCommand,
           env: {
             NODE_ENV: 'test',
-            CI: 'true'
-          }
+            CI: 'true',
+          },
         },
-        ...(config.coverage ? [{
-          name: 'Upload coverage',
-          uses: 'codecov/codecov-action@v3',
-          with: {
-            token: '${{ secrets.CODECOV_TOKEN }}'
-          }
-        }] : [])
-      ]
+        ...(config.coverage
+          ? [
+              {
+                name: 'Upload coverage',
+                uses: 'codecov/codecov-action@v3',
+                with: {
+                  token: '${{ secrets.CODECOV_TOKEN }}',
+                },
+              },
+            ]
+          : []),
+      ],
     });
 
     // Build job
@@ -806,21 +822,21 @@ export class NodeJSPlugin implements DotGitHubPlugin {
         checkout('Checkout code').toStep(),
         setupNode('Setup Node.js', {
           'node-version': config.nodeVersion,
-          'cache': 'npm'
+          cache: 'npm',
         }).toStep(),
         {
           name: 'Install dependencies',
-          run: 'npm ci'
+          run: 'npm ci',
         },
         {
           name: 'Build',
-          run: config.buildCommand
+          run: config.buildCommand,
         },
         uploadArtifact('Upload build artifacts', {
           name: 'build-artifacts',
-          path: 'dist/'
-        }).toStep()
-      ]
+          path: 'dist/',
+        }).toStep(),
+      ],
     });
 
     // Deploy job (if enabled)
@@ -836,18 +852,18 @@ export class NodeJSPlugin implements DotGitHubPlugin {
             uses: 'actions/download-artifact@v3',
             with: {
               name: 'build-artifacts',
-              path: 'dist/'
-            }
+              path: 'dist/',
+            },
           },
           {
             name: 'Deploy',
             run: config.deployCommand || 'npm run deploy',
             env: {
               NODE_ENV: config.environment,
-              AWS_REGION: config.deploy.region
-            }
-          }
-        ]
+              AWS_REGION: config.deploy.region,
+            },
+          },
+        ],
       });
     }
   }
@@ -857,6 +873,7 @@ export default new NodeJSPlugin();
 ```
 
 This comprehensive plugin demonstrates:
+
 - Configuration validation with Zod
 - Matrix builds for multiple Node.js versions
 - Conditional job creation

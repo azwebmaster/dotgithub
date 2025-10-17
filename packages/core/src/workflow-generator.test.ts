@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { generateWorkflowYaml, createWorkflow, createJob } from './workflow-generator.js';
+import {
+  generateWorkflowYaml,
+  createWorkflow,
+  createJob,
+} from './workflow-generator.js';
 import type { GitHubWorkflow, GitHubJob } from './types/workflow.js';
 
 describe('workflow-generator', () => {
@@ -14,15 +18,15 @@ describe('workflow-generator', () => {
             steps: [
               {
                 name: 'Checkout',
-                uses: 'actions/checkout@v4'
-              }
-            ]
-          }
-        }
+                uses: 'actions/checkout@v4',
+              },
+            ],
+          },
+        },
       };
 
       const yaml = generateWorkflowYaml(workflow);
-      
+
       expect(yaml).toContain('name: CI');
       expect(yaml).toContain('"on": push');
       expect(yaml).toContain('runs-on: ubuntu-latest');
@@ -35,68 +39,68 @@ describe('workflow-generator', () => {
         'run-name': 'Running ${{ github.actor }} tests',
         on: {
           push: {
-            branches: ['main', 'develop']
+            branches: ['main', 'develop'],
           },
-          pull_request: {}
+          pull_request: {},
         },
         permissions: {
           contents: 'read',
-          'pull-requests': 'write'
+          'pull-requests': 'write',
         },
         env: {
           NODE_VERSION: '18',
-          CI: 'true'
+          CI: 'true',
         },
         concurrency: {
           group: '${{ github.workflow }}-${{ github.ref }}',
-          'cancel-in-progress': true
+          'cancel-in-progress': true,
         },
         jobs: {
           test: {
             name: 'Run Tests',
             'runs-on': 'ubuntu-latest',
             permissions: {
-              contents: 'read'
+              contents: 'read',
             },
             env: {
-              TEST_ENV: 'ci'
+              TEST_ENV: 'ci',
             },
             strategy: {
               matrix: {
-                'node-version': ['16', '18', '20']
+                'node-version': ['16', '18', '20'],
               },
-              failFast: false
+              failFast: false,
             },
             steps: [
               {
                 name: 'Checkout code',
-                uses: 'actions/checkout@v4'
+                uses: 'actions/checkout@v4',
               },
               {
                 name: 'Setup Node.js',
                 uses: 'actions/setup-node@v4',
                 with: {
-                  'node-version': '${{ matrix.node-version }}'
-                }
+                  'node-version': '${{ matrix.node-version }}',
+                },
               },
               {
                 name: 'Install dependencies',
-                run: 'npm install'
+                run: 'npm install',
               },
               {
                 name: 'Run tests',
                 run: 'npm test',
                 env: {
-                  CI: 'true'
-                }
-              }
-            ]
-          }
-        }
+                  CI: 'true',
+                },
+              },
+            ],
+          },
+        },
       };
 
       const yaml = generateWorkflowYaml(workflow);
-      
+
       expect(yaml).toContain('name: Complex Workflow');
       expect(yaml).toContain('run-name: Running ${{ github.actor }} tests');
       expect(yaml).toContain('branches:');
@@ -121,9 +125,9 @@ describe('workflow-generator', () => {
         jobs: {
           test: {
             'runs-on': 'ubuntu-latest',
-            steps: []
-          }
-        }
+            steps: [],
+          },
+        },
       };
 
       const yaml = generateWorkflowYaml(workflow);
@@ -137,9 +141,9 @@ describe('workflow-generator', () => {
         jobs: {
           test: {
             'runs-on': 'ubuntu-latest',
-            steps: []
-          }
-        }
+            steps: [],
+          },
+        },
       };
 
       const yaml = generateWorkflowYaml(workflow);
@@ -152,7 +156,7 @@ describe('workflow-generator', () => {
         permissions: {
           'id-token': 'write',
           'pull-requests': 'read',
-          'security-events': 'write'
+          'security-events': 'write',
         },
         jobs: {
           test: {
@@ -165,11 +169,11 @@ describe('workflow-generator', () => {
                 run: 'echo "test"',
                 'continue-on-error': true,
                 'timeout-minutes': 5,
-                'working-directory': './src'
-              }
-            ]
-          }
-        }
+                'working-directory': './src',
+              },
+            ],
+          },
+        },
       };
 
       const yaml = generateWorkflowYaml(workflow);
@@ -189,9 +193,9 @@ describe('workflow-generator', () => {
         jobs: {
           test: {
             'runs-on': 'ubuntu-latest',
-            steps: []
-          }
-        }
+            steps: [],
+          },
+        },
       });
 
       expect(workflow.on).toBe('push');
@@ -199,17 +203,21 @@ describe('workflow-generator', () => {
     });
 
     it('should throw error when missing "on" field', () => {
-      expect(() => createWorkflow({
-        jobs: {
-          test: { 'runs-on': 'ubuntu-latest', steps: [] }
-        }
-      } as any)).toThrow('Workflow must specify "on" triggers');
+      expect(() =>
+        createWorkflow({
+          jobs: {
+            test: { 'runs-on': 'ubuntu-latest', steps: [] },
+          },
+        } as any)
+      ).toThrow('Workflow must specify "on" triggers');
     });
 
     it('should throw error when missing "jobs" field', () => {
-      expect(() => createWorkflow({
-        on: 'push'
-      } as any)).toThrow('Workflow must specify "jobs"');
+      expect(() =>
+        createWorkflow({
+          on: 'push',
+        } as any)
+      ).toThrow('Workflow must specify "jobs"');
     });
   });
 
@@ -221,9 +229,9 @@ describe('workflow-generator', () => {
         steps: [
           {
             name: 'Checkout',
-            uses: 'actions/checkout@v4'
-          }
-        ]
+            uses: 'actions/checkout@v4',
+          },
+        ],
       });
 
       expect(job.name).toBe('Test Job');

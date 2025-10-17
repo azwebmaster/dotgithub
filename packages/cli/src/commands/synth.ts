@@ -1,36 +1,50 @@
 import { Command } from 'commander';
-import { StackSynthesizer, type DotGithubContext, logger } from '@dotgithub/core';
+import {
+  StackSynthesizer,
+  type DotGithubContext,
+  logger,
+} from '@dotgithub/core';
 import * as path from 'path';
 
-export function createSynthCommand(createContext: (options?: any) => DotGithubContext): Command {
+export function createSynthCommand(
+  createContext: (options?: any) => DotGithubContext
+): Command {
   const synthCommand = new Command('synth');
 
   synthCommand
-    .description('Synthesize GitHub workflows from configured stacks and plugins')
+    .description(
+      'Synthesize GitHub workflows from configured stacks and plugins'
+    )
     .option('--dry-run', 'preview files without writing them to disk', false)
-    .option('--output <dir>', 'output directory (default: config outputDir relative to config file)')
+    .option(
+      '--output <dir>',
+      'output directory (default: config outputDir relative to config file)'
+    )
     .option('--stack <name>', 'synthesize only the specified stack')
     .option('--verbose', 'show detailed output', false)
     .action(async (options) => {
       try {
         const context = createContext(options);
-        
+
         // Determine output path: use --output relative to cwd, or config.outputDir relative to config file if not specified
-        const outputPath = options.output 
+        const outputPath = options.output
           ? path.resolve(process.cwd(), options.output)
-          : path.join(path.dirname(context.configPath), context.config.outputDir);
-        
+          : path.join(
+              path.dirname(context.configPath),
+              context.config.outputDir
+            );
+
         const synthesizer = new StackSynthesizer({
           context,
           projectRoot: process.cwd(),
-          outputPath
+          outputPath,
         });
 
         if (options.dryRun) {
           logger.info('🧪 Dry run mode - no files will be written');
-          
+
           const results = await synthesizer.synthesizeAll();
-          
+
           if (!results.success) {
             logger.failure('Synthesis failed');
             for (const error of results.errors) {
@@ -44,17 +58,23 @@ export function createSynthCommand(createContext: (options?: any) => DotGithubCo
             return;
           }
 
-          logger.info(`📋 Would synthesize ${results.results.length} stack(s):`);
+          logger.info(
+            `📋 Would synthesize ${results.results.length} stack(s):`
+          );
 
           for (const result of results.results) {
             logger.info(`🏗️  Stack: ${result.stackConfig.name}`);
-            logger.debug(`   Plugins: ${result.stackConfig.plugins.join(', ')}`);
-            
+            logger.debug(
+              `   Plugins: ${result.stackConfig.plugins.join(', ')}`
+            );
+
             if (options.verbose) {
               logger.info('   Plugin execution results:');
               for (const pluginResult of result.pluginResults) {
                 const status = pluginResult.success ? '✅' : '❌';
-                logger.info(`     ${status} ${pluginResult.plugin.name} (${pluginResult.duration}ms)`);
+                logger.info(
+                  `     ${status} ${pluginResult.plugin.name} (${pluginResult.duration}ms)`
+                );
                 if (!pluginResult.success && pluginResult.error) {
                   logger.error(`        Error: ${pluginResult.error.message}`);
                 }
@@ -78,12 +98,11 @@ export function createSynthCommand(createContext: (options?: any) => DotGithubCo
               }
             }
           }
-
         } else {
           logger.info('Synthesizing GitHub workflows...');
-          
+
           const results = await synthesizer.synthesizeAndWrite();
-          
+
           if (!results.success) {
             logger.failure('Synthesis failed');
             for (const error of results.errors) {
@@ -97,17 +116,23 @@ export function createSynthCommand(createContext: (options?: any) => DotGithubCo
             return;
           }
 
-          logger.success(`Successfully synthesized ${results.results.length} stack(s):`);
+          logger.success(
+            `Successfully synthesized ${results.results.length} stack(s):`
+          );
 
           for (const result of results.results) {
             logger.info(`🏗️  Stack: ${result.stackConfig.name}`);
-            logger.debug(`   Plugins: ${result.stackConfig.plugins.join(', ')}`);
-            
+            logger.debug(
+              `   Plugins: ${result.stackConfig.plugins.join(', ')}`
+            );
+
             if (options.verbose) {
               logger.info('   Plugin execution results:');
               for (const pluginResult of result.pluginResults) {
                 const status = pluginResult.success ? '✅' : '❌';
-                logger.info(`     ${status} ${pluginResult.plugin.name} (${pluginResult.duration}ms)`);
+                logger.info(
+                  `     ${status} ${pluginResult.plugin.name} (${pluginResult.duration}ms)`
+                );
               }
             }
 
@@ -120,11 +145,10 @@ export function createSynthCommand(createContext: (options?: any) => DotGithubCo
 
           logger.success('Synthesis complete!');
         }
-
       } catch (error) {
-        logger.failure('Synthesis failed', { 
+        logger.failure('Synthesis failed', {
           error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
+          stack: error instanceof Error ? error.stack : undefined,
         });
         process.exit(1);
       }

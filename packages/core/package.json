@@ -29,7 +29,9 @@
   },
   "devoptimizer": {
     "devcheck": {
-      "exclude": ["prettier"]
+      "exclude": [
+        "prettier"
+      ]
     }
   }
 }

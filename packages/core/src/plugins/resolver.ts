@@ -1,11 +1,19 @@
 import * as path from 'path';
 import * as fs from 'fs';
-import type { PluginConfig, PluginModule, DotGitHubPlugin, PluginLoadResult } from './types.js';
+import type {
+  PluginConfig,
+  PluginModule,
+  DotGitHubPlugin,
+  PluginLoadResult,
+} from './types.js';
 // Removed import - using direct path resolution
 import type { DotGithubContext } from '../context.js';
 
 export class PluginResolver {
-  constructor(private readonly projectRoot: string, private readonly context?: DotGithubContext) {}
+  constructor(
+    private readonly projectRoot: string,
+    private readonly context?: DotGithubContext
+  ) {}
 
   async resolvePlugin(config: PluginConfig): Promise<PluginLoadResult> {
     let plugin: DotGitHubPlugin;
@@ -19,32 +27,40 @@ export class PluginResolver {
         plugin = await this.loadNpmPlugin(config.package);
         resolved = true;
       }
-      
+
       return {
         plugin,
         config,
-        resolved
+        resolved,
       };
     } catch (error) {
-      throw new Error(`Failed to load plugin "${config.name}" from "${config.package}": ${error instanceof Error ? error.message : error}`);
+      throw new Error(
+        `Failed to load plugin "${config.name}" from "${config.package}": ${error instanceof Error ? error.message : error}`
+      );
     }
   }
 
   private isLocalPath(packagePath: string): boolean {
-    return packagePath.startsWith('./') || 
-           packagePath.startsWith('../') || 
-           path.isAbsolute(packagePath) ||
-           // Also consider paths with file extensions as local paths
-           path.extname(packagePath) !== '' ||
-           // Consider paths that don't look like npm package names as local
-           !this.isValidNpmPackageName(packagePath);
+    return (
+      packagePath.startsWith('./') ||
+      packagePath.startsWith('../') ||
+      path.isAbsolute(packagePath) ||
+      // Also consider paths with file extensions as local paths
+      path.extname(packagePath) !== '' ||
+      // Consider paths that don't look like npm package names as local
+      !this.isValidNpmPackageName(packagePath)
+    );
   }
 
   private isValidNpmPackageName(packageName: string): boolean {
     // Basic npm package name validation
     // Package names should be lowercase, can contain hyphens, and should not start with dots
-    return /^[a-z0-9][a-z0-9-]*[a-z0-9]$/.test(packageName) || 
-           /^@[a-z0-9][a-z0-9-]*[a-z0-9]\/[a-z0-9][a-z0-9-]*[a-z0-9]$/.test(packageName);
+    return (
+      /^[a-z0-9][a-z0-9-]*[a-z0-9]$/.test(packageName) ||
+      /^@[a-z0-9][a-z0-9-]*[a-z0-9]\/[a-z0-9][a-z0-9-]*[a-z0-9]$/.test(
+        packageName
+      )
+    );
   }
 
   private async loadLocalPlugin(pluginPath: string): Promise<DotGitHubPlugin> {
@@ -59,18 +75,20 @@ export class PluginResolver {
       // Fallback to old behavior - resolve relative to project root
       resolvedPath = path.resolve(this.projectRoot, pluginPath);
     }
-    
+
     if (!fs.existsSync(resolvedPath)) {
       throw new Error(`Local plugin not found at: ${resolvedPath}`);
     }
 
     let modulePath: string;
     const stats = fs.statSync(resolvedPath);
-    
+
     if (stats.isDirectory()) {
       const packageJsonPath = path.join(resolvedPath, 'package.json');
       if (fs.existsSync(packageJsonPath)) {
-        const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+        const packageJson = JSON.parse(
+          fs.readFileSync(packageJsonPath, 'utf8')
+        );
         modulePath = path.join(resolvedPath, packageJson.main || 'index.js');
       } else {
         modulePath = path.join(resolvedPath, 'index.js');
@@ -92,15 +110,19 @@ export class PluginResolver {
       const module: PluginModule = await import(packageName);
       return this.extractPluginFromModule(module);
     } catch (error) {
-      throw new Error(`Cannot resolve npm package "${packageName}". Make sure it's installed: npm install ${packageName}`);
+      throw new Error(
+        `Cannot resolve npm package "${packageName}". Make sure it's installed: npm install ${packageName}`
+      );
     }
   }
 
   private extractPluginFromModule(module: PluginModule): DotGitHubPlugin {
     const plugin = module.default || module.plugin;
-    
+
     if (!plugin) {
-      throw new Error('Plugin module must export either a default export or named "plugin" export');
+      throw new Error(
+        'Plugin module must export either a default export or named "plugin" export'
+      );
     }
 
     if (typeof plugin.synthesize !== 'function') {
@@ -116,7 +138,7 @@ export class PluginResolver {
 
   async resolvePlugins(configs: PluginConfig[]): Promise<PluginLoadResult[]> {
     const results: PluginLoadResult[] = [];
-    
+
     for (const config of configs) {
       if (config.enabled !== false) {
         results.push(await this.resolvePlugin(config));

@@ -3,10 +3,10 @@ import * as fs from 'fs';
 import { GitHubStack } from './constructs/base.js';
 import { PluginManager } from './plugins/manager.js';
 // Removed import - using direct path resolution
-import type { 
-  StackConfig, 
-  PluginConfig, 
-  PluginExecutionResult
+import type {
+  StackConfig,
+  PluginConfig,
+  PluginExecutionResult,
 } from './plugins/types.js';
 import type { DotGithubContext } from './context.js';
 
@@ -39,10 +39,11 @@ export class StackSynthesizer {
   constructor(options: StackSynthesizerOptions) {
     this.context = options.context;
     this.projectRoot = options.projectRoot || process.cwd();
-    this.outputPath = options.outputPath || path.join(this.projectRoot, '.github');
+    this.outputPath =
+      options.outputPath || path.join(this.projectRoot, '.github');
     this.pluginManager = new PluginManager({
       projectRoot: this.projectRoot,
-      context: this.context
+      context: this.context,
     });
   }
 
@@ -55,7 +56,7 @@ export class StackSynthesizer {
       return {
         results: [],
         success: true,
-        errors: []
+        errors: [],
       };
     }
 
@@ -68,7 +69,7 @@ export class StackSynthesizer {
       return {
         results: [],
         success: false,
-        errors
+        errors,
       };
     }
 
@@ -85,7 +86,7 @@ export class StackSynthesizer {
     return {
       results,
       success: errors.length === 0,
-      errors
+      errors,
     };
   }
 
@@ -111,7 +112,7 @@ export class StackSynthesizer {
       stackConfig,
       pluginResults,
       files,
-      outputPath: this.outputPath
+      outputPath: this.outputPath,
     };
   }
 
@@ -127,7 +128,9 @@ export class StackSynthesizer {
       try {
         await this.writeStackFiles(result);
       } catch (error) {
-        results.errors.push(error instanceof Error ? error : new Error(String(error)));
+        results.errors.push(
+          error instanceof Error ? error : new Error(String(error))
+        );
         results.success = false;
       }
     }
@@ -153,7 +156,6 @@ export class StackSynthesizer {
       fs.writeFileSync(filePath, content, 'utf8');
     }
   }
-
 
   getPluginManager(): PluginManager {
     return this.pluginManager;

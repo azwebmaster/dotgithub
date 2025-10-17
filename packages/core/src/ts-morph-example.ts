@@ -1,4 +1,10 @@
-import { Project, SourceFile, InterfaceDeclaration, FunctionDeclaration, VariableDeclaration } from 'ts-morph';
+import {
+  Project,
+  SourceFile,
+  InterfaceDeclaration,
+  FunctionDeclaration,
+  VariableDeclaration,
+} from 'ts-morph';
 
 /**
  * Example demonstrating how to use ts-morph for TypeScript code generation
@@ -25,12 +31,15 @@ export class TypeScriptGenerator {
   /**
    * Generate a TypeScript interface for GitHub Action inputs
    */
-  generateActionInputsInterface(actionName: string, inputs: Record<string, any>): string {
+  generateActionInputsInterface(
+    actionName: string,
+    inputs: Record<string, any>
+  ): string {
     const fileName = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.ts`;
     const sourceFile = this.project.createSourceFile(fileName);
-    
+
     const interfaceName = `${this.toPascalCase(actionName)}Inputs`;
-    
+
     const interfaceDeclaration = sourceFile.addInterface({
       name: interfaceName,
       isExported: true,
@@ -53,21 +62,26 @@ export class TypeScriptGenerator {
   /**
    * Generate a factory function for creating GitHub Action steps
    */
-  generateActionFactoryFunction(actionName: string, inputs: Record<string, any>): string {
+  generateActionFactoryFunction(
+    actionName: string,
+    inputs: Record<string, any>
+  ): string {
     const fileName = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.ts`;
     const sourceFile = this.project.createSourceFile(fileName);
-    
+
     const functionName = this.toCamelCase(actionName);
     const interfaceName = `${this.toPascalCase(actionName)}Inputs`;
-    
+
     const functionDeclaration = sourceFile.addFunction({
       name: functionName,
       isExported: true,
-      parameters: [{
-        name: 'inputs',
-        type: `${interfaceName} | undefined`,
-        hasQuestionToken: true,
-      }],
+      parameters: [
+        {
+          name: 'inputs',
+          type: `${interfaceName} | undefined`,
+          hasQuestionToken: true,
+        },
+      ],
       returnType: `GitHubStep<${interfaceName}>`,
       statements: [
         `return createStep("${actionName}", { with: inputs }, "latest");`,
@@ -87,10 +101,13 @@ export class TypeScriptGenerator {
   /**
    * Generate a complete action module with interface and factory function
    */
-  generateActionModule(actionName: string, inputs: Record<string, any>): string {
+  generateActionModule(
+    actionName: string,
+    inputs: Record<string, any>
+  ): string {
     const fileName = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.ts`;
     const sourceFile = this.project.createSourceFile(fileName);
-    
+
     // Add imports
     sourceFile.addImportDeclaration({
       moduleSpecifier: '@dotgithub/core',
@@ -119,11 +136,13 @@ export class TypeScriptGenerator {
     const functionDeclaration = sourceFile.addFunction({
       name: functionName,
       isExported: true,
-      parameters: [{
-        name: 'inputs',
-        type: `${interfaceName} | undefined`,
-        hasQuestionToken: true,
-      }],
+      parameters: [
+        {
+          name: 'inputs',
+          type: `${interfaceName} | undefined`,
+          hasQuestionToken: true,
+        },
+      ],
       returnType: `GitHubStep<${interfaceName}>`,
       statements: [
         `return createStep("${actionName}", { with: inputs }, "latest");`,
@@ -142,10 +161,13 @@ export class TypeScriptGenerator {
   /**
    * Generate a plugin class using ts-morph
    */
-  generatePluginClass(pluginName: string, workflows: Record<string, any>): string {
+  generatePluginClass(
+    pluginName: string,
+    workflows: Record<string, any>
+  ): string {
     const fileName = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.ts`;
     const sourceFile = this.project.createSourceFile(fileName);
-    
+
     // Add imports
     sourceFile.addImportDeclaration({
       moduleSpecifier: '@dotgithub/core',
@@ -153,7 +175,7 @@ export class TypeScriptGenerator {
     });
 
     const className = `${this.toPascalCase(pluginName)}Plugin`;
-    
+
     // Generate class
     const classDeclaration = sourceFile.addClass({
       name: className,
@@ -183,10 +205,12 @@ export class TypeScriptGenerator {
         {
           name: 'apply',
           isAsync: true,
-          parameters: [{
-            name: 'context',
-            type: 'PluginContext',
-          }],
+          parameters: [
+            {
+              name: 'context',
+              type: 'PluginContext',
+            },
+          ],
           returnType: 'Promise<void>',
           statements: [
             '// Plugin implementation',
@@ -209,7 +233,7 @@ export class TypeScriptGenerator {
   private toPascalCase(str: string): string {
     return str
       .split(/[-_\/]/)
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
       .join('');
   }
 
@@ -229,7 +253,8 @@ export class TypeScriptGenerator {
     if (typeof value === 'number') return 'number';
     if (typeof value === 'boolean') return 'boolean';
     if (Array.isArray(value)) return 'string[]';
-    if (typeof value === 'object' && value !== null) return 'Record<string, any>';
+    if (typeof value === 'object' && value !== null)
+      return 'Record<string, any>';
     return 'any';
   }
 
@@ -255,7 +280,7 @@ export class TypeScriptGenerator {
 // Example usage
 export function createExampleActionModule(): string {
   const generator = new TypeScriptGenerator();
-  
+
   const actionInputs = {
     repository: 'string',
     ref: 'string',
@@ -270,7 +295,7 @@ export function createExampleActionModule(): string {
 // Example plugin generation
 export function createExamplePlugin(): string {
   const generator = new TypeScriptGenerator();
-  
+
   const workflows = {
     ci: {
       name: 'CI',

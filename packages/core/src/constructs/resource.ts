@@ -12,11 +12,11 @@ export class ResourceConstruct extends Construct {
 
   constructor(scope: GitHubStack, path: string, props: ResourceProps) {
     super(scope, path.replace(/[\/\\]/g, '-'));
-    
+
     this._path = path;
     this._resource = {
       content: props.content,
-      children: props.children
+      children: props.children,
     };
 
     scope.addResource(path, this._resource);
@@ -53,7 +53,11 @@ export class FileResourceConstruct extends ResourceConstruct {
 }
 
 export class DirectoryResourceConstruct extends ResourceConstruct {
-  constructor(scope: GitHubStack, path: string, children: DotGitHubResources = {}) {
+  constructor(
+    scope: GitHubStack,
+    path: string,
+    children: DotGitHubResources = {}
+  ) {
     super(scope, path, { children });
   }
 
@@ -68,19 +72,23 @@ export class DirectoryResourceConstruct extends ResourceConstruct {
 
 // Convenience constructors for common GitHub files
 export class IssueTemplateConstruct extends FileResourceConstruct {
-  constructor(scope: GitHubStack, name: string, template: {
-    name: string;
-    about: string;
-    title?: string;
-    labels?: string[];
-    assignees?: string[];
-    body?: Array<{
-      type: 'markdown' | 'textarea' | 'input' | 'dropdown' | 'checkboxes';
-      id?: string;
-      attributes: Record<string, any>;
-      validations?: Record<string, any>;
-    }>;
-  }) {
+  constructor(
+    scope: GitHubStack,
+    name: string,
+    template: {
+      name: string;
+      about: string;
+      title?: string;
+      labels?: string[];
+      assignees?: string[];
+      body?: Array<{
+        type: 'markdown' | 'textarea' | 'input' | 'dropdown' | 'checkboxes';
+        id?: string;
+        attributes: Record<string, any>;
+        validations?: Record<string, any>;
+      }>;
+    }
+  ) {
     const content = [
       '---',
       `name: ${template.name}`,
@@ -90,12 +98,14 @@ export class IssueTemplateConstruct extends FileResourceConstruct {
       template.assignees && `assignees: ${template.assignees.join(', ')}`,
       '---',
       '',
-      ...(template.body?.map(item => {
+      ...(template.body?.map((item) => {
         const lines = [`type: ${item.type}`];
         if (item.id) lines.push(`id: ${item.id}`);
         lines.push('attributes:');
         Object.entries(item.attributes).forEach(([key, value]) => {
-          lines.push(`  ${key}: ${typeof value === 'string' ? value : JSON.stringify(value)}`);
+          lines.push(
+            `  ${key}: ${typeof value === 'string' ? value : JSON.stringify(value)}`
+          );
         });
         if (item.validations) {
           lines.push('validations:');
@@ -104,8 +114,10 @@ export class IssueTemplateConstruct extends FileResourceConstruct {
           });
         }
         return lines.join('\n');
-      }) || [])
-    ].filter(Boolean).join('\n');
+      }) || []),
+    ]
+      .filter(Boolean)
+      .join('\n');
 
     super(scope, `ISSUE_TEMPLATE/${name}.yml`, content);
   }
@@ -122,34 +134,41 @@ export class CodeownersConstruct extends FileResourceConstruct {
     const content = Object.entries(owners)
       .map(([pattern, reviewers]) => `${pattern} ${reviewers.join(' ')}`)
       .join('\n');
-    
+
     super(scope, 'CODEOWNERS', content);
   }
 }
 
 export class DependabotConstruct extends FileResourceConstruct {
-  constructor(scope: GitHubStack, config: {
-    version: number;
-    updates: Array<{
-      'package-ecosystem': string;
-      directory: string;
-      schedule: { interval: string };
-      [key: string]: any;
-    }>;
-  }) {
+  constructor(
+    scope: GitHubStack,
+    config: {
+      version: number;
+      updates: Array<{
+        'package-ecosystem': string;
+        directory: string;
+        schedule: { interval: string };
+        [key: string]: any;
+      }>;
+    }
+  ) {
     const yamlContent = `version: ${config.version}\nupdates:\n${config.updates
-      .map(update => 
-        `  - package-ecosystem: "${update['package-ecosystem']}"\n` +
-        `    directory: "${update.directory}"\n` +
-        `    schedule:\n` +
-        `      interval: "${update.schedule.interval}"\n` +
-        Object.entries(update)
-          .filter(([key]) => !['package-ecosystem', 'directory', 'schedule'].includes(key))
-          .map(([key, value]) => `    ${key}: ${JSON.stringify(value)}`)
-          .join('\n')
+      .map(
+        (update) =>
+          `  - package-ecosystem: "${update['package-ecosystem']}"\n` +
+          `    directory: "${update.directory}"\n` +
+          `    schedule:\n` +
+          `      interval: "${update.schedule.interval}"\n` +
+          Object.entries(update)
+            .filter(
+              ([key]) =>
+                !['package-ecosystem', 'directory', 'schedule'].includes(key)
+            )
+            .map(([key, value]) => `    ${key}: ${JSON.stringify(value)}`)
+            .join('\n')
       )
       .join('\n')}`;
-    
+
     super(scope, 'dependabot.yml', yamlContent);
   }
 }

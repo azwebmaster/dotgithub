@@ -179,20 +179,22 @@ Example command structure:
 import { Command } from 'commander';
 import { DotGithubContext, logger } from '@dotgithub/core';
 
-export function createMyCommand(createContext: (options?: any) => DotGithubContext): Command {
+export function createMyCommand(
+  createContext: (options?: any) => DotGithubContext
+): Command {
   return new Command('my-command')
     .description('Description of what the command does')
     .option('--option <value>', 'Description of the option')
     .action(async (options) => {
       try {
         const context = createContext(options);
-        
+
         // Command logic here
-        
+
         logger.success('Command completed successfully');
       } catch (err) {
-        logger.failure('Command failed', { 
-          error: err instanceof Error ? err.message : String(err)
+        logger.failure('Command failed', {
+          error: err instanceof Error ? err.message : String(err),
         });
         process.exit(1);
       }
@@ -258,6 +260,7 @@ describe('MyFunction', () => {
 ### Test Coverage
 
 Maintain high test coverage:
+
 - Aim for 90%+ coverage
 - Test both success and error cases
 - Test edge cases and boundary conditions
@@ -300,20 +303,24 @@ bun run test:changed
 
 ```markdown
 ## Description
+
 Brief description of the changes
 
 ## Type of Change
+
 - [ ] Bug fix (non-breaking change which fixes an issue)
 - [ ] New feature (non-breaking change which adds functionality)
 - [ ] Breaking change (fix or feature that would cause existing functionality to not work as expected)
 - [ ] Documentation update
 
 ## Testing
+
 - [ ] Tests pass locally
 - [ ] New tests added for new functionality
 - [ ] Manual testing completed
 
 ## Checklist
+
 - [ ] Code follows the project's coding standards
 - [ ] Self-review completed
 - [ ] Documentation updated

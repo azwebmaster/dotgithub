@@ -1,6 +1,9 @@
 {
   "$schema": "https://unpkg.com/@changesets/config@3.1.1/schema.json",
-  "changelog": ["@changesets/changelog-github", { "repo": "azwebmaster/dotgithub" }],
+  "changelog": [
+    "@changesets/changelog-github",
+    { "repo": "azwebmaster/dotgithub" }
+  ],
   "commit": false,
   "fixed": [],
   "linked": [],

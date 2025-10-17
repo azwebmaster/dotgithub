@@ -2,7 +2,7 @@
 
 /**
  * Demonstration script showing how to use ts-morph for TypeScript code generation
- * 
+ *
  * This script demonstrates:
  * 1. Generating TypeScript interfaces for GitHub Actions
  * 2. Creating factory functions for workflow steps
@@ -20,9 +20,11 @@ async function demonstrateTsMorph() {
   const generator = new TypeScriptGenerator();
 
   // Example 1: Generate interface for a GitHub Action
-  console.log('📝 Example 1: Generating TypeScript interface for GitHub Action');
-  console.log('=' .repeat(60));
-  
+  console.log(
+    '📝 Example 1: Generating TypeScript interface for GitHub Action'
+  );
+  console.log('='.repeat(60));
+
   const checkoutInputs = {
     repository: 'string',
     ref: 'string',
@@ -32,30 +34,39 @@ async function demonstrateTsMorph() {
     submodules: 'boolean',
   };
 
-  const checkoutInterface = generator.generateActionInputsInterface('actions/checkout', checkoutInputs);
+  const checkoutInterface = generator.generateActionInputsInterface(
+    'actions/checkout',
+    checkoutInputs
+  );
   console.log(checkoutInterface);
   console.log('\n');
 
   // Example 2: Generate factory function
   console.log('🔧 Example 2: Generating factory function');
-  console.log('=' .repeat(60));
-  
-  const checkoutFactory = generator.generateActionFactoryFunction('actions/checkout', checkoutInputs);
+  console.log('='.repeat(60));
+
+  const checkoutFactory = generator.generateActionFactoryFunction(
+    'actions/checkout',
+    checkoutInputs
+  );
   console.log(checkoutFactory);
   console.log('\n');
 
   // Example 3: Generate complete action module
   console.log('📦 Example 3: Complete action module');
-  console.log('=' .repeat(60));
-  
-  const completeModule = generator.generateActionModule('actions/checkout', checkoutInputs);
+  console.log('='.repeat(60));
+
+  const completeModule = generator.generateActionModule(
+    'actions/checkout',
+    checkoutInputs
+  );
   console.log(completeModule);
   console.log('\n');
 
   // Example 4: Generate plugin class
   console.log('🔌 Example 4: Plugin class generation');
-  console.log('=' .repeat(60));
-  
+  console.log('='.repeat(60));
+
   const pluginWorkflows = {
     ci: {
       name: 'CI',
@@ -65,7 +76,11 @@ async function demonstrateTsMorph() {
           'runs-on': 'ubuntu-latest',
           steps: [
             { name: 'Checkout', uses: 'actions/checkout@v4' },
-            { name: 'Setup Node', uses: 'actions/setup-node@v4', with: { 'node-version': '20' } },
+            {
+              name: 'Setup Node',
+              uses: 'actions/setup-node@v4',
+              with: { 'node-version': '20' },
+            },
             { name: 'Install', run: 'npm install' },
             { name: 'Test', run: 'npm test' },
           ],
@@ -80,16 +95,22 @@ async function demonstrateTsMorph() {
 
   // Example 5: Workflow type generation (simulated)
   console.log('🏗️  Example 5: Workflow type generation');
-  console.log('=' .repeat(60));
-  
+  console.log('='.repeat(60));
+
   const workflowInputs = {
     trigger: 'string',
     concurrency: 'string',
     environment: 'Record<string, string>',
   };
-  
-  const workflowInterface = generator.generateActionInputsInterface('workflow/ci', workflowInputs);
-  const workflowFactory = generator.generateActionFactoryFunction('workflow/ci', workflowInputs);
+
+  const workflowInterface = generator.generateActionInputsInterface(
+    'workflow/ci',
+    workflowInputs
+  );
+  const workflowFactory = generator.generateActionFactoryFunction(
+    'workflow/ci',
+    workflowInputs
+  );
   console.log(workflowInterface);
   console.log('\n');
   console.log(workflowFactory);
@@ -97,11 +118,11 @@ async function demonstrateTsMorph() {
 
   // Example 6: Code formatting
   console.log('✨ Example 6: Code formatting');
-  console.log('=' .repeat(60));
-  
+  console.log('='.repeat(60));
+
   const unformattedCode = `export interface Test{name:string;value:number;description:string;}`;
   const formattedCode = generator.formatCode(unformattedCode);
-  
+
   console.log('Before formatting:');
   console.log(unformattedCode);
   console.log('\nAfter formatting:');
@@ -110,8 +131,8 @@ async function demonstrateTsMorph() {
 
   // Example 7: Multiple action types
   console.log('🎯 Example 7: Generating multiple action types');
-  console.log('=' .repeat(60));
-  
+  console.log('='.repeat(60));
+
   const actions = [
     {
       name: 'actions/setup-node',

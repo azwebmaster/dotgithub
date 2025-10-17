@@ -10,7 +10,7 @@ import type { PluginConfig } from './schemas.js';
 export async function demonstratePluginDescription() {
   // Create a plugin manager
   const manager = new PluginManager({
-    projectRoot: process.cwd()
+    projectRoot: process.cwd(),
   });
 
   // Example plugin configurations
@@ -21,16 +21,19 @@ export async function demonstratePluginDescription() {
       config: {
         environment: 'production',
         timeout: 15,
-        nodeVersion: '18.17'
+        nodeVersion: '18.17',
       },
-      enabled: true
-    }
+      enabled: true,
+    },
   ];
 
   try {
     // Load plugins
     const loadResults = await manager.loadPlugins(pluginConfigs);
-    console.log('Loaded plugins:', loadResults.map(r => r.config.name));
+    console.log(
+      'Loaded plugins:',
+      loadResults.map((r) => r.config.name)
+    );
 
     // List all plugins with their descriptions
     const pluginList = await manager.listPlugins();
@@ -49,7 +52,7 @@ export async function demonstratePluginDescription() {
     if (exampleDescription) {
       console.log('\n=== Example Plugin Description ===');
       console.log(formatPluginDescription(exampleDescription));
-      
+
       console.log('\n=== Markdown Documentation ===');
       console.log(generatePluginMarkdown(exampleDescription));
     }
@@ -62,11 +65,14 @@ export async function demonstratePluginDescription() {
     }
 
     // Validate plugin configuration against its schema
-    const validationResult = await manager.validatePluginConfigAgainstSchema('example', {
-      environment: 'staging',
-      timeout: 30,
-      nodeVersion: '20.5'
-    });
+    const validationResult = await manager.validatePluginConfigAgainstSchema(
+      'example',
+      {
+        environment: 'staging',
+        timeout: 30,
+        nodeVersion: '20.5',
+      }
+    );
 
     if (validationResult.success) {
       console.log('\n=== Configuration Validation ===');
@@ -75,7 +81,6 @@ export async function demonstratePluginDescription() {
       console.log('\n=== Configuration Validation Error ===');
       console.log('Error:', validationResult.error);
     }
-
   } catch (error) {
     console.error('Error demonstrating plugin description:', error);
   }
@@ -93,7 +98,7 @@ export class DemoPlugin {
         throw new Error('Message is required');
       }
       return config;
-    }
+    },
   };
 
   describe() {
@@ -111,12 +116,12 @@ export class DemoPlugin {
           name: 'Basic Demo',
           description: 'Simple demo configuration',
           config: {
-            message: 'Hello World'
-          }
-        }
+            message: 'Hello World',
+          },
+        },
       ],
       tags: ['demo', 'example'],
-      minDotGithubVersion: '1.0.0'
+      minDotGithubVersion: '1.0.0',
     };
   }
 

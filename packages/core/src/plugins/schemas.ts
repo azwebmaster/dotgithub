@@ -8,90 +8,99 @@ import { DotGitHubPlugin } from './types.js';
  * Base schema for plugin configuration
  */
 export const PluginConfigSchema = z.object({
-  name: z.string()
+  name: z
+    .string()
     .min(1, 'Plugin name is required')
-    .regex(/^[a-zA-Z0-9-_]+$/, { message: 'Plugin name must contain only alphanumeric characters, hyphens, and underscores' }),
-  package: z.string()
-    .min(1, 'Plugin package is required'),
+    .regex(/^[a-zA-Z0-9-_]+$/, {
+      message:
+        'Plugin name must contain only alphanumeric characters, hyphens, and underscores',
+    }),
+  package: z.string().min(1, 'Plugin package is required'),
   config: z.record(z.string(), z.any()).optional(),
   actions: z.record(z.string(), z.string()).optional(),
-  enabled: z.boolean().optional().default(true)
+  enabled: z.boolean().optional().default(true),
 });
 
 /**
  * Schema for stack configuration
  */
 export const StackConfigSchema = z.object({
-  name: z.string()
+  name: z
+    .string()
     .min(1, 'Stack name is required')
-    .regex(/^[a-zA-Z0-9-_]+$/, { message: 'Stack name must contain only alphanumeric characters, hyphens, and underscores' }),
-  plugins: z.array(z.string())
+    .regex(/^[a-zA-Z0-9-_]+$/, {
+      message:
+        'Stack name must contain only alphanumeric characters, hyphens, and underscores',
+    }),
+  plugins: z
+    .array(z.string())
     .min(1, 'Stack must have at least one plugin')
-    .refine(
-      (plugins) => new Set(plugins).size === plugins.length,
-      { message: 'Stack plugins must be unique' }
-    ),
+    .refine((plugins) => new Set(plugins).size === plugins.length, {
+      message: 'Stack plugins must be unique',
+    }),
   config: z.record(z.string(), z.any()).optional(),
-  actions: z.record(z.string(), z.string()).optional()
+  actions: z.record(z.string(), z.string()).optional(),
 });
 
 /**
  * Schema for individual actions in the configuration
  */
 export const ActionConfigSchema = z.object({
-  orgRepo: z.string()
+  orgRepo: z
+    .string()
     .min(1, 'Organization/repository is required')
     .regex(/^[^\/]+\/[^\/]+$/, { message: 'Must be in format org/repo' }),
-  ref: z.string()
-    .min(1, 'Git reference is required'),
-  versionRef: z.string()
-    .min(1, 'Version reference is required'),
-  functionName: z.string()
-    .min(1, 'Function name is required'),
-  outputPath: z.string()
-    .min(1, 'Output path is required'),
+  ref: z.string().min(1, 'Git reference is required'),
+  versionRef: z.string().min(1, 'Version reference is required'),
+  functionName: z.string().min(1, 'Function name is required'),
+  outputPath: z.string().min(1, 'Output path is required'),
   actionPath: z.string().optional(),
-  generateCode: z.boolean().optional().default(false)
+  generateCode: z.boolean().optional().default(false),
 });
 
 /**
  * Schema for the main dotgithub configuration
  */
 export const DotGithubConfigSchema = z.object({
-  version: z.string()
+  version: z
+    .string()
     .min(1, 'Version is required')
-    .regex(/^\d+\.\d+\.\d+/, { message: 'Version must follow semantic versioning (e.g., 1.0.0)' }),
-  rootDir: z.string()
-    .min(1, 'Root directory is required')
-    .default('src'),
-  outputDir: z.string()
-    .min(1, 'Output directory is required')
-    .default('./'),
+    .regex(/^\d+\.\d+\.\d+/, {
+      message: 'Version must follow semantic versioning (e.g., 1.0.0)',
+    }),
+  rootDir: z.string().min(1, 'Root directory is required').default('src'),
+  outputDir: z.string().min(1, 'Output directory is required').default('./'),
   actions: z.array(ActionConfigSchema).default([]),
-  plugins: z.array(PluginConfigSchema)
+  plugins: z
+    .array(PluginConfigSchema)
     .refine(
       (plugins) => {
-        const names = plugins.map(p => p.name);
+        const names = plugins.map((p) => p.name);
         return new Set(names).size === names.length;
       },
       { message: 'Plugin names must be unique' }
     )
     .default([]),
-  stacks: z.array(StackConfigSchema)
+  stacks: z
+    .array(StackConfigSchema)
     .refine(
       (stacks) => {
-        const names = stacks.map(s => s.name);
+        const names = stacks.map((s) => s.name);
         return new Set(names).size === names.length;
       },
       { message: 'Stack names must be unique' }
     )
     .default([]),
-  options: z.object({
-    tokenSource: z.enum(['env', 'github']).optional().default('env'),
-    formatting: z.object({
-      prettier: z.boolean().optional().default(true)
-    }).optional()
-  }).optional()
+  options: z
+    .object({
+      tokenSource: z.enum(['env', 'github']).optional().default('env'),
+      formatting: z
+        .object({
+          prettier: z.boolean().optional().default(true),
+        })
+        .optional(),
+    })
+    .optional(),
 });
 
 /**
@@ -104,7 +113,6 @@ export interface PluginMetadata {
   dependencies?: string[];
   conflicts?: string[];
 }
-
 
 /**
  * Plugin execution result type
@@ -149,24 +157,29 @@ export interface PluginDescription {
 /**
  * Utility function to validate plugin configuration
  */
-export function validatePluginConfig(config: unknown): z.infer<typeof PluginConfigSchema> {
+export function validatePluginConfig(
+  config: unknown
+): z.infer<typeof PluginConfigSchema> {
   return PluginConfigSchema.parse(config);
 }
 
 /**
  * Utility function to validate stack configuration
  */
-export function validateStackConfig(config: unknown): z.infer<typeof StackConfigSchema> {
+export function validateStackConfig(
+  config: unknown
+): z.infer<typeof StackConfigSchema> {
   return StackConfigSchema.parse(config);
 }
 
 /**
  * Utility function to validate dotgithub configuration
  */
-export function validateDotGithubConfig(config: unknown): z.infer<typeof DotGithubConfigSchema> {
+export function validateDotGithubConfig(
+  config: unknown
+): z.infer<typeof DotGithubConfigSchema> {
   return DotGithubConfigSchema.parse(config);
 }
-
 
 /**
  * Utility function to safely validate with error handling
@@ -181,15 +194,17 @@ export function safeValidate<T>(
     return { success: true, data: result };
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const errorDetails = error.issues.map((e: any) => `${e.path.join('.')}: ${e.message}`).join(', ');
-      return { 
-        success: false, 
-        error: errorMessage ? `${errorMessage}: ${errorDetails}` : errorDetails 
+      const errorDetails = error.issues
+        .map((e: any) => `${e.path.join('.')}: ${e.message}`)
+        .join(', ');
+      return {
+        success: false,
+        error: errorMessage ? `${errorMessage}: ${errorDetails}` : errorDetails,
       };
     }
-    return { 
-      success: false, 
-      error: errorMessage || 'Validation failed' 
+    return {
+      success: false,
+      error: errorMessage || 'Validation failed',
     };
   }
 }

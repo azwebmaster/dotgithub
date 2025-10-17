@@ -1,5 +1,9 @@
 import type { GitHubWorkflow, GitHubWorkflows } from '../types/workflow.js';
-import type { DotGitHubResource, DotGitHubResources, DotGitHub } from '../types/common.js';
+import type {
+  DotGitHubResource,
+  DotGitHubResources,
+  DotGitHub,
+} from '../types/common.js';
 import * as yaml from 'yaml';
 
 export interface IConstruct {
@@ -11,7 +15,7 @@ export class ConstructNode {
     public readonly host: IConstruct,
     public readonly scope: IConstruct | undefined,
     public readonly id: string
-  ) { }
+  ) {}
 
   get path(): string {
     if (!this.scope) {
@@ -83,7 +87,10 @@ export class GitHubStack extends Construct {
     return this._resources[path];
   }
 
-  addDirectoryResource(path: string, children: DotGitHubResources = {}): DotGitHubResource {
+  addDirectoryResource(
+    path: string,
+    children: DotGitHubResources = {}
+  ): DotGitHubResource {
     this._resources[path] = { children };
     return this._resources[path];
   }
@@ -99,7 +106,7 @@ export class GitHubStack extends Construct {
   getDotGitHub(): DotGitHub {
     return {
       workflows: this.workflows,
-      ...this.resources
+      ...this.resources,
     };
   }
 
@@ -116,7 +123,7 @@ export class GitHubStack extends Construct {
         minContentWidth: 0,
         simpleKeys: false,
         doubleQuotedAsJSON: false,
-        doubleQuotedMinMultiLineLength: 40
+        doubleQuotedMinMultiLineLength: 40,
       });
     }
 
@@ -139,7 +146,7 @@ export class GitHubStack extends Construct {
       'env',
       'defaults',
       'concurrency',
-      'jobs'
+      'jobs',
     ];
 
     // Add properties in the specified order
@@ -152,7 +159,12 @@ export class GitHubStack extends Construct {
     // Process jobs with ordered properties
     if (processed.jobs) {
       for (const [jobId, job] of Object.entries(processed.jobs)) {
-        if (job && typeof job === 'object' && 'steps' in job && Array.isArray(job.steps)) {
+        if (
+          job &&
+          typeof job === 'object' &&
+          'steps' in job &&
+          Array.isArray(job.steps)
+        ) {
           processed.jobs[jobId] = this._processJobForYaml(job);
         }
       }
@@ -182,7 +194,7 @@ export class GitHubStack extends Construct {
       'with',
       'secrets',
       'timeout-minutes',
-      'continue-on-error'
+      'continue-on-error',
     ];
 
     const processed: any = {};
@@ -191,7 +203,9 @@ export class GitHubStack extends Construct {
     for (const key of jobOrder) {
       if (job[key] !== undefined) {
         if (key === 'steps' && Array.isArray(job[key])) {
-          processed[key] = job[key].map((step: any) => this._processStepForYaml(step));
+          processed[key] = job[key].map((step: any) =>
+            this._processStepForYaml(step)
+          );
         } else {
           processed[key] = job[key];
         }
@@ -214,7 +228,7 @@ export class GitHubStack extends Construct {
       'env',
       'continue-on-error',
       'timeout-minutes',
-      'working-directory'
+      'working-directory',
     ];
 
     const processed: any = {};
@@ -223,7 +237,11 @@ export class GitHubStack extends Construct {
     for (const key of stepOrder) {
       if (step[key] !== undefined) {
         // Remove empty 'with' fields
-        if (key === 'with' && typeof step[key] === 'object' && Object.keys(step[key]).length === 0) {
+        if (
+          key === 'with' &&
+          typeof step[key] === 'object' &&
+          Object.keys(step[key]).length === 0
+        ) {
           continue; // Skip empty with fields
         }
         processed[key] = step[key];
@@ -233,7 +251,11 @@ export class GitHubStack extends Construct {
     return processed;
   }
 
-  private _synthResourcesRecursive(basePath: string, resources: DotGitHubResources, files: Record<string, string>): void {
+  private _synthResourcesRecursive(
+    basePath: string,
+    resources: DotGitHubResources,
+    files: Record<string, string>
+  ): void {
     for (const [name, resource] of Object.entries(resources)) {
       const fullPath = basePath ? `${basePath}/${name}` : name;
 
@@ -249,7 +271,7 @@ export class GitHubStack extends Construct {
             minContentWidth: 0,
             simpleKeys: false,
             doubleQuotedAsJSON: false,
-            doubleQuotedMinMultiLineLength: 40
+            doubleQuotedMinMultiLineLength: 40,
           });
         }
       } else if (resource.children) {

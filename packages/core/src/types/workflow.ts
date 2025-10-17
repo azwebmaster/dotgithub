@@ -1,6 +1,6 @@
 // Types for GitHub Actions workflow syntax
 
-import type { GitHubInputValue } from "./common";
+import type { GitHubInputValue } from './common';
 
 /**
  * Environment variables configuration for workflows, jobs, or steps.
@@ -24,13 +24,17 @@ export type GitHubWorkflowInputs = Record<string, GitHubWorkflowInput>;
  * Collection of outputs defined for a reusable workflow.
  * Outputs allow the workflow to return data to the caller.
  */
-export type GitHubWorkflowOutputs = { [outputId: string]: GitHubWorkflowOutput };
+export type GitHubWorkflowOutputs = {
+  [outputId: string]: GitHubWorkflowOutput;
+};
 
 /**
  * Collection of secrets defined for a reusable workflow.
  * Secrets allow callers to pass sensitive data to the workflow.
  */
-export type GitHubWorkflowSecrets = { [secretId: string]: GitHubWorkflowSecret };
+export type GitHubWorkflowSecrets = {
+  [secretId: string]: GitHubWorkflowSecret;
+};
 
 /**
  * Collection of outputs from a job.
@@ -70,7 +74,7 @@ export type GitHubWorkflow = {
   /** The name of the workflow. Displayed in GitHub's UI. */
   name?: string;
   /** The name for workflow runs generated from the workflow. */
-  "run-name"?: string;
+  'run-name'?: string;
   /** Events that trigger the workflow. */
   on: GitHubWorkflowOn;
   /** Permissions granted to the GITHUB_TOKEN for all jobs in the workflow. */
@@ -93,7 +97,7 @@ export type GitHubReusableWorkflow = {
   /** The name of the workflow. Displayed in GitHub's UI. */
   name?: string;
   /** The name for workflow runs generated from the workflow. */
-  "run-name"?: string;
+  'run-name'?: string;
   /** Events that trigger the workflow. */
   on: { workflow_call: WorkflowCallWorkflowEvent };
   /** Permissions granted to the GITHUB_TOKEN for all jobs in the workflow. */
@@ -121,7 +125,7 @@ export type GitHubReusableWorkflow = {
 export type GitHubWorkflowOn =
   | GitHubWorkflowEventName
   | GitHubWorkflowEventName[]
-  | GitHubWorkflowEvent
+  | GitHubWorkflowEvent;
 
 /**
  * Configuration for a workflow input parameter.
@@ -135,7 +139,7 @@ export type GitHubWorkflowInput = {
   /** Default value if not provided by the caller. */
   default?: string | number | boolean;
   /** Type of the input parameter. */
-  type?: "boolean" | "number" | "string" | "choice" | "environment";
+  type?: 'boolean' | 'number' | 'string' | 'choice' | 'environment';
   /** Available options when type is "choice". */
   options?: string[];
 };
@@ -179,7 +183,7 @@ export type GitHubPermissions = {
   /** Work with deployments */
   deployments?: GitHubPermissionLevel;
   /** Fetch an OpenID Connect (OIDC) token */
-  "id-token"?: GitHubPermissionLevelIdToken;
+  'id-token'?: GitHubPermissionLevelIdToken;
   /** Work with issues */
   issues?: GitHubPermissionLevel;
   /** Generate AI inference responses with GitHub Models */
@@ -191,9 +195,9 @@ export type GitHubPermissions = {
   /** Work with GitHub Pages */
   pages?: GitHubPermissionLevel;
   /** Work with pull requests */
-  "pull-requests"?: GitHubPermissionLevel;
+  'pull-requests'?: GitHubPermissionLevel;
   /** Work with GitHub code scanning and secret scanning alerts */
-  "security-events"?: GitHubPermissionLevel;
+  'security-events'?: GitHubPermissionLevel;
   /** Work with commit statuses */
   statuses?: GitHubPermissionLevel;
 };
@@ -204,25 +208,25 @@ export type GitHubPermissions = {
  * "write-all" grants write access to all permissions.
  * Empty object {} sets all permissions to "none".
  */
-export type GitHubPermissionsAll = "read-all" | "write-all" | {};
+export type GitHubPermissionsAll = 'read-all' | 'write-all' | {};
 
 /**
  * Standard permission levels for most GitHub permissions.
  * "write" includes "read" permissions.
  */
-export type GitHubPermissionLevel = "read" | "write" | "none";
+export type GitHubPermissionLevel = 'read' | 'write' | 'none';
 
 /**
  * Permission levels for ID token generation.
  * Only "write" and "none" are valid for OIDC token fetching.
  */
-export type GitHubPermissionLevelIdToken = "write" | "none";
+export type GitHubPermissionLevelIdToken = 'write' | 'none';
 
 /**
  * Permission levels for GitHub Models.
  * Only "read" and "none" are valid for AI model inference.
  */
-export type GitHubPermissionLevelModels = "read" | "none";
+export type GitHubPermissionLevelModels = 'read' | 'none';
 
 /**
  * Default settings that apply to all jobs in the workflow.
@@ -234,7 +238,7 @@ export type GitHubDefaults = {
     /** Default shell for run steps. */
     shell?: string;
     /** Default working directory for run steps. */
-    "working-directory"?: string;
+    'working-directory'?: string;
   };
 };
 
@@ -242,12 +246,14 @@ export type GitHubDefaults = {
  * Concurrency controls to prevent multiple workflow runs from running simultaneously.
  * Useful for preventing conflicts in deployment scenarios.
  */
-export type GitHubConcurrency = string | {
-  /** Identifier for the concurrency group. */
-  group: string;
-  /** Whether to cancel in-progress runs when a new run starts. */
-  "cancel-in-progress"?: boolean | string;
-};
+export type GitHubConcurrency =
+  | string
+  | {
+      /** Identifier for the concurrency group. */
+      group: string;
+      /** Whether to cancel in-progress runs when a new run starts. */
+      'cancel-in-progress'?: boolean | string;
+    };
 
 /**
  * Collection of steps that make up a job.
@@ -269,7 +275,7 @@ export type GitHubJob = {
   /** Condition that must be met for the job to run. */
   if?: string;
   /** Type of machine to run the job on. */
-  "runs-on"?: string | string[] | GitHubJobRunsOnGroup;
+  'runs-on'?: string | string[] | GitHubJobRunsOnGroup;
   /** Environment that the job references. */
   environment?: string | GitHubJobEnvironment;
   /** Concurrency controls for this job. */
@@ -293,11 +299,11 @@ export type GitHubJob = {
   /** Inputs for the reusable workflow. */
   with?: GitHubJobWith;
   /** Secrets available to the reusable workflow. */
-  secrets?: { [key: string]: string } | "inherit";
+  secrets?: { [key: string]: string } | 'inherit';
   /** Maximum time in minutes for the job to run. */
-  "timeout-minutes"?: number;
+  'timeout-minutes'?: number;
   /** Whether to continue running the workflow if this job fails. */
-  "continue-on-error"?: boolean | string;
+  'continue-on-error'?: boolean | string;
 };
 
 /**
@@ -398,7 +404,7 @@ export type GitHubStep<T extends GitHubStepWith> = GitHubStepBase & {
   with?: T;
   /** Not allowed when using an action. */
   run?: never;
-}
+};
 
 export type GitHubStepAction = GitHubStep<GitHubStepWith>;
 
@@ -412,12 +418,12 @@ export type GitHubStepRun = GitHubStepBase & {
   /** Shell to use for running the command. */
   shell?: string;
   /** Working directory for the command. */
-  "working-directory"?: string;
+  'working-directory'?: string;
   /** Not allowed when running commands. */
   uses?: never;
   /** Not allowed when running commands. */
   with?: never;
-}
+};
 
 /**
  * Union type for any type of workflow step.
@@ -439,9 +445,9 @@ export type GitHubStepBase = {
   /** Environment variables for the step. */
   env?: GitHubEnv;
   /** Whether to continue the job if this step fails. */
-  "continue-on-error"?: boolean;
+  'continue-on-error'?: boolean;
   /** Maximum time in minutes for the step to run. */
-  "timeout-minutes"?: number;
+  'timeout-minutes'?: number;
 };
 
 /**
@@ -452,15 +458,15 @@ export type PushWorkflowEvent = {
   /** Branches that will trigger the workflow */
   branches?: string[];
   /** Branches that will NOT trigger the workflow */
-  "branches-ignore"?: string[];
+  'branches-ignore'?: string[];
   /** Tags that will trigger the workflow */
   tags?: string[];
   /** Tags that will NOT trigger the workflow */
-  "tags-ignore"?: string[];
+  'tags-ignore'?: string[];
   /** File paths that will trigger the workflow */
   paths?: string[];
   /** File paths that will NOT trigger the workflow */
-  "paths-ignore"?: string[];
+  'paths-ignore'?: string[];
 };
 
 // Union type for all event workflow event types
@@ -547,38 +553,38 @@ export type WorkflowCallWorkflowEvent = {
  * These correspond to the events that can trigger GitHub Actions workflows.
  */
 export type GitHubWorkflowEventName =
-  | "branch_protection_rule"
-  | "check_run"
-  | "check_suite"
-  | "create"
-  | "delete"
-  | "deployment"
-  | "deployment_status"
-  | "discussion"
-  | "discussion_comment"
-  | "fork"
-  | "gollum"
-  | "issue_comment"
-  | "issues"
-  | "label"
-  | "merge_group"
-  | "milestone"
-  | "page_build"
-  | "public"
-  | "pull_request"
-  | "pull_request_review"
-  | "pull_request_review_comment"
-  | "pull_request_target"
-  | "push"
-  | "registry_package"
-  | "release"
-  | "repository_dispatch"
-  | "schedule"
-  | "status"
-  | "watch"
-  | "workflow_call"
-  | "workflow_dispatch"
-  | "workflow_run";
+  | 'branch_protection_rule'
+  | 'check_run'
+  | 'check_suite'
+  | 'create'
+  | 'delete'
+  | 'deployment'
+  | 'deployment_status'
+  | 'discussion'
+  | 'discussion_comment'
+  | 'fork'
+  | 'gollum'
+  | 'issue_comment'
+  | 'issues'
+  | 'label'
+  | 'merge_group'
+  | 'milestone'
+  | 'page_build'
+  | 'public'
+  | 'pull_request'
+  | 'pull_request_review'
+  | 'pull_request_review_comment'
+  | 'pull_request_target'
+  | 'push'
+  | 'registry_package'
+  | 'release'
+  | 'repository_dispatch'
+  | 'schedule'
+  | 'status'
+  | 'watch'
+  | 'workflow_call'
+  | 'workflow_dispatch'
+  | 'workflow_run';
 
 // Add event-specific types here as needed
 
@@ -586,7 +592,7 @@ export type GitHubWorkflowEventName =
  * Activity types for branch protection rule events.
  * Defines what actions on branch protection rules will trigger the workflow.
  */
-export type BranchProtectionRuleActivityType = "created" | "edited" | "deleted";
+export type BranchProtectionRuleActivityType = 'created' | 'edited' | 'deleted';
 
 /**
  * Configuration for branch protection rule event triggers.
@@ -601,7 +607,11 @@ export type BranchProtectionRuleWorkflowEvent = {
  * Activity types for check run events.
  * Defines what actions on check runs will trigger the workflow.
  */
-export type CheckRunActivityType = "created" | "rerequested" | "completed" | "requested_action";
+export type CheckRunActivityType =
+  | 'created'
+  | 'rerequested'
+  | 'completed'
+  | 'requested_action';
 
 /**
  * Configuration for check run event triggers.
@@ -616,7 +626,7 @@ export type CheckRunWorkflowEvent = {
  * Activity types for check suite events.
  * Currently only supports "completed" events.
  */
-export type CheckSuiteActivityType = "completed";
+export type CheckSuiteActivityType = 'completed';
 
 /**
  * Configuration for check suite event triggers.
@@ -631,7 +641,20 @@ export type CheckSuiteWorkflowEvent = {
  * Activity types for discussion events.
  * Defines what actions on discussions will trigger the workflow.
  */
-export type DiscussionActivityType = "created" | "edited" | "deleted" | "transferred" | "pinned" | "unpinned" | "labeled" | "unlabeled" | "locked" | "unlocked" | "category_changed" | "answered" | "unanswered";
+export type DiscussionActivityType =
+  | 'created'
+  | 'edited'
+  | 'deleted'
+  | 'transferred'
+  | 'pinned'
+  | 'unpinned'
+  | 'labeled'
+  | 'unlabeled'
+  | 'locked'
+  | 'unlocked'
+  | 'category_changed'
+  | 'answered'
+  | 'unanswered';
 
 /**
  * Configuration for discussion event triggers.
@@ -646,7 +669,7 @@ export type DiscussionWorkflowEvent = {
  * Activity types for discussion comment events.
  * Defines what actions on discussion comments will trigger the workflow.
  */
-export type DiscussionCommentActivityType = "created" | "edited" | "deleted";
+export type DiscussionCommentActivityType = 'created' | 'edited' | 'deleted';
 
 /**
  * Configuration for discussion comment event triggers.
@@ -661,7 +684,7 @@ export type DiscussionCommentWorkflowEvent = {
  * Activity types for issue comment events.
  * Defines what actions on issue comments will trigger the workflow.
  */
-export type IssueCommentActivityType = "created" | "edited" | "deleted";
+export type IssueCommentActivityType = 'created' | 'edited' | 'deleted';
 
 /**
  * Configuration for issue comment event triggers.
@@ -676,7 +699,25 @@ export type IssueCommentWorkflowEvent = {
  * Activity types for issue events.
  * Defines what actions on issues will trigger the workflow.
  */
-export type IssuesActivityType = "opened" | "edited" | "deleted" | "transferred" | "pinned" | "unpinned" | "closed" | "reopened" | "assigned" | "unassigned" | "labeled" | "unlabeled" | "locked" | "unlocked" | "milestoned" | "demilestoned" | "typed" | "untyped";
+export type IssuesActivityType =
+  | 'opened'
+  | 'edited'
+  | 'deleted'
+  | 'transferred'
+  | 'pinned'
+  | 'unpinned'
+  | 'closed'
+  | 'reopened'
+  | 'assigned'
+  | 'unassigned'
+  | 'labeled'
+  | 'unlabeled'
+  | 'locked'
+  | 'unlocked'
+  | 'milestoned'
+  | 'demilestoned'
+  | 'typed'
+  | 'untyped';
 
 /**
  * Configuration for issue event triggers.
@@ -691,7 +732,7 @@ export type IssuesWorkflowEvent = {
  * Activity types for label events.
  * Defines what actions on labels will trigger the workflow.
  */
-export type LabelActivityType = "created" | "edited" | "deleted";
+export type LabelActivityType = 'created' | 'edited' | 'deleted';
 
 /**
  * Configuration for label event triggers.
@@ -706,7 +747,7 @@ export type LabelWorkflowEvent = {
  * Activity types for merge group events.
  * Currently only supports "checks_requested" events.
  */
-export type MergeGroupActivityType = "checks_requested";
+export type MergeGroupActivityType = 'checks_requested';
 
 /**
  * Configuration for merge group event triggers.
@@ -721,7 +762,12 @@ export type MergeGroupWorkflowEvent = {
  * Activity types for milestone events.
  * Defines what actions on milestones will trigger the workflow.
  */
-export type MilestoneActivityType = "created" | "closed" | "opened" | "edited" | "deleted";
+export type MilestoneActivityType =
+  | 'created'
+  | 'closed'
+  | 'opened'
+  | 'edited'
+  | 'deleted';
 
 /**
  * Configuration for milestone event triggers.
@@ -736,7 +782,28 @@ export type MilestoneWorkflowEvent = {
  * Activity types for pull request events.
  * Defines what actions on pull requests will trigger the workflow.
  */
-export type PullRequestActivityType = "assigned" | "unassigned" | "labeled" | "unlabeled" | "opened" | "edited" | "closed" | "reopened" | "synchronize" | "converted_to_draft" | "locked" | "unlocked" | "enqueued" | "dequeued" | "milestoned" | "demilestoned" | "ready_for_review" | "review_requested" | "review_request_removed" | "auto_merge_enabled" | "auto_merge_disabled";
+export type PullRequestActivityType =
+  | 'assigned'
+  | 'unassigned'
+  | 'labeled'
+  | 'unlabeled'
+  | 'opened'
+  | 'edited'
+  | 'closed'
+  | 'reopened'
+  | 'synchronize'
+  | 'converted_to_draft'
+  | 'locked'
+  | 'unlocked'
+  | 'enqueued'
+  | 'dequeued'
+  | 'milestoned'
+  | 'demilestoned'
+  | 'ready_for_review'
+  | 'review_requested'
+  | 'review_request_removed'
+  | 'auto_merge_enabled'
+  | 'auto_merge_disabled';
 
 // Pull request event type with all possible properties
 /**
@@ -749,18 +816,21 @@ export type PullRequestWorkflowEvent = {
   /** Branches that will trigger the workflow */
   branches?: string[];
   /** Branches that will NOT trigger the workflow */
-  "branches-ignore"?: string[];
+  'branches-ignore'?: string[];
   /** File paths that will trigger the workflow */
   paths?: string[];
   /** File paths that will NOT trigger the workflow */
-  "paths-ignore"?: string[];
+  'paths-ignore'?: string[];
 };
 
 /**
  * Activity types for pull request review events.
  * Defines what actions on pull request reviews will trigger the workflow.
  */
-export type PullRequestReviewActivityType = "submitted" | "edited" | "dismissed";
+export type PullRequestReviewActivityType =
+  | 'submitted'
+  | 'edited'
+  | 'dismissed';
 
 /**
  * Configuration for pull request review event triggers.
@@ -775,7 +845,10 @@ export type PullRequestReviewWorkflowEvent = {
  * Activity types for pull request review comment events.
  * Defines what actions on pull request review comments will trigger the workflow.
  */
-export type PullRequestReviewCommentActivityType = "created" | "edited" | "deleted";
+export type PullRequestReviewCommentActivityType =
+  | 'created'
+  | 'edited'
+  | 'deleted';
 
 /**
  * Configuration for pull request review comment event triggers.
@@ -790,7 +863,7 @@ export type PullRequestReviewCommentWorkflowEvent = {
  * Activity types for registry package events.
  * Defines what actions on packages will trigger the workflow.
  */
-export type RegistryPackageActivityType = "published" | "updated";
+export type RegistryPackageActivityType = 'published' | 'updated';
 
 /**
  * Configuration for registry package event triggers.
@@ -805,7 +878,14 @@ export type RegistryPackageWorkflowEvent = {
  * Activity types for release events.
  * Defines what actions on releases will trigger the workflow.
  */
-export type ReleaseActivityType = "published" | "unpublished" | "created" | "edited" | "deleted" | "prereleased" | "released";
+export type ReleaseActivityType =
+  | 'published'
+  | 'unpublished'
+  | 'created'
+  | 'edited'
+  | 'deleted'
+  | 'prereleased'
+  | 'released';
 
 /**
  * Configuration for release event triggers.
@@ -820,7 +900,7 @@ export type ReleaseWorkflowEvent = {
  * Activity types for watch events.
  * Currently only supports "started" (when someone stars the repository).
  */
-export type WatchActivityType = "started";
+export type WatchActivityType = 'started';
 
 /**
  * Configuration for watch event triggers.
@@ -835,7 +915,7 @@ export type WatchWorkflowEvent = {
  * Activity types for workflow run events.
  * Defines what workflow run states will trigger the workflow.
  */
-export type WorkflowRunActivityType = "completed" | "requested" | "in_progress";
+export type WorkflowRunActivityType = 'completed' | 'requested' | 'in_progress';
 
 /**
  * Configuration for workflow run event triggers.
@@ -849,7 +929,7 @@ export type WorkflowRunWorkflowEvent = {
   /** Branches that will trigger the workflow */
   branches?: string[];
   /** Branches that will NOT trigger the workflow */
-  "branches-ignore"?: string[];
+  'branches-ignore'?: string[];
 };
 
 /**
@@ -873,7 +953,7 @@ export type WorkflowDispatchInput = {
   /** Default value if not provided */
   default?: string;
   /** Type of the input parameter */
-  type?: "boolean" | "choice" | "environment" | "string";
+  type?: 'boolean' | 'choice' | 'environment' | 'string';
   /** Available options when type is "choice" */
   options?: string[];
 };

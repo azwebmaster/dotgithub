@@ -5,7 +5,13 @@ import { format } from 'prettier';
 import { cloneRepo } from './git.js';
 import { getDefaultBranch } from './github.js';
 import type { DotGithubContext } from './context.js';
-import { Project, SourceFile, ClassDeclaration, MethodDeclaration, PropertyDeclaration } from 'ts-morph';
+import {
+  Project,
+  SourceFile,
+  ClassDeclaration,
+  MethodDeclaration,
+  PropertyDeclaration,
+} from 'ts-morph';
 import { generateActionFiles } from './actions-manager.js';
 
 // Enhanced TypeScript interfaces for better type safety
@@ -115,30 +121,42 @@ export interface CreatePluginFromFilesResult {
  * Creates plugin content from .github files in a directory
  * @throws {Error} When path validation or file processing fails
  */
-export async function createPluginFromFiles(options: CreatePluginFromFilesOptions): Promise<CreatePluginFromFilesResult> {
-  const { pluginName, githubFilesPath, description = `Plugin generated from .github files`, outputDir, context, autoAddActions = false, token } = options;
-  
+export async function createPluginFromFiles(
+  options: CreatePluginFromFilesOptions
+): Promise<CreatePluginFromFilesResult> {
+  const {
+    pluginName,
+    githubFilesPath,
+    description = `Plugin generated from .github files`,
+    outputDir,
+    context,
+    autoAddActions = false,
+    token,
+  } = options;
+
   // Validate plugin name
   if (!pluginName || pluginName.trim().length === 0) {
     throw new Error('Plugin name is required and cannot be empty');
   }
-  
+
   // Validate path exists and is accessible
   if (!githubFilesPath || githubFilesPath.trim().length === 0) {
     throw new Error('GitHub files path is required and cannot be empty');
   }
-  
+
   let stats: fs.Stats;
   try {
     if (!fs.existsSync(githubFilesPath)) {
       throw new Error(`Path does not exist: ${githubFilesPath}`);
     }
-    
+
     stats = fs.statSync(githubFilesPath);
   } catch (error) {
-    throw new Error(`Failed to access path ${githubFilesPath}: ${error instanceof Error ? error.message : error}`);
+    throw new Error(
+      `Failed to access path ${githubFilesPath}: ${error instanceof Error ? error.message : error}`
+    );
   }
-  
+
   if (!stats.isDirectory()) {
     throw new Error(`Path is not a directory: ${githubFilesPath}`);
   }
@@ -148,10 +166,12 @@ export async function createPluginFromFiles(options: CreatePluginFromFilesOption
   try {
     files = collectFilesRecursively(githubFilesPath);
   } catch (error) {
-    throw new Error(`Failed to collect files from ${githubFilesPath}: ${error instanceof Error ? error.message : error}`);
+    throw new Error(
+      `Failed to collect files from ${githubFilesPath}: ${error instanceof Error ? error.message : error}`
+    );
   }
-  
-  const filesFound = files.map(f => f.relativePath);
+
+  const filesFound = files.map((f) => f.relativePath);
 
   if (files.length === 0) {
     throw new Error(`No files found in: ${githubFilesPath}`);
@@ -160,15 +180,25 @@ export async function createPluginFromFiles(options: CreatePluginFromFilesOption
   // Auto-add actions if requested (do this BEFORE plugin generation)
   if (autoAddActions && files.length > 0) {
     console.log(`🔍 Scanning workflows for actions to auto-add...`);
-    
+
     // Extract actions from workflow files
-    const workflowFiles = files.filter(f => f.relativePath.startsWith('workflows/') && (f.relativePath.endsWith('.yml') || f.relativePath.endsWith('.yaml')));
+    const workflowFiles = files.filter(
+      (f) =>
+        f.relativePath.startsWith('workflows/') &&
+        (f.relativePath.endsWith('.yml') || f.relativePath.endsWith('.yaml'))
+    );
     if (workflowFiles.length > 0) {
       const actions = extractActionsFromWorkflows(workflowFiles);
-      
+
       if (actions.size > 0) {
-        console.log(`   Found ${actions.size} unique actions to add: ${Array.from(actions).join(', ')}`);
-        const addedActions = await autoAddActionsToConfig(context, actions, token);
+        console.log(
+          `   Found ${actions.size} unique actions to add: ${Array.from(actions).join(', ')}`
+        );
+        const addedActions = await autoAddActionsToConfig(
+          context,
+          actions,
+          token
+        );
         console.log(`   Successfully added ${addedActions.length} actions`);
       } else {
         console.log(`   No actions found in workflows`);
@@ -186,7 +216,10 @@ export async function createPluginFromFiles(options: CreatePluginFromFilesOption
       configToUse = localConfig;
       console.log(`   Using local config from ${localConfigPath}`);
     } catch (error) {
-      console.warn(`   Warning: Could not parse local config at ${localConfigPath}:`, error);
+      console.warn(
+        `   Warning: Could not parse local config at ${localConfigPath}:`,
+        error
+      );
     }
   }
 
@@ -194,10 +227,12 @@ export async function createPluginFromFiles(options: CreatePluginFromFilesOption
   // Filter actions to only include those with functionName for code generation
   const configForPlugin: Config = {
     actions: configToUse.actions
-      .filter(action => action.generateCode !== false && action.outputPath)
-      .map(action => {
+      .filter((action) => action.generateCode !== false && action.outputPath)
+      .map((action) => {
         const { generateFunctionName } = require('./utils');
-        const functionName = action.actionName ? generateFunctionName(action.actionName) : action.orgRepo;
+        const functionName = action.actionName
+          ? generateFunctionName(action.actionName)
+          : action.orgRepo;
         return {
           orgRepo: action.orgRepo,
           ref: action.ref,
@@ -205,49 +240,72 @@ export async function createPluginFromFiles(options: CreatePluginFromFilesOption
           functionName,
           outputPath: action.outputPath!,
           actionPath: action.actionPath,
-          generateCode: action.generateCode
+          generateCode: action.generateCode,
         };
       }),
-    outputDir: configToUse.outputDir
+    outputDir: configToUse.outputDir,
   };
-  
-  let pluginResult: { mainContent: string; generatedFiles: GeneratedPluginFile[] };
+
+  let pluginResult: {
+    mainContent: string;
+    generatedFiles: GeneratedPluginFile[];
+  };
   try {
-    pluginResult = await generatePluginCode(pluginName, description, files, outputDir, configForPlugin);
+    pluginResult = await generatePluginCode(
+      pluginName,
+      description,
+      files,
+      outputDir,
+      configForPlugin
+    );
   } catch (error) {
-    throw new Error(`Failed to generate plugin code: ${error instanceof Error ? error.message : error}`);
+    throw new Error(
+      `Failed to generate plugin code: ${error instanceof Error ? error.message : error}`
+    );
   }
-  
+
   return {
     pluginContent: pluginResult.mainContent,
     filesFound,
-    generatedFiles: pluginResult.generatedFiles
+    generatedFiles: pluginResult.generatedFiles,
   };
 }
 
 /**
  * Generates a plugin from .github files (local path or GitHub repo)
  */
-export async function generatePluginFromGitHubFiles(options: GeneratePluginFromGitHubFilesOptions): Promise<GeneratePluginFromGitHubFilesResult> {
-  const { pluginName, source, description, overwrite = false, context, autoAddActions = false, token } = options;
-  
+export async function generatePluginFromGitHubFiles(
+  options: GeneratePluginFromGitHubFilesOptions
+): Promise<GeneratePluginFromGitHubFilesResult> {
+  const {
+    pluginName,
+    source,
+    description,
+    overwrite = false,
+    context,
+    autoAddActions = false,
+    token,
+  } = options;
+
   // Use context to resolve path relative to configured output directory
   const finalOutputDir = context.resolvePath('plugins');
-  
+
   // Determine if source is a local path, GitHub repo, or GitHub file URL
   let result: CreatePluginFromFilesResult;
   let tempDir: string | null = null;
-  
+
   if (isGitHubFileUrl(source)) {
     // Handle GitHub file URL
     const { content, filename } = await downloadGitHubFile(source);
     // Filter actions to only include those with outputPath for code generation
     const configForPlugin: Config = {
       actions: context.config.actions
-        .filter(action => action.generateCode !== false && action.outputPath)
-        .map(action => {
+        .filter((action) => action.generateCode !== false && action.outputPath)
+        .map((action) => {
           const { generateFunctionName } = require('./utils');
-          const functionName = action.actionName ? generateFunctionName(action.actionName) : action.orgRepo;
+          const functionName = action.actionName
+            ? generateFunctionName(action.actionName)
+            : action.orgRepo;
           return {
             orgRepo: action.orgRepo,
             ref: action.ref,
@@ -255,44 +313,55 @@ export async function generatePluginFromGitHubFiles(options: GeneratePluginFromG
             functionName,
             outputPath: action.outputPath!,
             actionPath: action.actionPath,
-            generateCode: action.generateCode
+            generateCode: action.generateCode,
           };
         }),
-      outputDir: context.config.outputDir
+      outputDir: context.config.outputDir,
     };
-    result = await createPluginFromSingleFile(pluginName, filename, content, description, finalOutputDir, configForPlugin);
+    result = await createPluginFromSingleFile(
+      pluginName,
+      filename,
+      content,
+      description,
+      finalOutputDir,
+      configForPlugin
+    );
   } else if (isGitHubRepo(source)) {
     // Clone GitHub repo and extract .github files
     const { orgRepo, ref } = parseGitHubRepo(source);
     const [owner, repo] = orgRepo.split('/');
-    
+
     if (!owner || !repo) {
-      throw new Error('GitHub repo must be in the format owner/repo or owner/repo@ref');
+      throw new Error(
+        'GitHub repo must be in the format owner/repo or owner/repo@ref'
+      );
     }
-    
+
     const token = process.env.GITHUB_TOKEN;
     let resolvedRef = ref;
-    
+
     if (!resolvedRef) {
       resolvedRef = await getDefaultBranch(owner, repo, token);
     }
-    
+
     // Create temp directory and clone repo
     tempDir = fs.mkdtempSync(path.join(process.cwd(), 'tmp-plugin-'));
     const url = token
       ? `https://${token}:x-oauth-basic@github.com/${owner}/${repo}.git`
       : `https://github.com/${owner}/${repo}.git`;
-      
+
     const cloneOptions: Record<string, any> = { '--depth': 1 };
     if (resolvedRef) cloneOptions['--branch'] = resolvedRef;
-    
+
     await cloneRepo(url, tempDir, cloneOptions);
     const githubFilesPath = path.join(tempDir, '.github');
-    
+
     if (!fs.existsSync(githubFilesPath)) {
-      throw new Error(`No .github directory found in ${orgRepo}${ref ? `@${ref}` : ''}`);
+      throw new Error(
+        `No .github directory found in ${orgRepo}${ref ? `@${ref}` : ''}`
+      );
     }
-    
+
     // Create plugin from files
     result = await createPluginFromFiles({
       pluginName,
@@ -301,17 +370,17 @@ export async function generatePluginFromGitHubFiles(options: GeneratePluginFromG
       outputDir: finalOutputDir,
       context,
       autoAddActions,
-      token
+      token,
     });
   } else {
     // Use local path
     let githubFilesPath = path.resolve(source);
-    
+
     // If the source doesn't end with .github, append it
     if (!githubFilesPath.endsWith('.github')) {
       githubFilesPath = path.join(githubFilesPath, '.github');
     }
-    
+
     // Create plugin from files
     result = await createPluginFromFiles({
       pluginName,
@@ -320,24 +389,27 @@ export async function generatePluginFromGitHubFiles(options: GeneratePluginFromG
       outputDir: finalOutputDir,
       context,
       autoAddActions,
-      token
+      token,
     });
   }
-  
+
   try {
     // Use the finalOutputDir that was already calculated
     const outputPath = path.resolve(finalOutputDir);
-    const pluginDir = path.join(outputPath, pluginName.replace(/[^a-zA-Z0-9-]/g, '-').toLowerCase());
-    
+    const pluginDir = path.join(
+      outputPath,
+      pluginName.replace(/[^a-zA-Z0-9-]/g, '-').toLowerCase()
+    );
+
     try {
       if (!fs.existsSync(pluginDir)) {
         fs.mkdirSync(pluginDir, { recursive: true });
       }
-      
+
       // Create subdirectories for workflows and resources
       const workflowsDir = path.join(pluginDir, 'workflows');
       const resourcesDir = path.join(pluginDir, 'resources');
-      
+
       if (!fs.existsSync(workflowsDir)) {
         fs.mkdirSync(workflowsDir, { recursive: true });
       }
@@ -345,25 +417,31 @@ export async function generatePluginFromGitHubFiles(options: GeneratePluginFromG
         fs.mkdirSync(resourcesDir, { recursive: true });
       }
     } catch (error) {
-      throw new Error(`Failed to create output directory ${pluginDir}: ${error instanceof Error ? error.message : error}`);
+      throw new Error(
+        `Failed to create output directory ${pluginDir}: ${error instanceof Error ? error.message : error}`
+      );
     }
-    
+
     // Generate main plugin file path
     const fileName = 'index.ts';
     const pluginPath = path.resolve(pluginDir, fileName);
-    
+
     // Check if main plugin file exists and handle overwrite
     if (fs.existsSync(pluginPath) && !overwrite) {
-      throw new Error(`Plugin file already exists: ${pluginPath}. Use --overwrite to replace it.`);
+      throw new Error(
+        `Plugin file already exists: ${pluginPath}. Use --overwrite to replace it.`
+      );
     }
-    
+
     // Write main plugin file with proper error handling
     try {
       fs.writeFileSync(pluginPath, result.pluginContent, 'utf8');
     } catch (error) {
-      throw new Error(`Failed to write plugin file ${pluginPath}: ${error instanceof Error ? error.message : error}`);
+      throw new Error(
+        `Failed to write plugin file ${pluginPath}: ${error instanceof Error ? error.message : error}`
+      );
     }
-    
+
     // Write individual workflow and resource files
     const generatedFiles: GeneratedPluginFile[] = [];
     for (const file of result.generatedFiles) {
@@ -373,29 +451,32 @@ export async function generatePluginFromGitHubFiles(options: GeneratePluginFromG
         if (!fs.existsSync(fileDir)) {
           fs.mkdirSync(fileDir, { recursive: true });
         }
-        
+
         fs.writeFileSync(file.path, file.content, 'utf8');
         generatedFiles.push(file);
       } catch (error) {
-        console.warn(`Warning: Failed to write file ${file.path}: ${error instanceof Error ? error.message : error}`);
+        console.warn(
+          `Warning: Failed to write file ${file.path}: ${error instanceof Error ? error.message : error}`
+        );
       }
     }
-    
+
     return {
       pluginPath,
       pluginName,
       filesFound: result.filesFound,
       generatedContent: result.pluginContent,
-      generatedFiles
+      generatedFiles,
     };
-    
   } catch (error) {
     // Ensure cleanup happens even if an error occurs
     if (tempDir) {
       try {
         fs.rmSync(tempDir, { recursive: true, force: true });
       } catch (cleanupError) {
-        console.warn(`Warning: Failed to cleanup temp directory ${tempDir}: ${cleanupError instanceof Error ? cleanupError.message : cleanupError}`);
+        console.warn(
+          `Warning: Failed to cleanup temp directory ${tempDir}: ${cleanupError instanceof Error ? cleanupError.message : cleanupError}`
+        );
       }
     }
     throw error;
@@ -407,7 +488,9 @@ export async function generatePluginFromGitHubFiles(options: GeneratePluginFromG
           fs.rmSync(tempDir, { recursive: true, force: true });
         }
       } catch (error) {
-        console.warn(`Warning: Failed to cleanup temp directory ${tempDir}: ${error instanceof Error ? error.message : error}`);
+        console.warn(
+          `Warning: Failed to cleanup temp directory ${tempDir}: ${error instanceof Error ? error.message : error}`
+        );
       }
     }
   }
@@ -421,40 +504,46 @@ export async function generatePluginFromGitHubFiles(options: GeneratePluginFromG
  * @returns Promise resolving to file content and filename
  * @throws {Error} When URL parsing or API request fails
  */
-async function downloadGitHubFile(url: string): Promise<{ content: string; filename: string }> {
+async function downloadGitHubFile(
+  url: string
+): Promise<{ content: string; filename: string }> {
   const githubFileInfo = parseGitHubFileUrl(url);
   if (!githubFileInfo) {
     throw new Error(`Invalid GitHub URL: ${url}`);
   }
-  
+
   const { owner, repo, ref, filePath } = githubFileInfo;
   const token = process.env.GITHUB_TOKEN;
-  
+
   // Use GitHub API to get file content
   const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${filePath}${ref ? `?ref=${ref}` : ''}`;
-  
+
   const headers: Record<string, string> = {
-    'Accept': 'application/vnd.github.v3.raw',
-    'User-Agent': 'dotgithub-cli'
+    Accept: 'application/vnd.github.v3.raw',
+    'User-Agent': 'dotgithub-cli',
   };
-  
+
   if (token) {
     headers['Authorization'] = `token ${token}`;
   }
-  
+
   try {
     const response = await fetch(apiUrl, { headers });
-    
+
     if (!response.ok) {
-      throw new Error(`Failed to download file from GitHub: ${response.status} ${response.statusText}`);
+      throw new Error(
+        `Failed to download file from GitHub: ${response.status} ${response.statusText}`
+      );
     }
-    
+
     const content = await response.text();
     const filename = path.basename(filePath);
-    
+
     return { content, filename };
   } catch (error) {
-    throw new Error(`Failed to download file from ${url}: ${error instanceof Error ? error.message : error}`);
+    throw new Error(
+      `Failed to download file from ${url}: ${error instanceof Error ? error.message : error}`
+    );
   }
 }
 
@@ -468,31 +557,39 @@ async function downloadGitHubFile(url: string): Promise<{ content: string; filen
  * @param config - Optional config for action replacement
  * @returns Plugin generation result with content and file list
  */
-async function createPluginFromSingleFile(pluginName: string, filename: string, content: string, description?: string, outputDir?: string, config: Config | null = null): Promise<CreatePluginFromFilesResult> {
+async function createPluginFromSingleFile(
+  pluginName: string,
+  filename: string,
+  content: string,
+  description?: string,
+  outputDir?: string,
+  config: Config | null = null
+): Promise<CreatePluginFromFilesResult> {
   // Check if this is a workflow file (ends with .yaml or .yml)
-  const isWorkflowFile = filename.endsWith('.yaml') || filename.endsWith('.yml');
-  
+  const isWorkflowFile =
+    filename.endsWith('.yaml') || filename.endsWith('.yml');
+
   // If it's a workflow file, treat it as if it's in the workflows/ directory
   const relativePath = isWorkflowFile ? `workflows/${filename}` : filename;
-  
+
   const fileEntry: FileEntry = {
     relativePath,
     fullPath: filename,
-    content
+    content,
   };
-  
+
   const pluginResult = await generatePluginCode(
-    pluginName, 
-    description || `Plugin generated from ${filename}`, 
+    pluginName,
+    description || `Plugin generated from ${filename}`,
     [fileEntry],
     outputDir,
     config
   );
-  
+
   return {
     pluginContent: pluginResult.mainContent,
     filesFound: [relativePath],
-    generatedFiles: pluginResult.generatedFiles
+    generatedFiles: pluginResult.generatedFiles,
   };
 }
 
@@ -511,37 +608,43 @@ interface FileEntry {
  */
 function collectFilesRecursively(dirPath: string, basePath = ''): FileEntry[] {
   const files: FileEntry[] = [];
-  
+
   let items: string[];
   try {
     items = fs.readdirSync(dirPath);
   } catch (error) {
-    throw new Error(`Failed to read directory ${dirPath}: ${error instanceof Error ? error.message : error}`);
+    throw new Error(
+      `Failed to read directory ${dirPath}: ${error instanceof Error ? error.message : error}`
+    );
   }
-  
+
   for (const item of items) {
     const itemPath = path.join(dirPath, item);
     const relativePath = path.posix.join(basePath, item); // Use posix for consistent path separators
-    
+
     let stats: fs.Stats;
     try {
       stats = fs.statSync(itemPath);
     } catch (error) {
-      console.warn(`Warning: Could not stat ${itemPath}, skipping: ${error instanceof Error ? error.message : error}`);
+      console.warn(
+        `Warning: Could not stat ${itemPath}, skipping: ${error instanceof Error ? error.message : error}`
+      );
       continue;
     }
-    
+
     if (stats.isDirectory()) {
       // Skip the 'src' directory to avoid including plugin source files
       if (item === 'src') {
         continue;
       }
-      
+
       // Recursively collect files from subdirectories
       try {
         files.push(...collectFilesRecursively(itemPath, relativePath));
       } catch (error) {
-        console.warn(`Warning: Could not process directory ${itemPath}: ${error instanceof Error ? error.message : error}`);
+        console.warn(
+          `Warning: Could not process directory ${itemPath}: ${error instanceof Error ? error.message : error}`
+        );
         continue;
       }
     } else if (stats.isFile()) {
@@ -551,15 +654,17 @@ function collectFilesRecursively(dirPath: string, basePath = ''): FileEntry[] {
         files.push({
           relativePath,
           fullPath: itemPath,
-          content
+          content,
         });
       } catch (error) {
-        console.warn(`Warning: Could not read file ${itemPath}, skipping: ${error instanceof Error ? error.message : error}`);
+        console.warn(
+          `Warning: Could not read file ${itemPath}, skipping: ${error instanceof Error ? error.message : error}`
+        );
         continue;
       }
     }
   }
-  
+
   return files;
 }
 
@@ -569,16 +674,22 @@ function collectFilesRecursively(dirPath: string, basePath = ''): FileEntry[] {
 function formatArrayToCode(value: any[], indent: number): string {
   if (value.length === 0) return '[]';
   const spaces = '  '.repeat(indent);
-  const items = value.map(item => `${spaces}  ${valueToCodeString(item, indent + 1)}`);
+  const items = value.map(
+    (item) => `${spaces}  ${valueToCodeString(item, indent + 1)}`
+  );
   return `[\n${items.join(',\n')}\n${spaces}]`;
 }
 
 /**
  * Formats a function call object to a TypeScript function call
  */
-function formatFunctionCallToCode(value: FunctionCallObject, indent: number): string {
+function formatFunctionCallToCode(
+  value: FunctionCallObject,
+  indent: number
+): string {
   const inputs = value.__functionInputs || {};
-  const { __functionCall, __functionName, __functionInputs, ...stepOptions } = value;
+  const { __functionCall, __functionName, __functionInputs, ...stepOptions } =
+    value;
 
   const hasInputs = Object.keys(inputs).length > 0;
   const hasStepOptions = Object.keys(stepOptions).length > 0;
@@ -613,16 +724,21 @@ function formatFunctionCallToCode(value: FunctionCallObject, indent: number): st
 /**
  * Formats an object to a properly indented code string
  */
-function formatObjectToCode(value: Record<string, any>, indent: number): string {
+function formatObjectToCode(
+  value: Record<string, any>,
+  indent: number
+): string {
   const keys = Object.keys(value);
   if (keys.length === 0) return '{}';
-  
+
   const spaces = '  '.repeat(indent);
-  const entries = keys.map(key => {
-    const keyString = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(key) ? key : JSON.stringify(key);
+  const entries = keys.map((key) => {
+    const keyString = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(key)
+      ? key
+      : JSON.stringify(key);
     return `${spaces}  ${keyString}: ${valueToCodeString(value[key], indent + 1)}`;
   });
-  
+
   return `{\n${entries.join(',\n')}\n${spaces}}`;
 }
 
@@ -634,23 +750,24 @@ function valueToCodeString(value: any, indent = 0): string {
   if (value === null) return 'null';
   if (value === undefined) return 'undefined';
   if (typeof value === 'string') return JSON.stringify(value);
-  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
-  
+  if (typeof value === 'number' || typeof value === 'boolean')
+    return String(value);
+
   // Handle arrays
   if (Array.isArray(value)) {
     return formatArrayToCode(value, indent);
   }
-  
+
   // Handle objects
   if (typeof value === 'object') {
     // Handle special function call objects
     if (value.__functionCall && value.__functionName) {
       return formatFunctionCallToCode(value as FunctionCallObject, indent);
     }
-    
+
     return formatObjectToCode(value, indent);
   }
-  
+
   return 'undefined';
 }
 
@@ -662,30 +779,41 @@ function valueToCodeString(value: any, indent = 0): string {
  * @param coreFunctionUsage - Object to track usage of core functions like createStep and run
  * @returns Processed workflow schema with function calls
  */
-function processWorkflowForGeneration(workflow: WorkflowSchema, config: Config | null, actionImports: Set<ActionImport>, coreFunctionUsage: CoreFunctionUsage): WorkflowSchema {
+function processWorkflowForGeneration(
+  workflow: WorkflowSchema,
+  config: Config | null,
+  actionImports: Set<ActionImport>,
+  coreFunctionUsage: CoreFunctionUsage
+): WorkflowSchema {
   if (!config || !config.actions || !workflow.jobs) {
     return workflow;
   }
 
   const processedWorkflow: WorkflowSchema = { ...workflow };
-  
+
   // Process each job in the workflow
   for (const [jobId, job] of Object.entries(processedWorkflow.jobs)) {
     if (!job.steps) continue;
-    
-    const processedSteps = job.steps.map((step: StepSchema | FunctionCallObject) => {
-      return processStepForGeneration(step as StepSchema, config, actionImports, coreFunctionUsage);
-    });
-    
+
+    const processedSteps = job.steps.map(
+      (step: StepSchema | FunctionCallObject) => {
+        return processStepForGeneration(
+          step as StepSchema,
+          config,
+          actionImports,
+          coreFunctionUsage
+        );
+      }
+    );
+
     processedWorkflow.jobs[jobId] = {
       ...job,
-      steps: processedSteps
+      steps: processedSteps,
     };
   }
-  
+
   return processedWorkflow;
 }
-
 
 /**
  * Processes a single step to replace 'uses' with action function call during generation time
@@ -695,25 +823,30 @@ function processWorkflowForGeneration(workflow: WorkflowSchema, config: Config |
  * @param coreFunctionUsage - Object to track usage of core functions like createStep and run
  * @returns Either the original step or a function call object
  */
-function processStepForGeneration(step: StepSchema, config: Config, actionImports: Set<ActionImport>, coreFunctionUsage: CoreFunctionUsage): StepSchema | FunctionCallObject {
+function processStepForGeneration(
+  step: StepSchema,
+  config: Config,
+  actionImports: Set<ActionImport>,
+  coreFunctionUsage: CoreFunctionUsage
+): StepSchema | FunctionCallObject {
   // Handle run steps - convert to run() function call
   if (step.run) {
     const { run: script, ...stepOptions } = step;
-    
+
     // Track that run function is used
     coreFunctionUsage.run = true;
-    
+
     // Create a special object that represents the run function call
     const runCallStep: FunctionCallObject = {
       ...stepOptions,
       __functionCall: true,
       __functionName: 'run',
-      __functionInputs: { script }
+      __functionInputs: { script },
     };
-    
+
     return runCallStep;
   }
-  
+
   if (!step.uses) {
     return step;
   }
@@ -723,11 +856,13 @@ function processStepForGeneration(step: StepSchema, config: Config, actionImport
   if (!usesMatch) {
     return step;
   }
-  
+
   const orgRepo = usesMatch[1];
-  
+
   // Look up action in config
-  const action = config.actions?.find((a: ActionConfig) => a.orgRepo === orgRepo);
+  const action = config.actions?.find(
+    (a: ActionConfig) => a.orgRepo === orgRepo
+  );
   if (!action) {
     return step;
   }
@@ -736,22 +871,22 @@ function processStepForGeneration(step: StepSchema, config: Config, actionImport
   if (action.generateCode === false) {
     // Use createStep for actions that are not enabled for code generation
     const { uses, with: inputs, ...stepOptions } = step;
-    
+
     // Track that createStep function is used
     coreFunctionUsage.createStep = true;
-    
+
     // Create a special object that represents the createStep function call
     const createStepCall: FunctionCallObject = {
       ...stepOptions,
       __functionCall: true,
       __functionName: 'createStep',
-      __functionInputs: { 
-        uses: orgRepo, 
+      __functionInputs: {
+        uses: orgRepo,
         step: { with: inputs },
-        ref: action.ref 
-      }
+        ref: action.ref,
+      },
     };
-    
+
     return createStepCall;
   }
 
@@ -759,28 +894,33 @@ function processStepForGeneration(step: StepSchema, config: Config, actionImport
   // Use the functionName as a key to avoid duplicates
   // Only add if the action has the required fields for code generation
   if (action.functionName && action.outputPath) {
-    const existing = Array.from(actionImports).find(item => item.functionName === action.functionName);
+    const existing = Array.from(actionImports).find(
+      (item) => item.functionName === action.functionName
+    );
     if (!existing) {
-      actionImports.add({ functionName: action.functionName, outputPath: action.outputPath });
+      actionImports.add({
+        functionName: action.functionName,
+        outputPath: action.outputPath,
+      });
     }
   }
-  
+
   // Replace uses step with function call
   // Map 'with' options to function inputs, preserve other step properties
   const { uses, with: inputs, ...stepOptions } = step;
-  
+
   // Use inputs as-is since we no longer store input metadata in config
   const formattedInputs = inputs || {};
-  
+
   // Create a special object that represents the function call
   // This will be serialized by valueToCodeString as a function call
   const functionCallStep: FunctionCallObject = {
     ...stepOptions,
     __functionCall: true,
     __functionName: action.functionName!,
-    __functionInputs: formattedInputs
+    __functionInputs: formattedInputs,
   };
-  
+
   return functionCallStep;
 }
 
@@ -789,16 +929,25 @@ function processStepForGeneration(step: StepSchema, config: Config, actionImport
  * @param files - Array of file entries to process
  * @returns Object containing separated workflow and other files
  */
-function separateWorkflowFromOtherFiles(files: FileEntry[]): { workflowFiles: FileEntry[]; otherFiles: FileEntry[] } {
-  const workflowFiles = files.filter(file => 
-    file.relativePath.startsWith('workflows/') && 
-    (file.relativePath.endsWith('.yml') || file.relativePath.endsWith('.yaml'))
+function separateWorkflowFromOtherFiles(files: FileEntry[]): {
+  workflowFiles: FileEntry[];
+  otherFiles: FileEntry[];
+} {
+  const workflowFiles = files.filter(
+    (file) =>
+      file.relativePath.startsWith('workflows/') &&
+      (file.relativePath.endsWith('.yml') ||
+        file.relativePath.endsWith('.yaml'))
   );
-  const otherFiles = files.filter(file => 
-    !(file.relativePath.startsWith('workflows/') && 
-      (file.relativePath.endsWith('.yml') || file.relativePath.endsWith('.yaml')))
+  const otherFiles = files.filter(
+    (file) =>
+      !(
+        file.relativePath.startsWith('workflows/') &&
+        (file.relativePath.endsWith('.yml') ||
+          file.relativePath.endsWith('.yaml'))
+      )
   );
-  
+
   return { workflowFiles, otherFiles };
 }
 
@@ -808,28 +957,33 @@ function separateWorkflowFromOtherFiles(files: FileEntry[]): { workflowFiles: Fi
  * @param outputDir - Output directory for relative import paths
  * @returns Generated import statements for workflow files
  */
-function generateWorkflowImports(actionImports: Set<ActionImport>, outputDir?: string): string {
+function generateWorkflowImports(
+  actionImports: Set<ActionImport>,
+  outputDir?: string
+): string {
   if (actionImports.size === 0) {
     return '';
   }
 
   // Generate individual import statements for each action based on its outputPath
-  const actionImportArray = Array.from(actionImports).sort((a, b) => a.functionName.localeCompare(b.functionName));
-  
+  const actionImportArray = Array.from(actionImports).sort((a, b) =>
+    a.functionName.localeCompare(b.functionName)
+  );
+
   const imports: string[] = [];
-  
+
   for (const actionImport of actionImportArray) {
     let importPath = actionImport.outputPath;
-    
+
     if (outputDir) {
       // The action outputPath is relative to the config's output directory (e.g., "actions/owner/action-name.ts")
       // The workflow will be in a workflows subdirectory (e.g., "plugins/plugin-name/workflows/workflow-name.ts")
       // So we need to go up three levels to get to src/, then into the actions directory
       importPath = '../../../' + actionImport.outputPath;
-      
+
       // Convert to forward slashes
       importPath = importPath.replace(/\\/g, '/');
-      
+
       // Remove .ts extension and add .js for import
       if (importPath.endsWith('.ts')) {
         importPath = importPath.slice(0, -3) + '.js';
@@ -840,16 +994,18 @@ function generateWorkflowImports(actionImports: Set<ActionImport>, outputDir?: s
       if (!importPath.startsWith('.')) {
         importPath = './' + importPath;
       }
-      
+
       // Remove .ts extension and add .js for import
       if (importPath.endsWith('.ts')) {
         importPath = importPath.slice(0, -3) + '.js';
       }
     }
-    
-    imports.push(`import { ${actionImport.functionName} } from '${importPath}';`);
+
+    imports.push(
+      `import { ${actionImport.functionName} } from '${importPath}';`
+    );
   }
-  
+
   return imports.length > 0 ? imports.join('\n') + '\n\n' : '';
 }
 
@@ -861,7 +1017,12 @@ function generateWorkflowImports(actionImports: Set<ActionImport>, outputDir?: s
  * @param outputDir - Directory where the plugin will be output
  * @returns Import statements as a string
  */
-function generateImports(hasWorkflows: boolean, actionImports: Set<ActionImport>, coreFunctionUsage: CoreFunctionUsage, outputDir?: string): string {
+function generateImports(
+  hasWorkflows: boolean,
+  actionImports: Set<ActionImport>,
+  coreFunctionUsage: CoreFunctionUsage,
+  outputDir?: string
+): string {
   // Create a new ts-morph project for code generation
   const project = new Project({
     useInMemoryFileSystem: true,
@@ -885,7 +1046,7 @@ function generateImports(hasWorkflows: boolean, actionImports: Set<ActionImport>
     namedImports: ['DotGitHubPlugin', 'PluginContext'],
     isTypeOnly: true,
   });
-  
+
   // Add core function imports if they are used
   const coreFunctionImports: string[] = [];
   if (coreFunctionUsage.createStep) {
@@ -894,14 +1055,14 @@ function generateImports(hasWorkflows: boolean, actionImports: Set<ActionImport>
   if (coreFunctionUsage.run) {
     coreFunctionImports.push('run');
   }
-  
+
   if (coreFunctionImports.length > 0) {
     sourceFile.addImportDeclaration({
       moduleSpecifier: '@dotgithub/core',
       namedImports: coreFunctionImports,
     });
   }
-  
+
   // Add GitHubWorkflows import if we have workflows
   if (hasWorkflows) {
     sourceFile.addImportDeclaration({
@@ -910,24 +1071,26 @@ function generateImports(hasWorkflows: boolean, actionImports: Set<ActionImport>
       isTypeOnly: true,
     });
   }
-  
+
   // Add action imports if we have any
   if (actionImports.size > 0) {
     // Generate individual import statements for each action based on its outputPath
-    const actionImportArray = Array.from(actionImports).sort((a, b) => a.functionName.localeCompare(b.functionName));
-    
+    const actionImportArray = Array.from(actionImports).sort((a, b) =>
+      a.functionName.localeCompare(b.functionName)
+    );
+
     for (const actionImport of actionImportArray) {
       let importPath = actionImport.outputPath;
-      
+
       if (outputDir) {
         // The action outputPath is relative to the config's output directory (e.g., "actions/owner/action-name.ts")
         // The plugin will be in a plugins subdirectory (e.g., "plugins/plugin-name.ts")
         // So we need to go up one level and then into the actions directory
         importPath = '../' + actionImport.outputPath;
-        
+
         // Convert to forward slashes
         importPath = importPath.replace(/\\/g, '/');
-        
+
         // Remove .ts extension and add .js for import
         if (importPath.endsWith('.ts')) {
           importPath = importPath.slice(0, -3) + '.js';
@@ -938,20 +1101,20 @@ function generateImports(hasWorkflows: boolean, actionImports: Set<ActionImport>
         if (!importPath.startsWith('.')) {
           importPath = './' + importPath;
         }
-        
+
         // Remove .ts extension and add .js for import
         if (importPath.endsWith('.ts')) {
           importPath = importPath.slice(0, -3) + '.js';
         }
       }
-      
+
       sourceFile.addImportDeclaration({
         moduleSpecifier: importPath,
         namedImports: [actionImport.functionName],
       });
     }
   }
-  
+
   return sourceFile.getFullText();
 }
 
@@ -965,30 +1128,48 @@ function generateImports(hasWorkflows: boolean, actionImports: Set<ActionImport>
  * @returns Array of generated workflow files
  */
 async function generateWorkflowFiles(
-  workflowFiles: FileEntry[], 
-  config: Config | null, 
+  workflowFiles: FileEntry[],
+  config: Config | null,
   actionImports: Set<ActionImport>,
   pluginName: string,
   outputDir: string
-): Promise<{ generatedFiles: GeneratedPluginFile[]; allActionImports: Set<ActionImport>; coreFunctionUsage: CoreFunctionUsage }> {
+): Promise<{
+  generatedFiles: GeneratedPluginFile[];
+  allActionImports: Set<ActionImport>;
+  coreFunctionUsage: CoreFunctionUsage;
+}> {
   const generatedFiles: GeneratedPluginFile[] = [];
   const allActionImports: Set<ActionImport> = new Set();
-  const coreFunctionUsage: CoreFunctionUsage = { createStep: false, run: false };
-  
+  const coreFunctionUsage: CoreFunctionUsage = {
+    createStep: false,
+    run: false,
+  };
+
   for (const file of workflowFiles) {
-    const workflowName = path.basename(file.relativePath, path.extname(file.relativePath));
+    const workflowName = path.basename(
+      file.relativePath,
+      path.extname(file.relativePath)
+    );
     const fileName = `${workflowName}.ts`;
     const filePath = path.join(outputDir, 'workflows', fileName);
-    
+
     try {
       const parsedWorkflow = yaml.parse(file.content) as any;
-      
+
       // Create a separate actionImports set for this specific workflow
       const workflowActionImports: Set<ActionImport> = new Set();
-      const workflowCoreFunctionUsage: CoreFunctionUsage = { createStep: false, run: false };
-      const processedWorkflow = processWorkflowForGeneration(parsedWorkflow, config, workflowActionImports, workflowCoreFunctionUsage);
+      const workflowCoreFunctionUsage: CoreFunctionUsage = {
+        createStep: false,
+        run: false,
+      };
+      const processedWorkflow = processWorkflowForGeneration(
+        parsedWorkflow,
+        config,
+        workflowActionImports,
+        workflowCoreFunctionUsage
+      );
       const workflowCode = valueToCodeString(processedWorkflow, 0);
-      
+
       // Merge core function usage
       if (workflowCoreFunctionUsage.createStep) {
         coreFunctionUsage.createStep = true;
@@ -996,15 +1177,18 @@ async function generateWorkflowFiles(
       if (workflowCoreFunctionUsage.run) {
         coreFunctionUsage.run = true;
       }
-      
+
       // Add this workflow's actions to the overall collection
       for (const actionImport of workflowActionImports) {
         allActionImports.add(actionImport);
       }
-      
+
       // Generate imports for this workflow file using only its specific actions
-      const workflowImports = generateWorkflowImports(workflowActionImports, outputDir);
-      
+      const workflowImports = generateWorkflowImports(
+        workflowActionImports,
+        outputDir
+      );
+
       const rawContent = `${workflowImports}import { run } from '@dotgithub/core';
 import type { PluginContext } from '@dotgithub/core';
 
@@ -1018,22 +1202,25 @@ export async function ${toCamelCase(workflowName)}Handler(context: PluginContext
   stack.addWorkflow('${workflowName}', ${workflowCode});
 }
 `;
-      
+
       const formattedContent = await formatCode(rawContent);
-      
+
       generatedFiles.push({
         path: filePath,
         content: formattedContent,
         type: 'workflow',
-        name: workflowName
+        name: workflowName,
       });
     } catch (error) {
-      console.warn(`Warning: Could not parse YAML in ${file.relativePath}, falling back to string:`, error);
+      console.warn(
+        `Warning: Could not parse YAML in ${file.relativePath}, falling back to string:`,
+        error
+      );
       const escapedContent = JSON.stringify(file.content);
-      
+
       // Generate imports for this workflow file (even for fallback case)
       const workflowImports = generateWorkflowImports(actionImports, outputDir);
-      
+
       const rawContent = `${workflowImports}import type { GitHubWorkflow, PluginContext } from '@dotgithub/core';
 
 /**
@@ -1046,18 +1233,18 @@ export async function ${toCamelCase(workflowName)}Handler(context: PluginContext
   stack.addWorkflow('${workflowName}', ${escapedContent});
 }
 `;
-      
+
       const formattedContent = await formatCode(rawContent);
-      
+
       generatedFiles.push({
         path: filePath,
         content: formattedContent,
         type: 'workflow',
-        name: workflowName
+        name: workflowName,
       });
     }
   }
-  
+
   return { generatedFiles, allActionImports, coreFunctionUsage };
 }
 
@@ -1074,28 +1261,37 @@ async function generateResourceFiles(
   outputDir: string
 ): Promise<GeneratedPluginFile[]> {
   const generatedFiles: GeneratedPluginFile[] = [];
-  
+
   for (const file of otherFiles) {
-    const resourceName = path.basename(file.relativePath, path.extname(file.relativePath));
+    const resourceName = path.basename(
+      file.relativePath,
+      path.extname(file.relativePath)
+    );
     const fileName = `${resourceName}.ts`;
     const filePath = path.join(outputDir, 'resources', fileName);
-    
+
     const escapedPath = file.relativePath.replace(/\\/g, '/');
-    
+
     // Try to parse YAML files for better code generation
     let resourceCode: string;
-    if (file.relativePath.endsWith('.yml') || file.relativePath.endsWith('.yaml')) {
+    if (
+      file.relativePath.endsWith('.yml') ||
+      file.relativePath.endsWith('.yaml')
+    ) {
       try {
         const parsedYaml = yaml.parse(file.content) as any;
         resourceCode = valueToCodeString(parsedYaml, 0);
       } catch (error) {
-        console.warn(`Warning: Could not parse YAML in ${file.relativePath}, using as string:`, error);
+        console.warn(
+          `Warning: Could not parse YAML in ${file.relativePath}, using as string:`,
+          error
+        );
         resourceCode = JSON.stringify(file.content);
       }
     } else {
       resourceCode = JSON.stringify(file.content);
     }
-    
+
     const rawContent = `import type { PluginContext } from '@dotgithub/core';
 
 /**
@@ -1108,17 +1304,17 @@ export async function ${toCamelCase(resourceName)}Handler(context: PluginContext
   stack.addResource('${escapedPath}', { content: ${resourceCode} });
 }
 `;
-    
+
     const formattedContent = await formatCode(rawContent);
-    
+
     generatedFiles.push({
       path: filePath,
       content: formattedContent,
       type: 'resource',
-      name: resourceName
+      name: resourceName,
     });
   }
-  
+
   return generatedFiles;
 }
 
@@ -1130,28 +1326,33 @@ export async function ${toCamelCase(resourceName)}Handler(context: PluginContext
  * @returns Object containing applyWorkflows method
  */
 function generateWorkflowMethods(
-  workflowFiles: FileEntry[], 
-  config: Config | null, 
+  workflowFiles: FileEntry[],
+  config: Config | null,
   actionImports: Set<ActionImport>
 ): { applyWorkflowsMethod: string } {
   const hasWorkflows = workflowFiles.length > 0;
-  
+
   // Generate applyWorkflows method
   let applyWorkflowsMethod: string;
   if (hasWorkflows) {
     applyWorkflowsMethod = `  async applyWorkflows(context: PluginContext): Promise<void> {
-    ${workflowFiles.map(file => {
-      const workflowName = path.basename(file.relativePath, path.extname(file.relativePath));
-      const importName = toCamelCase(workflowName) + 'Handler';
-      return `await ${importName}(context);`;
-    }).join('\n    ')}
+    ${workflowFiles
+      .map((file) => {
+        const workflowName = path.basename(
+          file.relativePath,
+          path.extname(file.relativePath)
+        );
+        const importName = toCamelCase(workflowName) + 'Handler';
+        return `await ${importName}(context);`;
+      })
+      .join('\n    ')}
   }`;
   } else {
     applyWorkflowsMethod = `  async applyWorkflows(_context: PluginContext): Promise<void> {
     // This plugin doesn't define any workflows
   }`;
   }
-  
+
   return { applyWorkflowsMethod };
 }
 
@@ -1160,25 +1361,32 @@ function generateWorkflowMethods(
  * @param otherFiles - Array of non-workflow files to process
  * @returns Object containing applyResources method
  */
-function generateResourceMethods(otherFiles: FileEntry[]): { applyResourcesMethod: string } {
+function generateResourceMethods(otherFiles: FileEntry[]): {
+  applyResourcesMethod: string;
+} {
   const hasOtherFiles = otherFiles.length > 0;
-  
+
   // Generate applyResources method
   let applyResourcesMethod: string;
   if (hasOtherFiles) {
     applyResourcesMethod = `  async applyResources(context: PluginContext): Promise<void> {
-    ${otherFiles.map(file => {
-      const resourceName = path.basename(file.relativePath, path.extname(file.relativePath));
-      const importName = toCamelCase(resourceName) + 'Handler';
-      return `await ${importName}(context);`;
-    }).join('\n    ')}
+    ${otherFiles
+      .map((file) => {
+        const resourceName = path.basename(
+          file.relativePath,
+          path.extname(file.relativePath)
+        );
+        const importName = toCamelCase(resourceName) + 'Handler';
+        return `await ${importName}(context);`;
+      })
+      .join('\n    ')}
   }`;
   } else {
     applyResourcesMethod = `  async applyResources(_context: PluginContext): Promise<void> {
     // This plugin doesn't define any resources
   }`;
   }
-  
+
   return { applyResourcesMethod };
 }
 
@@ -1205,29 +1413,33 @@ async function generateClassDefinition(
   generatedFiles: GeneratedPluginFile[]
 ): Promise<string> {
   const escapedDescription = description.replace(/'/g, "\\'");
-  
+
   // Generate imports for workflow and resource files
   const workflowImports: string[] = [];
   const resourceImports: string[] = [];
-  
+
   for (const file of generatedFiles) {
     if (file.type === 'workflow') {
       const importName = toCamelCase(file.name) + 'Handler';
-      workflowImports.push(`import { ${importName} } from './workflows/${file.name}.js';`);
+      workflowImports.push(
+        `import { ${importName} } from './workflows/${file.name}.js';`
+      );
     } else if (file.type === 'resource') {
       const importName = toCamelCase(file.name) + 'Handler';
-      resourceImports.push(`import { ${importName} } from './resources/${file.name}.js';`);
+      resourceImports.push(
+        `import { ${importName} } from './resources/${file.name}.js';`
+      );
     }
   }
-  
+
   // Generate main synthesize method that calls the other two
   const synthesizeMethod = `  async synthesize(context: PluginContext): Promise<void> {
     await this.applyWorkflows(context);
     await this.applyResources(context);
   }`;
-  
+
   // No need for inline workflow and resource objects since we're using separate files
-  
+
   const rawContent = `${imports}
 ${workflowImports.join('\n')}
 ${resourceImports.join('\n')}
@@ -1236,7 +1448,7 @@ ${resourceImports.join('\n')}
  * ${escapedDescription}
  * 
  * This plugin was auto-generated from .github files.
- * Files included: ${files.map(f => f.relativePath).join(', ')}
+ * Files included: ${files.map((f) => f.relativePath).join(', ')}
  */
 export class ${className} implements DotGitHubPlugin {
   readonly name = '${pluginName}';
@@ -1266,34 +1478,68 @@ export default new ${className}();
  * @param config - Optional config for action replacement, or null to skip replacement
  * @returns Generated TypeScript plugin code and individual files
  */
-async function generatePluginCode(pluginName: string, description: string, files: FileEntry[], outputDir?: string, config: Config | null = null): Promise<{ mainContent: string; generatedFiles: GeneratedPluginFile[] }> {
+async function generatePluginCode(
+  pluginName: string,
+  description: string,
+  files: FileEntry[],
+  outputDir?: string,
+  config: Config | null = null
+): Promise<{ mainContent: string; generatedFiles: GeneratedPluginFile[] }> {
   const className = toPascalCase(pluginName) + 'Plugin';
-  
+
   // Separate workflow files from other files
   const { workflowFiles, otherFiles } = separateWorkflowFromOtherFiles(files);
-  
+
   // Use the provided config for available actions for uses replacement
   const actionImports: Set<ActionImport> = new Set();
 
   // Generate individual workflow and resource files
   // Note: outputDir here should be the plugin directory, not the parent directory
   const resolvedOutputDir = outputDir ? path.resolve(outputDir) : '';
-  const pluginDir = resolvedOutputDir ? path.join(resolvedOutputDir, pluginName.replace(/[^a-zA-Z0-9-]/g, '-').toLowerCase()) : '';
-  
-  const { generatedFiles: workflowFiles_generated, allActionImports, coreFunctionUsage } = await generateWorkflowFiles(workflowFiles, config, actionImports, pluginName, pluginDir);
-  const resourceFiles_generated = await generateResourceFiles(otherFiles, pluginName, pluginDir);
-  
+  const pluginDir = resolvedOutputDir
+    ? path.join(
+        resolvedOutputDir,
+        pluginName.replace(/[^a-zA-Z0-9-]/g, '-').toLowerCase()
+      )
+    : '';
+
+  const {
+    generatedFiles: workflowFiles_generated,
+    allActionImports,
+    coreFunctionUsage,
+  } = await generateWorkflowFiles(
+    workflowFiles,
+    config,
+    actionImports,
+    pluginName,
+    pluginDir
+  );
+  const resourceFiles_generated = await generateResourceFiles(
+    otherFiles,
+    pluginName,
+    pluginDir
+  );
+
   // Generate workflow methods for the main plugin file using all collected actions
-  const { applyWorkflowsMethod } = generateWorkflowMethods(workflowFiles, config, allActionImports);
-  
+  const { applyWorkflowsMethod } = generateWorkflowMethods(
+    workflowFiles,
+    config,
+    allActionImports
+  );
+
   // Generate resource methods for the main plugin file
   const { applyResourcesMethod } = generateResourceMethods(otherFiles);
-  
+
   // Generate imports for the main plugin file using all collected actions
   const hasWorkflows = workflowFiles.length > 0;
   const hasOtherFiles = otherFiles.length > 0;
-  const imports = generateImports(hasWorkflows, allActionImports, coreFunctionUsage, outputDir);
-  
+  const imports = generateImports(
+    hasWorkflows,
+    allActionImports,
+    coreFunctionUsage,
+    outputDir
+  );
+
   // Generate complete class definition
   const mainContent = await generateClassDefinition(
     pluginName,
@@ -1305,10 +1551,10 @@ async function generatePluginCode(pluginName: string, description: string, files
     applyResourcesMethod,
     [...workflowFiles_generated, ...resourceFiles_generated]
   );
-  
+
   return {
     mainContent,
-    generatedFiles: [...workflowFiles_generated, ...resourceFiles_generated]
+    generatedFiles: [...workflowFiles_generated, ...resourceFiles_generated],
   };
 }
 
@@ -1319,7 +1565,12 @@ async function generatePluginCode(pluginName: string, description: string, files
  */
 function isGitHubRepo(source: string): boolean {
   // Simple check: contains slash and doesn't start with . or /, and is not a URL
-  return source.includes('/') && !source.startsWith('.') && !source.startsWith('/') && !isGitHubFileUrl(source);
+  return (
+    source.includes('/') &&
+    !source.startsWith('.') &&
+    !source.startsWith('/') &&
+    !isGitHubFileUrl(source)
+  );
 }
 
 /**
@@ -1346,21 +1597,23 @@ interface GitHubFileInfo {
  */
 function parseGitHubFileUrl(url: string): GitHubFileInfo | null {
   // Parse URLs like: https://github.com/actions/starter-workflows/blob/main/ci/npm-publish.yml
-  const match = url.match(/^https:\/\/github\.com\/([^\/]+)\/([^\/]+)\/blob\/([^\/]+)\/(.+)$/);
-  
+  const match = url.match(
+    /^https:\/\/github\.com\/([^\/]+)\/([^\/]+)\/blob\/([^\/]+)\/(.+)$/
+  );
+
   if (!match || match.length < 5) {
     return null;
   }
-  
+
   const owner = match[1];
   const repo = match[2];
   const ref = match[3];
   const filePath = match[4];
-  
+
   if (!owner || !repo || !ref || !filePath) {
     return null;
   }
-  
+
   return { owner, repo, ref, filePath };
 }
 
@@ -1377,7 +1630,7 @@ function parseGitHubRepo(source: string): { orgRepo: string; ref?: string } {
   }
   return {
     orgRepo: source.substring(0, atIndex),
-    ref: source.substring(atIndex + 1)
+    ref: source.substring(atIndex + 1),
   };
 }
 
@@ -1391,8 +1644,8 @@ function toPascalCase(str: string): string {
   return str
     .replace(/[^a-zA-Z0-9]/g, ' ')
     .split(' ')
-    .filter(word => word.length > 0)
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .filter((word) => word.length > 0)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join('');
 }
 
@@ -1406,9 +1659,9 @@ function toCamelCase(str: string): string {
   return str
     .replace(/[^a-zA-Z0-9]/g, ' ')
     .split(' ')
-    .filter(word => word.length > 0)
-    .map((word, index) => 
-      index === 0 
+    .filter((word) => word.length > 0)
+    .map((word, index) =>
+      index === 0
         ? word.toLowerCase()
         : word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
     )
@@ -1444,16 +1697,16 @@ async function formatCode(code: string): Promise<string> {
  */
 function extractActionsFromWorkflows(workflowFiles: FileEntry[]): Set<string> {
   const actions = new Set<string>();
-  
+
   for (const file of workflowFiles) {
     try {
       const workflow = yaml.parse(file.content) as any;
       if (!workflow || !workflow.jobs) continue;
-      
+
       // Extract actions from all jobs and steps
       for (const job of Object.values(workflow.jobs) as any[]) {
         if (!job.steps) continue;
-        
+
         for (const step of job.steps) {
           if (step.uses) {
             // Extract org/repo from uses (e.g., "actions/checkout@v4" -> "actions/checkout")
@@ -1465,10 +1718,13 @@ function extractActionsFromWorkflows(workflowFiles: FileEntry[]): Set<string> {
         }
       }
     } catch (error) {
-      console.warn(`Warning: Could not parse workflow ${file.relativePath} to extract actions:`, error);
+      console.warn(
+        `Warning: Could not parse workflow ${file.relativePath} to extract actions:`,
+        error
+      );
     }
   }
-  
+
   return actions;
 }
 
@@ -1479,26 +1735,32 @@ function extractActionsFromWorkflows(workflowFiles: FileEntry[]): Set<string> {
  * @param token - Optional GitHub token
  * @returns Array of successfully added actions
  */
-async function autoAddActionsToConfig(context: DotGithubContext, actions: Set<string>, token?: string): Promise<string[]> {
+async function autoAddActionsToConfig(
+  context: DotGithubContext,
+  actions: Set<string>,
+  token?: string
+): Promise<string[]> {
   const addedActions: string[] = [];
-  
+
   for (const orgRepo of actions) {
     try {
       console.log(`🔧 Auto-adding action: ${orgRepo}`);
-      
+
       const result = await generateActionFiles(context, {
         orgRepoRef: orgRepo,
         token: token || process.env.GITHUB_TOKEN,
-        useSha: true
+        useSha: true,
       });
-      
+
       addedActions.push(orgRepo);
       console.log(`✅ Added action: ${orgRepo}`);
     } catch (error) {
-      console.warn(`⚠️  Failed to auto-add action ${orgRepo}:`, error instanceof Error ? error.message : error);
+      console.warn(
+        `⚠️  Failed to auto-add action ${orgRepo}:`,
+        error instanceof Error ? error.message : error
+      );
     }
   }
-  
+
   return addedActions;
 }
-

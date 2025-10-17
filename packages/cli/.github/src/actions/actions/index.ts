@@ -1,1 +1,1 @@
-export * as cache from "./cache/index.js";
+export * as cache from './cache/index.js';

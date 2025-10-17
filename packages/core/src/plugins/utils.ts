@@ -8,67 +8,75 @@ import type { DotGitHubPlugin } from './types.js';
 /**
  * Format plugin description for display
  */
-export function formatPluginDescription(description: PluginDescription): string {
+export function formatPluginDescription(
+  description: PluginDescription
+): string {
   const lines: string[] = [];
-  
+
   lines.push(`Name: ${description.name}`);
-  
+
   if (description.version) {
     lines.push(`Version: ${description.version}`);
   }
-  
+
   if (description.description) {
     lines.push(`Description: ${description.description}`);
   }
-  
+
   if (description.author) {
     lines.push(`Author: ${description.author}`);
   }
-  
+
   if (description.license) {
     lines.push(`License: ${description.license}`);
   }
-  
+
   if (description.category) {
     lines.push(`Category: ${description.category}`);
   }
-  
+
   if (description.keywords && description.keywords.length > 0) {
     lines.push(`Keywords: ${description.keywords.join(', ')}`);
   }
-  
+
   if (description.dependencies && description.dependencies.length > 0) {
     lines.push(`Dependencies: ${description.dependencies.join(', ')}`);
   }
-  
+
   if (description.conflicts && description.conflicts.length > 0) {
     lines.push(`Conflicts: ${description.conflicts.join(', ')}`);
   }
-  
+
   // Add detailed configuration schema information
   if (description.configSchema) {
     const schemaInfo = extractConfigSchemaInfo(description.configSchema);
     lines.push('\n' + formatConfigSchemaInfo(schemaInfo));
   }
-  
+
   if (description.repository) {
     lines.push(`\nRepository: ${description.repository}`);
   }
-  
+
   if (description.homepage) {
     lines.push(`Homepage: ${description.homepage}`);
   }
-  
+
   return lines.join('\n');
 }
 
 /**
  * Get configuration schema as JSON schema
  */
-export function getConfigSchemaAsJsonSchema(plugin: DotGitHubPlugin): any | null {
+export function getConfigSchemaAsJsonSchema(
+  plugin: DotGitHubPlugin
+): any | null {
   if (plugin.describe) {
     const description = plugin.describe();
-    if (description && typeof description === 'object' && 'configSchema' in description) {
+    if (
+      description &&
+      typeof description === 'object' &&
+      'configSchema' in description
+    ) {
       // Convert Zod schema to JSON schema if possible
       // This is a simplified version - in practice you might want to use a library like zod-to-json-schema
       return description.configSchema;
@@ -80,10 +88,18 @@ export function getConfigSchemaAsJsonSchema(plugin: DotGitHubPlugin): any | null
 /**
  * Validate plugin configuration against plugin's schema
  */
-export function validatePluginConfigWithSchema(plugin: DotGitHubPlugin, config: unknown): { success: true; data: any } | { success: false; error: string } {
+export function validatePluginConfigWithSchema(
+  plugin: DotGitHubPlugin,
+  config: unknown
+): { success: true; data: any } | { success: false; error: string } {
   if (plugin.describe) {
     const description = plugin.describe();
-    if (description && typeof description === 'object' && 'configSchema' in description && description.configSchema) {
+    if (
+      description &&
+      typeof description === 'object' &&
+      'configSchema' in description &&
+      description.configSchema
+    ) {
       try {
         const result = description.configSchema.parse(config);
         return { success: true, data: result };
@@ -95,52 +111,63 @@ export function validatePluginConfigWithSchema(plugin: DotGitHubPlugin, config: 
       }
     }
   }
-  
-  return { 
-    success: false, 
-    error: `Plugin "${plugin.name}" does not provide a configuration schema` 
+
+  return {
+    success: false,
+    error: `Plugin "${plugin.name}" does not provide a configuration schema`,
   };
 }
 
 /**
  * Get plugin categories from a list of plugin descriptions
  */
-export function getPluginCategories(descriptions: PluginDescription[]): string[] {
+export function getPluginCategories(
+  descriptions: PluginDescription[]
+): string[] {
   const categories = new Set<string>();
-  
+
   for (const desc of descriptions) {
     if (desc.category) {
       categories.add(desc.category);
     }
   }
-  
+
   return Array.from(categories).sort();
 }
 
 /**
  * Filter plugins by category
  */
-export function filterPluginsByCategory(descriptions: PluginDescription[], category: string): PluginDescription[] {
-  return descriptions.filter(desc => desc.category === category);
+export function filterPluginsByCategory(
+  descriptions: PluginDescription[],
+  category: string
+): PluginDescription[] {
+  return descriptions.filter((desc) => desc.category === category);
 }
 
 /**
  * Search plugins by keyword
  */
-export function searchPluginsByKeyword(descriptions: PluginDescription[], keyword: string): PluginDescription[] {
+export function searchPluginsByKeyword(
+  descriptions: PluginDescription[],
+  keyword: string
+): PluginDescription[] {
   const lowerKeyword = keyword.toLowerCase();
-  
-  return descriptions.filter(desc => {
+
+  return descriptions.filter((desc) => {
     // Search in name
     if (desc.name.toLowerCase().includes(lowerKeyword)) {
       return true;
     }
-    
+
     // Search in description
-    if (desc.description && desc.description.toLowerCase().includes(lowerKeyword)) {
+    if (
+      desc.description &&
+      desc.description.toLowerCase().includes(lowerKeyword)
+    ) {
       return true;
     }
-    
+
     // Search in keywords
     if (desc.keywords) {
       for (const kw of desc.keywords) {
@@ -149,7 +176,7 @@ export function searchPluginsByKeyword(descriptions: PluginDescription[], keywor
         }
       }
     }
-    
+
     // Search in tags
     if (desc.tags) {
       for (const tag of desc.tags) {
@@ -158,7 +185,7 @@ export function searchPluginsByKeyword(descriptions: PluginDescription[], keywor
         }
       }
     }
-    
+
     return false;
   });
 }
@@ -166,7 +193,10 @@ export function searchPluginsByKeyword(descriptions: PluginDescription[], keywor
 /**
  * Sort plugins by various criteria
  */
-export function sortPlugins(descriptions: PluginDescription[], sortBy: 'name' | 'version' | 'category' = 'name'): PluginDescription[] {
+export function sortPlugins(
+  descriptions: PluginDescription[],
+  sortBy: 'name' | 'version' | 'category' = 'name'
+): PluginDescription[] {
   return [...descriptions].sort((a, b) => {
     switch (sortBy) {
       case 'name':
@@ -215,14 +245,23 @@ export function extractConfigSchemaInfo(schema: any): {
   }
 
   // Handle Zod object schemas
-  if (schema && (schema._def?.typeName === 'ZodObject' || schema.def?.type === 'object')) {
+  if (
+    schema &&
+    (schema._def?.typeName === 'ZodObject' || schema.def?.type === 'object')
+  ) {
     let shape;
     if (schema._def?.shape) {
-      shape = typeof schema._def.shape === 'function' ? schema._def.shape() : schema._def.shape;
+      shape =
+        typeof schema._def.shape === 'function'
+          ? schema._def.shape()
+          : schema._def.shape;
     } else if (schema.def?.shape) {
-      shape = typeof schema.def.shape === 'function' ? schema.def.shape() : schema.def.shape;
+      shape =
+        typeof schema.def.shape === 'function'
+          ? schema.def.shape()
+          : schema.def.shape;
     }
-    
+
     if (shape) {
       for (const [fieldName, fieldSchema] of Object.entries(shape)) {
         const fieldInfo = extractFieldInfo(fieldName, fieldSchema as any);
@@ -240,7 +279,10 @@ export function extractConfigSchemaInfo(schema: any): {
 /**
  * Extract information about a single field from a Zod schema
  */
-function extractFieldInfo(name: string, schema: any): {
+function extractFieldInfo(
+  name: string,
+  schema: any
+): {
   name: string;
   type: string;
   required: boolean;
@@ -271,15 +313,18 @@ function extractFieldInfo(name: string, schema: any): {
   let currentSchema = schema;
   let currentDef = def;
   let currentTypeName = typeName;
-  
+
   // Unwrap nested types to get the actual type
-  while (currentTypeName === 'ZodDefault' || currentTypeName === 'default' || 
-         currentTypeName === 'ZodOptional' || currentTypeName === 'optional') {
-    
+  while (
+    currentTypeName === 'ZodDefault' ||
+    currentTypeName === 'default' ||
+    currentTypeName === 'ZodOptional' ||
+    currentTypeName === 'optional'
+  ) {
     if (currentTypeName === 'ZodOptional' || currentTypeName === 'optional') {
       fieldInfo.required = false;
     }
-    
+
     // Get the inner type
     const innerType = currentDef.innerType;
     if (innerType) {
@@ -290,7 +335,7 @@ function extractFieldInfo(name: string, schema: any): {
       break;
     }
   }
-  
+
   // Set the final type
   if (currentTypeName) {
     fieldInfo.type = getZodTypeName(currentTypeName);
@@ -306,7 +351,10 @@ function extractFieldInfo(name: string, schema: any): {
   // Extract default value
   if (def.defaultValue !== undefined) {
     try {
-      fieldInfo.defaultValue = typeof def.defaultValue === 'function' ? def.defaultValue() : def.defaultValue;
+      fieldInfo.defaultValue =
+        typeof def.defaultValue === 'function'
+          ? def.defaultValue()
+          : def.defaultValue;
     } catch (error) {
       // defaultValue might be a getter, try accessing it directly
       fieldInfo.defaultValue = def.defaultValue;
@@ -324,7 +372,7 @@ function extractFieldInfo(name: string, schema: any): {
 
   // Extract validation rules from the unwrapped schema
   const validations: string[] = [];
-  
+
   // String validations
   if (currentTypeName === 'ZodString' || currentTypeName === 'string') {
     if (currentDef.checks) {
@@ -397,36 +445,38 @@ function extractFieldInfo(name: string, schema: any): {
  */
 function getZodTypeName(zodTypeName: string): string {
   const typeMap: Record<string, string> = {
-    'ZodString': 'string',
-    'ZodNumber': 'number',
-    'ZodBoolean': 'boolean',
-    'ZodArray': 'array',
-    'ZodObject': 'object',
-    'ZodEnum': 'enum',
-    'ZodOptional': 'optional',
-    'ZodDefault': 'default',
-    'ZodUnion': 'union',
-    'ZodLiteral': 'literal',
-    'ZodDate': 'date',
-    'ZodAny': 'any',
-    'ZodUnknown': 'unknown',
+    ZodString: 'string',
+    ZodNumber: 'number',
+    ZodBoolean: 'boolean',
+    ZodArray: 'array',
+    ZodObject: 'object',
+    ZodEnum: 'enum',
+    ZodOptional: 'optional',
+    ZodDefault: 'default',
+    ZodUnion: 'union',
+    ZodLiteral: 'literal',
+    ZodDate: 'date',
+    ZodAny: 'any',
+    ZodUnknown: 'unknown',
   };
-  
+
   return typeMap[zodTypeName] || zodTypeName;
 }
 
 /**
  * Generate example configuration based on field information
  */
-function generateExampleConfig(fields: Array<{
-  name: string;
-  type: string;
-  required: boolean;
-  defaultValue?: any;
-  options?: any[];
-}>): any {
+function generateExampleConfig(
+  fields: Array<{
+    name: string;
+    type: string;
+    required: boolean;
+    defaultValue?: any;
+    options?: any[];
+  }>
+): any {
   const example: any = {};
-  
+
   for (const field of fields) {
     if (field.defaultValue !== undefined) {
       example[field.name] = field.defaultValue;
@@ -436,7 +486,8 @@ function generateExampleConfig(fields: Array<{
       // Generate example value based on type
       switch (field.type) {
         case 'string':
-          example[field.name] = field.name === 'environment' ? 'production' : 'example-value';
+          example[field.name] =
+            field.name === 'environment' ? 'production' : 'example-value';
           break;
         case 'number':
           example[field.name] = 10;
@@ -455,7 +506,7 @@ function generateExampleConfig(fields: Array<{
       }
     }
   }
-  
+
   return example;
 }
 
@@ -475,7 +526,7 @@ export function formatConfigSchemaInfo(schemaInfo: {
   examples: any[];
 }): string {
   const lines: string[] = [];
-  
+
   if (schemaInfo.fields.length === 0) {
     lines.push('No configuration schema available');
     return lines.join('\n');
@@ -483,27 +534,29 @@ export function formatConfigSchemaInfo(schemaInfo: {
 
   lines.push('Configuration Schema:');
   lines.push('');
-  
+
   for (const field of schemaInfo.fields) {
     const required = field.required ? '✅ Required' : '❌ Optional';
     lines.push(`  ${field.name} (${field.type}) - ${required}`);
-    
+
     if (field.description) {
       lines.push(`    Description: ${field.description}`);
     }
-    
+
     if (field.defaultValue !== undefined) {
       lines.push(`    Default: ${JSON.stringify(field.defaultValue)}`);
     }
-    
+
     if (field.validation) {
       lines.push(`    Validation: ${field.validation}`);
     }
-    
+
     if (field.options && field.options.length > 0) {
-      lines.push(`    Options: ${field.options.map(opt => JSON.stringify(opt)).join(', ')}`);
+      lines.push(
+        `    Options: ${field.options.map((opt) => JSON.stringify(opt)).join(', ')}`
+      );
     }
-    
+
     lines.push('');
   }
 
@@ -522,38 +575,40 @@ export function formatConfigSchemaInfo(schemaInfo: {
  */
 export function generatePluginMarkdown(description: PluginDescription): string {
   const lines: string[] = [];
-  
+
   lines.push(`# ${description.name}`);
   lines.push('');
-  
+
   if (description.description) {
     lines.push(description.description);
     lines.push('');
   }
-  
+
   if (description.version) {
     lines.push(`**Version:** ${description.version}`);
   }
-  
+
   if (description.author) {
     lines.push(`**Author:** ${description.author}`);
   }
-  
+
   if (description.license) {
     lines.push(`**License:** ${description.license}`);
   }
-  
+
   if (description.category) {
     lines.push(`**Category:** ${description.category}`);
   }
-  
+
   lines.push('');
-  
+
   if (description.keywords && description.keywords.length > 0) {
-    lines.push(`**Keywords:** ${description.keywords.map(k => `\`${k}\``).join(', ')}`);
+    lines.push(
+      `**Keywords:** ${description.keywords.map((k) => `\`${k}\``).join(', ')}`
+    );
     lines.push('');
   }
-  
+
   if (description.dependencies && description.dependencies.length > 0) {
     lines.push('## Dependencies');
     lines.push('');
@@ -562,7 +617,7 @@ export function generatePluginMarkdown(description: PluginDescription): string {
     }
     lines.push('');
   }
-  
+
   if (description.conflicts && description.conflicts.length > 0) {
     lines.push('## Conflicts');
     lines.push('');
@@ -571,7 +626,6 @@ export function generatePluginMarkdown(description: PluginDescription): string {
     }
     lines.push('');
   }
-  
 
   // Add detailed configuration schema information
   if (description.configSchema) {
@@ -579,29 +633,31 @@ export function generatePluginMarkdown(description: PluginDescription): string {
     if (schemaInfo.fields.length > 0) {
       lines.push('## Configuration Schema');
       lines.push('');
-      
+
       for (const field of schemaInfo.fields) {
         const required = field.required ? '**Required**' : '*Optional*';
         lines.push(`### \`${field.name}\` (${field.type}) - ${required}`);
         lines.push('');
-        
+
         if (field.description) {
           lines.push(field.description);
           lines.push('');
         }
-        
+
         if (field.defaultValue !== undefined) {
           lines.push(`**Default:** \`${JSON.stringify(field.defaultValue)}\``);
           lines.push('');
         }
-        
+
         if (field.validation) {
           lines.push(`**Validation:** ${field.validation}`);
           lines.push('');
         }
-        
+
         if (field.options && field.options.length > 0) {
-          lines.push(`**Options:** ${field.options.map(opt => `\`${JSON.stringify(opt)}\``).join(', ')}`);
+          lines.push(
+            `**Options:** ${field.options.map((opt) => `\`${JSON.stringify(opt)}\``).join(', ')}`
+          );
           lines.push('');
         }
       }
@@ -616,21 +672,20 @@ export function generatePluginMarkdown(description: PluginDescription): string {
       }
     }
   }
-  
-  
+
   if (description.repository) {
     lines.push(`## Repository`);
     lines.push('');
     lines.push(`[${description.repository}](${description.repository})`);
     lines.push('');
   }
-  
+
   if (description.homepage) {
     lines.push(`## Homepage`);
     lines.push('');
     lines.push(`[${description.homepage}](${description.homepage})`);
     lines.push('');
   }
-  
+
   return lines.join('\n');
 }

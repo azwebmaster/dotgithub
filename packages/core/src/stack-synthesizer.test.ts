@@ -1,6 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { StackSynthesizer } from './stack-synthesizer.js';
-import { readConfig, writeConfig, setConfigPath, createDefaultConfig } from './config.js';
+import {
+  readConfig,
+  writeConfig,
+  setConfigPath,
+  createDefaultConfig,
+} from './config.js';
 import { DotGithubContext } from './context.js';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -17,7 +22,7 @@ describe('StackSynthesizer', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    
+
     tmpDir = '/tmp/dotgithub-test';
     configPath = path.join(tmpDir, '.github', 'dotgithub.json');
     setConfigPath(configPath);
@@ -38,16 +43,16 @@ describe('StackSynthesizer', () => {
               package: 'built-in',
               config: {
                 nodeVersions: ['18', '20'],
-                testCommand: 'bun test'
-              }
-            }
+                testCommand: 'bun test',
+              },
+            },
           ],
           stacks: [
             {
               name: 'main',
-              plugins: ['ci']
-            }
-          ]
+              plugins: ['ci'],
+            },
+          ],
         };
         return JSON.stringify(config, null, 2);
       }
@@ -67,9 +72,9 @@ describe('StackSynthesizer', () => {
     const context = new DotGithubContext({ config, configPath });
     const synthesizer = new StackSynthesizer({
       context,
-      projectRoot: '/custom/path'
+      projectRoot: '/custom/path',
     });
-    
+
     expect(synthesizer.getProjectRoot()).toBe('/custom/path');
   });
 
@@ -80,7 +85,7 @@ describe('StackSynthesizer', () => {
         const config: DotGithubConfig = {
           ...createDefaultConfig(),
           plugins: [],
-          stacks: []
+          stacks: [],
         };
         return JSON.stringify(config, null, 2);
       }
@@ -100,71 +105,78 @@ describe('StackSynthesizer', () => {
 
   it('should synthesize stack with mocked built-in plugins', async () => {
     const config = createDefaultConfig();
-    config.stacks = [{
-      name: 'test-stack',
-      plugins: ['ci']
-    }];
-    config.plugins = [{
-      name: 'ci',
-      package: 'built-in',
-      config: {}
-    }];
+    config.stacks = [
+      {
+        name: 'test-stack',
+        plugins: ['ci'],
+      },
+    ];
+    config.plugins = [
+      {
+        name: 'ci',
+        package: 'built-in',
+        config: {},
+      },
+    ];
     const context = new DotGithubContext({ config, configPath });
     const synthesizer = new StackSynthesizer({ context, projectRoot: tmpDir });
-    
+
     // Mock the plugin manager to use built-in plugins
     const pluginManager = synthesizer.getPluginManager();
     const originalLoadPlugins = pluginManager.loadPlugins.bind(pluginManager);
-    
-    vi.spyOn(pluginManager, 'loadPlugins').mockImplementation(async (configs) => {
-      // Mock loading CI plugin
-      return configs.map(config => ({
-        plugin: {
-          name: config.name,
-          apply: (context: any) => {
-            // Simple mock implementation that adds a workflow
-            context.stack.addWorkflow('ci', {
-              name: 'CI',
-              on: { push: { branches: ['main'] } },
-              jobs: {
-                test: {
-                  'runs-on': ['ubuntu-latest'],
-                  steps: [
-                    { uses: 'actions/checkout@v4' },
-                    { run: 'pnpm test' }
-                  ]
-                }
-              }
-            });
-          }
-        },
-        config,
-        resolved: true
-      }));
-    });
 
-    vi.spyOn(pluginManager, 'executePluginsForStack').mockImplementation(async (stack, stackConfig, pluginConfigs) => {
-      // Apply the mock plugin
-      stack.addWorkflow('ci', {
-        name: 'CI',
-        on: { push: { branches: ['main'] } },
-        jobs: {
-          test: {
-            'runs-on': ['ubuntu-latest'],
-            steps: [
-              { uses: 'actions/checkout@v4' },
-              { run: 'pnpm test' }
-            ]
-          }
-        }
-      });
+    vi.spyOn(pluginManager, 'loadPlugins').mockImplementation(
+      async (configs) => {
+        // Mock loading CI plugin
+        return configs.map((config) => ({
+          plugin: {
+            name: config.name,
+            apply: (context: any) => {
+              // Simple mock implementation that adds a workflow
+              context.stack.addWorkflow('ci', {
+                name: 'CI',
+                on: { push: { branches: ['main'] } },
+                jobs: {
+                  test: {
+                    'runs-on': ['ubuntu-latest'],
+                    steps: [
+                      { uses: 'actions/checkout@v4' },
+                      { run: 'pnpm test' },
+                    ],
+                  },
+                },
+              });
+            },
+          },
+          config,
+          resolved: true,
+        }));
+      }
+    );
 
-      return [{
-        plugin: { name: 'ci' } as any,
-        success: true,
-        duration: 100
-      }];
-    });
+    vi.spyOn(pluginManager, 'executePluginsForStack').mockImplementation(
+      async (stack, stackConfig, pluginConfigs) => {
+        // Apply the mock plugin
+        stack.addWorkflow('ci', {
+          name: 'CI',
+          on: { push: { branches: ['main'] } },
+          jobs: {
+            test: {
+              'runs-on': ['ubuntu-latest'],
+              steps: [{ uses: 'actions/checkout@v4' }, { run: 'pnpm test' }],
+            },
+          },
+        });
+
+        return [
+          {
+            plugin: { name: 'ci' } as any,
+            success: true,
+            duration: 100,
+          },
+        ];
+      }
+    );
 
     const results = await synthesizer.synthesizeAll();
 
@@ -177,7 +189,7 @@ describe('StackSynthesizer', () => {
     expect(result.stackConfig.plugins).toEqual(['ci']);
     expect(result.pluginResults).toHaveLength(1);
     expect(result.pluginResults[0].success).toBe(true);
-    
+
     // Check generated files
     expect(Object.keys(result.files)).toContain('workflows/ci.yml');
     expect(result.files['workflows/ci.yml']).toContain('name: CI');
@@ -187,21 +199,27 @@ describe('StackSynthesizer', () => {
 
   it('should handle plugin loading errors', async () => {
     const config = createDefaultConfig();
-    config.stacks = [{
-      name: 'test-stack',
-      plugins: ['ci']
-    }];
-    config.plugins = [{
-      name: 'ci',
-      package: 'built-in',
-      config: {}
-    }];
+    config.stacks = [
+      {
+        name: 'test-stack',
+        plugins: ['ci'],
+      },
+    ];
+    config.plugins = [
+      {
+        name: 'ci',
+        package: 'built-in',
+        config: {},
+      },
+    ];
     const context = new DotGithubContext({ config, configPath });
     const synthesizer = new StackSynthesizer({ context, projectRoot: tmpDir });
-    
+
     // Mock plugin manager to throw error during loading
     const pluginManager = synthesizer.getPluginManager();
-    vi.spyOn(pluginManager, 'loadPlugins').mockRejectedValue(new Error('Failed to load plugin'));
+    vi.spyOn(pluginManager, 'loadPlugins').mockRejectedValue(
+      new Error('Failed to load plugin')
+    );
 
     const results = await synthesizer.synthesizeAll();
 
@@ -213,27 +231,35 @@ describe('StackSynthesizer', () => {
 
   it('should handle plugin execution errors', async () => {
     const config = createDefaultConfig();
-    config.stacks = [{
-      name: 'test-stack',
-      plugins: ['ci']
-    }];
-    config.plugins = [{
-      name: 'ci',
-      package: 'built-in',
-      config: {}
-    }];
+    config.stacks = [
+      {
+        name: 'test-stack',
+        plugins: ['ci'],
+      },
+    ];
+    config.plugins = [
+      {
+        name: 'ci',
+        package: 'built-in',
+        config: {},
+      },
+    ];
     const context = new DotGithubContext({ config, configPath });
     const synthesizer = new StackSynthesizer({ context, projectRoot: tmpDir });
-    
+
     // Mock successful plugin loading but failed execution
     const pluginManager = synthesizer.getPluginManager();
-    vi.spyOn(pluginManager, 'loadPlugins').mockResolvedValue([{
-      plugin: { name: 'ci' } as any,
-      config: { name: 'ci', package: 'built-in' },
-      resolved: true
-    }]);
-    
-    vi.spyOn(pluginManager, 'executePluginsForStack').mockRejectedValue(new Error('Plugin execution failed'));
+    vi.spyOn(pluginManager, 'loadPlugins').mockResolvedValue([
+      {
+        plugin: { name: 'ci' } as any,
+        config: { name: 'ci', package: 'built-in' },
+        resolved: true,
+      },
+    ]);
+
+    vi.spyOn(pluginManager, 'executePluginsForStack').mockRejectedValue(
+      new Error('Plugin execution failed')
+    );
 
     const results = await synthesizer.synthesizeAll();
 
@@ -245,44 +271,54 @@ describe('StackSynthesizer', () => {
 
   it('should write synthesized files', async () => {
     const config = createDefaultConfig();
-    config.stacks = [{
-      name: 'test-stack',
-      plugins: ['ci']
-    }];
-    config.plugins = [{
-      name: 'ci',
-      package: 'built-in',
-      config: {}
-    }];
+    config.stacks = [
+      {
+        name: 'test-stack',
+        plugins: ['ci'],
+      },
+    ];
+    config.plugins = [
+      {
+        name: 'ci',
+        package: 'built-in',
+        config: {},
+      },
+    ];
     const context = new DotGithubContext({ config, configPath });
     const synthesizer = new StackSynthesizer({ context, projectRoot: tmpDir });
-    
+
     // Mock successful synthesis
     const pluginManager = synthesizer.getPluginManager();
-    vi.spyOn(pluginManager, 'loadPlugins').mockResolvedValue([{
-      plugin: { name: 'ci' } as any,
-      config: { name: 'ci', package: 'built-in' },
-      resolved: true
-    }]);
-    
-    vi.spyOn(pluginManager, 'executePluginsForStack').mockImplementation(async (stack) => {
-      stack.addWorkflow('ci', {
-        name: 'CI',
-        on: { push: { branches: ['main'] } },
-        jobs: {
-          test: {
-            'runs-on': ['ubuntu-latest'],
-            steps: [{ uses: 'actions/checkout@v4' }]
-          }
-        }
-      });
-      
-      return [{
+    vi.spyOn(pluginManager, 'loadPlugins').mockResolvedValue([
+      {
         plugin: { name: 'ci' } as any,
-        success: true,
-        duration: 100
-      }];
-    });
+        config: { name: 'ci', package: 'built-in' },
+        resolved: true,
+      },
+    ]);
+
+    vi.spyOn(pluginManager, 'executePluginsForStack').mockImplementation(
+      async (stack) => {
+        stack.addWorkflow('ci', {
+          name: 'CI',
+          on: { push: { branches: ['main'] } },
+          jobs: {
+            test: {
+              'runs-on': ['ubuntu-latest'],
+              steps: [{ uses: 'actions/checkout@v4' }],
+            },
+          },
+        });
+
+        return [
+          {
+            plugin: { name: 'ci' } as any,
+            success: true,
+            duration: 100,
+          },
+        ];
+      }
+    );
 
     const results = await synthesizer.synthesizeAndWrite();
 
@@ -295,7 +331,7 @@ describe('StackSynthesizer', () => {
       expect.stringContaining('name: CI'),
       'utf8'
     );
-    
+
     // Verify directory creation
     expect(mockedFs.mkdirSync).toHaveBeenCalledWith(
       expect.stringContaining('.github'),

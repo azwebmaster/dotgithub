@@ -5,6 +5,7 @@ This guide will walk you through creating your first DotGitHub project and gener
 ## Prerequisites
 
 Before starting, ensure you have:
+
 - [DotGitHub installed](installation.md)
 - A GitHub repository
 - Basic knowledge of GitHub Actions
@@ -44,13 +45,13 @@ This downloads the action metadata and generates TypeScript wrappers.
 Edit `src/index.ts` to create a simple CI plugin:
 
 ```typescript
-import { 
-  createStep, 
-  DotGitHubPlugin, 
-  GitHubStack, 
-  JobConstruct, 
-  run, 
-  WorkflowConstruct 
+import {
+  createStep,
+  DotGitHubPlugin,
+  GitHubStack,
+  JobConstruct,
+  run,
+  WorkflowConstruct,
 } from '@dotgithub/core';
 import { Actions } from './actions/index.js';
 
@@ -74,7 +75,7 @@ export class MyFirstPlugin implements DotGitHubPlugin {
       keywords: ['ci', 'github-actions'],
       category: 'ci',
       tags: ['ci', 'testing'],
-      minDotGithubVersion: '1.0.0'
+      minDotGithubVersion: '1.0.0',
     };
   }
 
@@ -84,11 +85,11 @@ export class MyFirstPlugin implements DotGitHubPlugin {
     // Create a CI workflow
     const wf = new WorkflowConstruct(stack, 'ci', {
       name: 'CI Workflow',
-      on: { 
+      on: {
         push: { branches: ['main'] },
-        pull_request: {}
+        pull_request: {},
       },
-      jobs: {}
+      jobs: {},
     });
 
     // Add a test job
@@ -97,11 +98,11 @@ export class MyFirstPlugin implements DotGitHubPlugin {
       steps: [
         checkout('Checkout code').toStep(),
         setupNode('Setup Node.js', {
-          'node-version': '18'
+          'node-version': '18',
         }).toStep(),
         run('Install dependencies', 'npm install').toStep(),
-        run('Run tests', 'npm test').toStep()
-      ]
+        run('Run tests', 'npm test').toStep(),
+      ],
     });
   }
 }
@@ -213,7 +214,7 @@ const { checkout, setupNode } = new Actions(stack, 'actions');
 // Type-safe usage with IntelliSense
 checkout('Checkout code').toStep();
 setupNode('Setup Node.js', {
-  'node-version': '18'  // TypeScript knows this is a valid input
+  'node-version': '18', // TypeScript knows this is a valid input
 }).toStep();
 ```
 
@@ -282,7 +283,7 @@ new JobConstruct(wf, 'build', {
   needs: ['test'],
   steps: [
     // ... build steps
-  ]
+  ],
 });
 ```
 
@@ -291,10 +292,7 @@ new JobConstruct(wf, 'build', {
 ### Conditional Steps
 
 ```typescript
-const steps = [
-  checkout('Checkout').toStep(),
-  setupNode('Setup Node').toStep()
-];
+const steps = [checkout('Checkout').toStep(), setupNode('Setup Node').toStep()];
 
 if (stack.config.environment === 'production') {
   steps.push(run('Deploy', 'npm run deploy').toStep());
@@ -308,14 +306,14 @@ new JobConstruct(wf, 'test', {
   'runs-on': 'ubuntu-latest',
   strategy: {
     matrix: {
-      'node-version': ['16', '18', '20']
-    }
+      'node-version': ['16', '18', '20'],
+    },
   },
   steps: [
     setupNode('Setup Node', {
-      'node-version': '${{ matrix.node-version }}'
-    }).toStep()
-  ]
+      'node-version': '${{ matrix.node-version }}',
+    }).toStep(),
+  ],
 });
 ```
 
@@ -326,11 +324,11 @@ new JobConstruct(wf, 'deploy', {
   'runs-on': 'ubuntu-latest',
   env: {
     NODE_ENV: 'production',
-    API_URL: 'https://api.example.com'
+    API_URL: 'https://api.example.com',
   },
   steps: [
     // ... deployment steps
-  ]
+  ],
 });
 ```
 

@@ -33,6 +33,7 @@ dotgithub config show
 Shows the complete `dotgithub.json` configuration in JSON format.
 
 **Example output:**
+
 ```json
 {
   "version": "1.0.0",
@@ -61,9 +62,11 @@ dotgithub config list [options]
 ```
 
 **Options:**
+
 - `--json` - Output as JSON format
 
 **Examples:**
+
 ```bash
 # Human-readable format
 dotgithub config list
@@ -73,6 +76,7 @@ dotgithub config list --json
 ```
 
 **Example output:**
+
 ```
 Tracked actions:
 ================
@@ -95,9 +99,11 @@ dotgithub config set-output-dir <directory>
 ```
 
 **Arguments:**
+
 - `<directory>` - The output directory path
 
 **Examples:**
+
 ```bash
 # Set relative path
 dotgithub config set-output-dir ./actions
@@ -115,9 +121,11 @@ dotgithub config remove <orgRepo>
 ```
 
 **Arguments:**
+
 - `<orgRepo>` - The organization/repository to remove (e.g., `actions/checkout`)
 
 **Examples:**
+
 ```bash
 # Remove specific action
 dotgithub config remove actions/checkout
@@ -137,10 +145,12 @@ dotgithub config init [options]
 ```
 
 **Options:**
+
 - `--output-dir <dir>` - Output directory for actions (default: `.github/actions`)
 - `--format <format>` - Config file format (json, js, yaml, yml) (default: `json`)
 
 **Examples:**
+
 ```bash
 # Initialize with default settings
 dotgithub config init
@@ -160,6 +170,7 @@ dotgithub config init --format js
 DotGitHub supports multiple configuration file formats:
 
 ### JSON (default)
+
 ```json
 {
   "version": "1.0.0",
@@ -169,18 +180,20 @@ DotGitHub supports multiple configuration file formats:
 ```
 
 ### JavaScript
+
 ```javascript
 module.exports = {
-  version: "1.0.0",
-  rootDir: "src",
-  actions: []
+  version: '1.0.0',
+  rootDir: 'src',
+  actions: [],
 };
 ```
 
 ### YAML
+
 ```yaml
-version: "1.0.0"
-rootDir: "src"
+version: '1.0.0'
+rootDir: 'src'
 actions: []
 ```
 
@@ -250,6 +263,7 @@ Stack configuration structure:
 ## Error Handling
 
 The command will fail if:
+
 - Configuration file doesn't exist (except for `init`)
 - Configuration file is invalid JSON
 - Specified action doesn't exist (for `remove`)

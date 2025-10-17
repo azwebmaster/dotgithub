@@ -1,9 +1,9 @@
-import { ActionConstruct } from "@dotgithub/core";
+import { ActionConstruct } from '@dotgithub/core';
 import type {
   GitHubInputValue,
   ActionConstructProps,
   Construct,
-} from "@dotgithub/core";
+} from '@dotgithub/core';
 
 /** Input parameters for the Save a cache action */
 export type SaveACacheSaveInputs = {
@@ -12,7 +12,7 @@ export type SaveACacheSaveInputs = {
   /** An explicit key for saving the cache */
   key: GitHubInputValue;
   /** The chunk size used to split up large files during upload, in bytes */
-  "upload-chunk-size"?: GitHubInputValue;
+  'upload-chunk-size'?: GitHubInputValue;
   /** An optional boolean when enabled, allows windows runners to save caches that can be restored on other platforms | default: "false" */
   enableCrossOsArchive?: GitHubInputValue;
 };
@@ -30,14 +30,14 @@ export class SaveACacheSave extends ActionConstruct<
   SaveACacheSaveInputs,
   SaveACacheSaveOutputsType
 > {
-  protected readonly uses = "actions/cache/save";
-  protected readonly fallbackRef = "0057852bfaa89a56745cba8c7296529d2fc39830";
+  protected readonly uses = 'actions/cache/save';
+  protected readonly fallbackRef = '0057852bfaa89a56745cba8c7296529d2fc39830';
   protected readonly outputs = SaveACacheSaveOutputs;
 
   constructor(
     scope: Construct | undefined,
     id: string,
-    props: ActionConstructProps<SaveACacheSaveInputs>,
+    props: ActionConstructProps<SaveACacheSaveInputs>
   ) {
     super(scope, id, props);
   }

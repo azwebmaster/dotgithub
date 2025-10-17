@@ -9,10 +9,7 @@ import { ActionConstruct } from './action.js';
  * all actions from a specific GitHub organization.
  */
 export abstract class ActionsConstruct extends Construct {
-  constructor(
-    scope: IConstruct | undefined,
-    id: string
-  ) {
+  constructor(scope: IConstruct | undefined, id: string) {
     super(scope, id);
   }
 
@@ -21,7 +18,11 @@ export abstract class ActionsConstruct extends Construct {
    * This is used by generated methods in organization-specific classes.
    */
   protected createActionConstruct<T extends ActionConstruct>(
-    ActionConstructClass: new (scope: IConstruct | undefined, id: string, props: ActionConstructProps<any>) => T,
+    ActionConstructClass: new (
+      scope: IConstruct | undefined,
+      id: string,
+      props: ActionConstructProps<any>
+    ) => T,
     actionName: string,
     props: ActionConstructProps<any>
   ): T {

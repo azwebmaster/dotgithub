@@ -1,5 +1,13 @@
 import * as yaml from 'yaml';
-import type { GitHubWorkflow, GitHubJob, GitHubStep, GitHubEnv, GitHubPermissions, GitHubPermissionsAll, GitHubStepAny } from './types/workflow.js';
+import type {
+  GitHubWorkflow,
+  GitHubJob,
+  GitHubStep,
+  GitHubEnv,
+  GitHubPermissions,
+  GitHubPermissionsAll,
+  GitHubStepAny,
+} from './types/workflow.js';
 
 export interface WorkflowGenerationOptions {
   indentSize?: number;
@@ -7,14 +15,17 @@ export interface WorkflowGenerationOptions {
   skipInvalid?: boolean;
 }
 
-export function generateWorkflowYaml(workflow: GitHubWorkflow, options: WorkflowGenerationOptions = {}): string {
+export function generateWorkflowYaml(
+  workflow: GitHubWorkflow,
+  options: WorkflowGenerationOptions = {}
+): string {
   const yamlOptions: yaml.ToStringOptions = {
     indent: options.indentSize || 2,
     lineWidth: 0,
     minContentWidth: 0,
     simpleKeys: false,
     doubleQuotedAsJSON: false,
-    doubleQuotedMinMultiLineLength: 40
+    doubleQuotedMinMultiLineLength: 40,
   };
 
   const processedWorkflow = processWorkflowForYaml(workflow);
@@ -22,23 +33,22 @@ export function generateWorkflowYaml(workflow: GitHubWorkflow, options: Workflow
   return yaml.stringify(processedWorkflow, yamlOptions);
 }
 
-
 function processWorkflowForYaml(workflow: GitHubWorkflow): any {
   // Create ordered workflow object to control YAML property order
   const processed: any = {};
-  
+
   // Define the desired order for workflow properties
   const workflowOrder = [
     'name',
-    'run-name', 
+    'run-name',
     'on',
     'permissions',
     'env',
     'defaults',
     'concurrency',
-    'jobs'
+    'jobs',
   ];
-  
+
   // Add properties in the specified order
   for (const key of workflowOrder) {
     if (workflow[key as keyof GitHubWorkflow] !== undefined) {
@@ -74,8 +84,13 @@ function processWorkflowOn(on: any): any {
   return processed;
 }
 
-function processPermissions(permissions: GitHubPermissions | GitHubPermissionsAll): any {
-  if (typeof permissions === 'string' || typeof permissions === 'object' && Object.keys(permissions).length === 0) {
+function processPermissions(
+  permissions: GitHubPermissions | GitHubPermissionsAll
+): any {
+  if (
+    typeof permissions === 'string' ||
+    (typeof permissions === 'object' && Object.keys(permissions).length === 0)
+  ) {
     return permissions;
   }
 
@@ -93,8 +108,10 @@ function processPermissions(permissions: GitHubPermissions | GitHubPermissionsAl
   if (perms.discussions) processed.discussions = perms.discussions;
   if (perms.packages) processed.packages = perms.packages;
   if (perms.pages) processed.pages = perms.pages;
-  if (perms['pull-requests']) processed['pull-requests'] = perms['pull-requests'];
-  if (perms['security-events']) processed['security-events'] = perms['security-events'];
+  if (perms['pull-requests'])
+    processed['pull-requests'] = perms['pull-requests'];
+  if (perms['security-events'])
+    processed['security-events'] = perms['security-events'];
   if (perms.statuses) processed.statuses = perms.statuses;
 
   return processed;
@@ -139,11 +156,11 @@ function processJob(job: GitHubJob): any {
     'with',
     'secrets',
     'timeout-minutes',
-    'continue-on-error'
+    'continue-on-error',
   ];
-  
+
   const processed: any = {};
-  
+
   // Add properties in the specified order
   for (const key of jobOrder) {
     if (job[key as keyof GitHubJob] !== undefined) {
@@ -167,7 +184,7 @@ function processJob(job: GitHubJob): any {
 }
 
 function processSteps(steps: GitHubStepAny[]): any[] {
-  return steps.map(step => processStep(step));
+  return steps.map((step) => processStep(step));
 }
 
 function processStep(step: GitHubStepAny): any {
@@ -183,11 +200,11 @@ function processStep(step: GitHubStepAny): any {
     'env',
     'continue-on-error',
     'timeout-minutes',
-    'working-directory'
+    'working-directory',
   ];
-  
+
   const processed: any = {};
-  
+
   // Add properties in the specified order
   for (const key of stepOrder) {
     if (step[key as keyof GitHubStepAny] !== undefined) {
@@ -202,7 +219,9 @@ function processStep(step: GitHubStepAny): any {
   return processed;
 }
 
-export function createWorkflow(config: Partial<GitHubWorkflow>): GitHubWorkflow {
+export function createWorkflow(
+  config: Partial<GitHubWorkflow>
+): GitHubWorkflow {
   if (!config.on) {
     throw new Error('Workflow must specify "on" triggers');
   }
@@ -214,12 +233,12 @@ export function createWorkflow(config: Partial<GitHubWorkflow>): GitHubWorkflow 
   return {
     on: config.on,
     jobs: config.jobs,
-    ...config
+    ...config,
   };
 }
 
 export function createJob(config: Partial<GitHubJob>): GitHubJob {
   return {
-    ...config
+    ...config,
   };
 }

@@ -1,1 +1,1 @@
-export * as actions from "./actions/index.js";
+export * as actions from './actions/index.js';

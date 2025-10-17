@@ -58,6 +58,7 @@ This will overwrite any existing files in the target directory.
 ### dotgithub.json
 
 The main configuration file that tracks:
+
 - Actions to generate
 - Plugin configurations
 - Stack definitions
@@ -66,6 +67,7 @@ The main configuration file that tracks:
 ### package.json
 
 A Node.js package file with:
+
 - TypeScript dependencies
 - Build scripts
 - DotGitHub core dependencies
@@ -73,6 +75,7 @@ A Node.js package file with:
 ### tsconfig.json
 
 TypeScript configuration optimized for:
+
 - ES2022 target
 - ESNext modules
 - Strict type checking
@@ -95,6 +98,7 @@ After running `init`, you typically:
 ## Error handling
 
 The command will fail if:
+
 - Files already exist and `--force` is not specified
 - The output directory cannot be created
 - There are permission issues writing files

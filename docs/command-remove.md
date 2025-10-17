@@ -57,6 +57,7 @@ The `rm` alias works the same as `remove`.
 ## File cleanup
 
 When removing an action (without `--keep-files`), the command deletes:
+
 - The main action TypeScript file
 - Related type definition files
 - Updates organization index files
@@ -65,6 +66,7 @@ When removing an action (without `--keep-files`), the command deletes:
 ## Keep files option
 
 Use `--keep-files` when you want to:
+
 - Remove tracking but keep the generated code
 - Manually manage the TypeScript files
 - Preserve custom modifications to generated files
@@ -73,11 +75,13 @@ Use `--keep-files` when you want to:
 ## Action reference matching
 
 The command matches actions by:
+
 - Repository name (org/repo)
 - Version reference (if specified)
 - Action path (for composite actions)
 
 Examples of valid references:
+
 - `actions/checkout` - Matches any version of checkout
 - `actions/checkout@v4` - Matches specific version
 - `actions/cache/restore` - Matches specific action path
@@ -85,6 +89,7 @@ Examples of valid references:
 ## Error handling
 
 The command will fail if:
+
 - No matching action is found
 - The action reference format is invalid
 - File deletion fails due to permissions
@@ -93,6 +98,7 @@ The command will fail if:
 ## Success output
 
 When successful, the command shows:
+
 ```
 ✅ Removed checkout from tracking
 Deleted generated files: actions/actions/checkout.ts, actions/actions/index.ts
@@ -101,6 +107,7 @@ Deleted generated files: actions/actions/checkout.ts, actions/actions/index.ts
 ## When to use
 
 Use this command to:
+
 - **Clean up unused actions** - Remove actions no longer needed
 - **Reduce bundle size** - Remove unnecessary dependencies
 - **Update dependencies** - Remove old versions before adding new ones

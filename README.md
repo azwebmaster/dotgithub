@@ -1,4 +1,3 @@
-
 # DotGitHub
 
 A powerful TypeScript framework for managing GitHub Actions workflows and configurations. DotGitHub provides a type-safe, plugin-based approach to generating and managing GitHub Actions, making it easier to maintain complex CI/CD pipelines.

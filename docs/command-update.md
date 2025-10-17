@@ -78,11 +78,13 @@ Updates actions and outputs to a custom directory.
 The command uses different strategies for version resolution:
 
 ### Using versionRef (default)
+
 - Follows the stored versionRef pattern (e.g., `v4` → `v4.1.2`)
 - Maintains semantic versioning compatibility
 - Preserves major version boundaries
 
 ### Using --latest
+
 - Finds the absolute latest version available
 - Ignores versionRef constraints
 - May include breaking changes
@@ -90,25 +92,31 @@ The command uses different strategies for version resolution:
 ## Update strategies
 
 ### Conservative updates
+
 ```bash
 dotgithub update
 ```
+
 - Updates within versionRef constraints
 - Maintains compatibility
 - Safe for production use
 
 ### Aggressive updates
+
 ```bash
 dotgithub update --latest
 ```
+
 - Updates to absolute latest
 - May include breaking changes
 - Requires testing
 
 ### Selective updates
+
 ```bash
 dotgithub update actions/checkout
 ```
+
 - Updates only specific actions
 - Allows gradual migration
 - Reduces risk
@@ -130,7 +138,9 @@ The command shows detailed update information:
 The command handles various error scenarios:
 
 ### Partial failures
+
 If some actions fail to update:
+
 ```
 ✅ Successfully updated 1 action(s):
   actions/checkout: v4.1.0 → v4.1.1
@@ -140,6 +150,7 @@ If some actions fail to update:
 ```
 
 ### No updates needed
+
 ```
 No actions needed updating.
 ```
@@ -147,11 +158,13 @@ No actions needed updating.
 ## Authentication
 
 Requires GitHub token for:
+
 - Accessing private repositories
 - Higher rate limits
 - Resolving version references
 
 Set via:
+
 - Environment variable: `GITHUB_TOKEN`
 - Command option: `--token <token>`
 
@@ -166,6 +179,7 @@ Set via:
 ## When to use
 
 Use this command to:
+
 - **Security updates** - Get latest security patches
 - **Bug fixes** - Receive bug fixes and improvements
 - **Feature updates** - Access new functionality

@@ -5,7 +5,7 @@ import type { DotGithubConfig } from './config.js';
 
 // Mock the config module
 vi.mock('./config', () => ({
-  readConfig: vi.fn()
+  readConfig: vi.fn(),
 }));
 
 describe('DotGithubContext', () => {
@@ -25,11 +25,11 @@ describe('DotGithubContext', () => {
           ref: 'abc123',
           versionRef: 'v5',
           functionName: 'checkout',
-          outputPath: 'actions/checkout/checkout.ts'
-        }
+          outputPath: 'actions/checkout/checkout.ts',
+        },
       ],
       plugins: [],
-      stacks: []
+      stacks: [],
     };
 
     // Reset mocks
@@ -40,12 +40,14 @@ describe('DotGithubContext', () => {
     it('should initialize with config and paths', () => {
       const context = new DotGithubContext({
         config: testConfig,
-        configPath: mockConfigPath
+        configPath: mockConfigPath,
       });
 
       expect(context.config).toEqual(testConfig);
       expect(context.configPath).toBe(mockConfigPath);
-      expect(context.outputPath).toBe(path.join(path.dirname(mockConfigPath), testConfig.outputDir));
+      expect(context.outputPath).toBe(
+        path.join(path.dirname(mockConfigPath), testConfig.outputDir)
+      );
     });
   });
 
@@ -53,10 +55,11 @@ describe('DotGithubContext', () => {
     it('should calculate relative path from output directory', () => {
       const context = new DotGithubContext({
         config: testConfig,
-        configPath: mockConfigPath
+        configPath: mockConfigPath,
       });
 
-      const absolutePath = '/mock/project/.github/src/actions/action1/checkout.ts';
+      const absolutePath =
+        '/mock/project/.github/src/actions/action1/checkout.ts';
       const relative = context.relativePath(absolutePath);
 
       expect(relative).toBe('actions/action1/checkout.ts');
@@ -65,7 +68,7 @@ describe('DotGithubContext', () => {
     it('should handle paths outside output directory', () => {
       const context = new DotGithubContext({
         config: testConfig,
-        configPath: mockConfigPath
+        configPath: mockConfigPath,
       });
 
       const absolutePath = '/mock/project/other/file.ts';
@@ -77,7 +80,7 @@ describe('DotGithubContext', () => {
     it('should handle the output directory itself', () => {
       const context = new DotGithubContext({
         config: testConfig,
-        configPath: mockConfigPath
+        configPath: mockConfigPath,
       });
 
       const outputDir = '/mock/project/.github/src';
@@ -91,11 +94,13 @@ describe('DotGithubContext', () => {
     it('should resolve relative paths from output directory', () => {
       const context = new DotGithubContext({
         config: testConfig,
-        configPath: mockConfigPath
+        configPath: mockConfigPath,
       });
 
       const resolved = context.resolvePath('actions/checkout.ts');
-      const expected = path.resolve('/mock/project/.github/src/actions/checkout.ts');
+      const expected = path.resolve(
+        '/mock/project/.github/src/actions/checkout.ts'
+      );
 
       expect(resolved).toBe(expected);
     });
@@ -103,7 +108,7 @@ describe('DotGithubContext', () => {
     it('should handle empty path correctly', () => {
       const context = new DotGithubContext({
         config: testConfig,
-        configPath: mockConfigPath
+        configPath: mockConfigPath,
       });
 
       const resolved = context.resolvePath('');
@@ -115,11 +120,15 @@ describe('DotGithubContext', () => {
     it('should handle nested paths', () => {
       const context = new DotGithubContext({
         config: testConfig,
-        configPath: mockConfigPath
+        configPath: mockConfigPath,
       });
 
-      const resolved = context.resolvePath('actions/github/codeql-action/analyze/action.ts');
-      const expected = path.resolve('/mock/project/.github/src/actions/github/codeql-action/analyze/action.ts');
+      const resolved = context.resolvePath(
+        'actions/github/codeql-action/analyze/action.ts'
+      );
+      const expected = path.resolve(
+        '/mock/project/.github/src/actions/github/codeql-action/analyze/action.ts'
+      );
 
       expect(resolved).toBe(expected);
     });
@@ -127,16 +136,18 @@ describe('DotGithubContext', () => {
     it('should work with different outputDir values', () => {
       const customConfig: DotGithubConfig = {
         ...testConfig,
-        outputDir: 'generated'
+        outputDir: 'generated',
       };
 
       const context = new DotGithubContext({
         config: customConfig,
-        configPath: mockConfigPath
+        configPath: mockConfigPath,
       });
 
       const resolved = context.resolvePath('actions/test.ts');
-      const expected = path.resolve('/mock/project/.github/generated/actions/test.ts');
+      const expected = path.resolve(
+        '/mock/project/.github/generated/actions/test.ts'
+      );
 
       expect(resolved).toBe(expected);
     });
@@ -144,7 +155,7 @@ describe('DotGithubContext', () => {
     it('should handle .. in paths correctly', () => {
       const context = new DotGithubContext({
         config: testConfig,
-        configPath: mockConfigPath
+        configPath: mockConfigPath,
       });
 
       const resolved = context.resolvePath('../other/file.ts');
@@ -164,7 +175,9 @@ describe('DotGithubContext', () => {
       expect(readConfig).toHaveBeenCalledWith(mockConfigPath);
       expect(context.config).toEqual(testConfig);
       expect(context.configPath).toBe(mockConfigPath);
-      expect(context.outputPath).toBe(path.join(path.dirname(mockConfigPath), testConfig.outputDir));
+      expect(context.outputPath).toBe(
+        path.join(path.dirname(mockConfigPath), testConfig.outputDir)
+      );
     });
 
     it('should handle relative config paths', async () => {
@@ -188,7 +201,7 @@ describe('DotGithubContext', () => {
         outputDir: 'src',
         actions: [],
         plugins: [],
-        stacks: []
+        stacks: [],
       };
       vi.mocked(readConfig).mockReturnValue(defaultConfig);
 
@@ -204,7 +217,7 @@ describe('DotGithubContext', () => {
     it('should correctly resolve action paths matching the fixed behavior', () => {
       const context = new DotGithubContext({
         config: testConfig,
-        configPath: mockConfigPath
+        configPath: mockConfigPath,
       });
 
       // Test the scenario from the bug fix
@@ -215,13 +228,15 @@ describe('DotGithubContext', () => {
       // Calculate relative path like in actions-manager.ts
       const relativePath = path.relative(actionPath, filePath);
 
-      expect(relativePath).toBe(path.join('actions', 'checkout', 'checkout.ts'));
+      expect(relativePath).toBe(
+        path.join('actions', 'checkout', 'checkout.ts')
+      );
     });
 
     it('should handle multi-action repos with subdirectories', () => {
       const context = new DotGithubContext({
         config: testConfig,
-        configPath: mockConfigPath
+        configPath: mockConfigPath,
       });
 
       const baseDir = context.resolvePath('');
@@ -231,13 +246,15 @@ describe('DotGithubContext', () => {
 
       const relativePath = path.relative(baseDir, filePath);
 
-      expect(relativePath).toBe(path.join('github', 'codeql-action', 'analyze', 'codeql-analyze.ts'));
+      expect(relativePath).toBe(
+        path.join('github', 'codeql-action', 'analyze', 'codeql-analyze.ts')
+      );
     });
 
     it('should maintain consistent paths across operations', () => {
       const context = new DotGithubContext({
         config: testConfig,
-        configPath: mockConfigPath
+        configPath: mockConfigPath,
       });
 
       // Simulate adding an action
@@ -257,7 +274,7 @@ describe('DotGithubContext', () => {
       const winPath = 'actions\\windows\\path\\file.ts';
       const context = new DotGithubContext({
         config: testConfig,
-        configPath: mockConfigPath
+        configPath: mockConfigPath,
       });
 
       const resolved = context.resolvePath(winPath);
@@ -274,11 +291,13 @@ describe('DotGithubContext', () => {
     it('should handle paths with spaces', () => {
       const context = new DotGithubContext({
         config: testConfig,
-        configPath: mockConfigPath
+        configPath: mockConfigPath,
       });
 
       const resolved = context.resolvePath('actions/my action/with spaces.ts');
-      const expected = path.resolve('/mock/project/.github/src/actions/my action/with spaces.ts');
+      const expected = path.resolve(
+        '/mock/project/.github/src/actions/my action/with spaces.ts'
+      );
 
       expect(resolved).toBe(expected);
     });
@@ -286,12 +305,12 @@ describe('DotGithubContext', () => {
     it('should handle empty outputDir', () => {
       const customConfig: DotGithubConfig = {
         ...testConfig,
-        outputDir: ''
+        outputDir: '',
       };
 
       const context = new DotGithubContext({
         config: customConfig,
-        configPath: mockConfigPath
+        configPath: mockConfigPath,
       });
 
       const resolved = context.resolvePath('actions/test.ts');
@@ -303,12 +322,12 @@ describe('DotGithubContext', () => {
     it('should handle . as outputDir', () => {
       const customConfig: DotGithubConfig = {
         ...testConfig,
-        outputDir: '.'
+        outputDir: '.',
       };
 
       const context = new DotGithubContext({
         config: customConfig,
-        configPath: mockConfigPath
+        configPath: mockConfigPath,
       });
 
       const resolved = context.resolvePath('actions/test.ts');

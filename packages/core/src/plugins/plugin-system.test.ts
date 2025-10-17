@@ -8,7 +8,10 @@ const ciPlugin: DotGitHubPlugin = {
   name: 'ci',
   description: 'CI/CD workflow plugin',
   validate(context) {
-    if (context.config.packageManager && !['npm', 'yarn', 'pnpm', 'bun'].includes(context.config.packageManager)) {
+    if (
+      context.config.packageManager &&
+      !['npm', 'yarn', 'pnpm', 'bun'].includes(context.config.packageManager)
+    ) {
       throw new Error('packageManager must be one of: npm, yarn, pnpm, bun');
     }
   },
@@ -20,12 +23,18 @@ const ciPlugin: DotGitHubPlugin = {
     const buildCommand = config.buildCommand;
     const lintCommand = config.lintCommand;
 
-    const installCmd = packageManager === 'yarn' ? 'yarn install --frozen-lockfile' : `${packageManager} install`;
-    
+    const installCmd =
+      packageManager === 'yarn'
+        ? 'yarn install --frozen-lockfile'
+        : `${packageManager} install`;
+
     const steps: any[] = [
       { uses: 'actions/checkout@v4' },
-      { uses: 'actions/setup-node@v4', with: { 'node-version': '${{ matrix.node-version }}' } },
-      { run: installCmd }
+      {
+        uses: 'actions/setup-node@v4',
+        with: { 'node-version': '${{ matrix.node-version }}' },
+      },
+      { run: installCmd },
     ];
 
     if (lintCommand) {
@@ -44,12 +53,12 @@ const ciPlugin: DotGitHubPlugin = {
           'runs-on': ['ubuntu-latest'],
           strategy: {
             matrix: {
-              'node-version': nodeVersions
-            }
+              'node-version': nodeVersions,
+            },
           },
-          steps
-        }
-      }
+          steps,
+        },
+      },
     });
 
     stack.setMetadata('ci', {
@@ -58,9 +67,9 @@ const ciPlugin: DotGitHubPlugin = {
       packageManager,
       hasTests: true,
       hasBuild: !!buildCommand,
-      hasLint: !!lintCommand
+      hasLint: !!lintCommand,
     });
-  }
+  },
 };
 
 const releasePlugin: DotGitHubPlugin = {
@@ -69,7 +78,7 @@ const releasePlugin: DotGitHubPlugin = {
   dependencies: ['ci'],
   synthesize(context) {
     const { stack } = context;
-    
+
     stack.addWorkflow('release', {
       name: 'Release',
       on: { push: { branches: ['main'] } },
@@ -80,12 +89,12 @@ const releasePlugin: DotGitHubPlugin = {
             { uses: 'actions/checkout@v4' },
             { uses: 'actions/setup-node@v4', with: { 'node-version': '20' } },
             { run: 'npm install' },
-            { run: 'npx release-it' }
-          ]
-        }
-      }
+            { run: 'npx release-it' },
+          ],
+        },
+      },
     });
-  }
+  },
 };
 
 describe('Plugin System', () => {
@@ -105,23 +114,25 @@ describe('Plugin System', () => {
           package: '@dotgithub/plugin-ci',
           config: {
             nodeVersions: ['18', '20'],
-            testCommand: 'bun test'
-          }
-        }
+            testCommand: 'bun test',
+          },
+        },
       ];
 
       // Mock the resolver to return our built-in plugin
       const originalResolver = (manager as any).resolver;
       (manager as any).resolver = {
-        resolvePlugins: async () => [{
-          plugin: ciPlugin,
-          config: pluginConfigs[0],
-          resolved: true
-        }]
+        resolvePlugins: async () => [
+          {
+            plugin: ciPlugin,
+            config: pluginConfigs[0],
+            resolved: true,
+          },
+        ],
       };
 
       const results = await manager.loadPlugins(pluginConfigs);
-      
+
       expect(results).toHaveLength(1);
       expect(results[0].resolved).toBe(true);
       expect(results[0].plugin.name).toBe('ci');
@@ -137,28 +148,34 @@ describe('Plugin System', () => {
           config: {
             nodeVersions: ['18', '20'],
             testCommand: 'bun test',
-            buildCommand: 'bun run build'
-          }
-        }
+            buildCommand: 'bun run build',
+          },
+        },
       ];
 
       const stackConfig: StackConfig = {
         name: 'test-stack',
-        plugins: ['ci']
+        plugins: ['ci'],
       };
 
       // Mock the resolver to return our built-in plugin
       const originalResolver = (manager as any).resolver;
       (manager as any).resolver = {
-        resolvePlugins: async () => [{
-          plugin: ciPlugin,
-          config: pluginConfigs[0],
-          resolved: true
-        }]
+        resolvePlugins: async () => [
+          {
+            plugin: ciPlugin,
+            config: pluginConfigs[0],
+            resolved: true,
+          },
+        ],
       };
 
       await manager.loadPlugins(pluginConfigs);
-      const results = await manager.executePluginsForStack(stack, stackConfig, pluginConfigs);
+      const results = await manager.executePluginsForStack(
+        stack,
+        stackConfig,
+        pluginConfigs
+      );
 
       expect(results).toHaveLength(1);
       expect(results[0].success).toBe(true);
@@ -168,7 +185,7 @@ describe('Plugin System', () => {
       // Check that the plugin added a workflow
       const workflows = stack.workflows;
       expect(Object.keys(workflows)).toContain('ci');
-      
+
       const ciWorkflow = workflows.ci;
       expect(ciWorkflow.name).toBe('CI');
       expect(ciWorkflow.jobs).toHaveProperty('test');
@@ -187,22 +204,24 @@ describe('Plugin System', () => {
         {
           name: 'release',
           package: '@dotgithub/plugin-release',
-          config: {}
-        }
+          config: {},
+        },
       ];
 
       const stackConfig: StackConfig = {
         name: 'test-stack',
-        plugins: ['release'] // Missing 'ci' dependency
+        plugins: ['release'], // Missing 'ci' dependency
       };
 
       // Mock the resolver to return the release plugin
       (manager as any).resolver = {
-        resolvePlugins: async () => [{
-          plugin: releasePlugin,
-          config: pluginConfigs[0],
-          resolved: true
-        }]
+        resolvePlugins: async () => [
+          {
+            plugin: releasePlugin,
+            config: pluginConfigs[0],
+            resolved: true,
+          },
+        ],
       };
 
       await manager.loadPlugins(pluginConfigs);
@@ -218,23 +237,25 @@ describe('Plugin System', () => {
           name: 'ci',
           package: '@dotgithub/plugin-ci',
           config: {
-            packageManager: 'invalid' // Invalid package manager
-          }
-        }
+            packageManager: 'invalid', // Invalid package manager
+          },
+        },
       ];
 
       const stackConfig: StackConfig = {
         name: 'test-stack',
-        plugins: ['ci']
+        plugins: ['ci'],
       };
 
       // Mock the resolver
       (manager as any).resolver = {
-        resolvePlugins: async () => [{
-          plugin: ciPlugin,
-          config: pluginConfigs[0],
-          resolved: true
-        }]
+        resolvePlugins: async () => [
+          {
+            plugin: ciPlugin,
+            config: pluginConfigs[0],
+            resolved: true,
+          },
+        ],
       };
 
       await manager.loadPlugins(pluginConfigs);
@@ -252,14 +273,14 @@ describe('Plugin System', () => {
           stack,
           config: {},
           stackConfig: { name: 'test', plugins: ['ci'] },
-          projectRoot: '/tmp'
+          projectRoot: '/tmp',
         };
 
         ciPlugin.synthesize(context);
 
         const workflows = stack.workflows;
         expect(Object.keys(workflows)).toContain('ci');
-        
+
         const ciWorkflow = workflows.ci;
         expect(ciWorkflow.name).toBe('CI');
         expect(ciWorkflow.on).toHaveProperty('push');
@@ -280,24 +301,24 @@ describe('Plugin System', () => {
             packageManager: 'yarn',
             testCommand: 'yarn test:ci',
             buildCommand: 'yarn build',
-            lintCommand: 'yarn lint'
+            lintCommand: 'yarn lint',
           },
           stackConfig: { name: 'test', plugins: ['ci'] },
-          projectRoot: '/tmp'
+          projectRoot: '/tmp',
         };
 
         ciPlugin.synthesize(context);
 
         const ciWorkflow = stack.workflows.ci;
         const testJob = ciWorkflow.jobs.test;
-        
+
         expect(testJob.strategy?.matrix['node-version']).toEqual(['16', '18']);
         expect(testJob.steps).toEqual(
           expect.arrayContaining([
             expect.objectContaining({ run: 'yarn install --frozen-lockfile' }),
             expect.objectContaining({ run: 'yarn lint' }),
             expect.objectContaining({ run: 'yarn build' }),
-            expect.objectContaining({ run: 'yarn test:ci' })
+            expect.objectContaining({ run: 'yarn test:ci' }),
           ])
         );
 
@@ -317,21 +338,21 @@ describe('Plugin System', () => {
           stack,
           config: {},
           stackConfig: { name: 'test', plugins: ['ci', 'release'] },
-          projectRoot: '/tmp'
+          projectRoot: '/tmp',
         });
 
         const context = {
           stack,
           config: {},
           stackConfig: { name: 'test', plugins: ['ci', 'release'] },
-          projectRoot: '/tmp'
+          projectRoot: '/tmp',
         };
 
         releasePlugin.synthesize(context);
 
         const workflows = stack.workflows;
         expect(Object.keys(workflows)).toContain('release');
-        
+
         const releaseWorkflow = workflows.release;
         expect(releaseWorkflow.name).toBe('Release');
         expect(releaseWorkflow.on).toHaveProperty('push');
@@ -339,10 +360,17 @@ describe('Plugin System', () => {
 
         const releaseJob = releaseWorkflow.jobs.release;
         expect(releaseJob['runs-on']).toEqual(['ubuntu-latest']);
-        
+
         const steps = releaseJob.steps;
-        expect(steps.some((step: any) => step.uses && step.uses.startsWith('actions/checkout@'))).toBe(true);
-        expect(steps.some((step: any) => step.run === 'npx release-it')).toBe(true);
+        expect(
+          steps.some(
+            (step: any) =>
+              step.uses && step.uses.startsWith('actions/checkout@')
+          )
+        ).toBe(true);
+        expect(steps.some((step: any) => step.run === 'npx release-it')).toBe(
+          true
+        );
       });
     });
   });

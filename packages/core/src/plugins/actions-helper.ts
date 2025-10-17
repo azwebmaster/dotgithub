@@ -1,6 +1,12 @@
-import { createStep, run } from '../actions.js';
+import { createStep, RunStep } from '../actions.js';
 import type { GitHubStack } from '../constructs/base.js';
-import type { GitHubStep, GitHubStepWith, GitHubStepRun, GitHubSteps, GitHubStepAny } from '../types/workflow.js';
+import type {
+  GitHubStep,
+  GitHubStepWith,
+  GitHubStepRun,
+  GitHubSteps,
+  GitHubStepAny,
+} from '../types/workflow.js';
 import { GitHubOutputValue } from './index.js';
 
 /**
@@ -22,18 +28,20 @@ export class StepChainBuilder<TOutputs = any> {
    */
   private createOutputs<TOutputs>(stepId: string, outputs: TOutputs): TOutputs {
     const result = {} as TOutputs;
-    
+
     for (const [key, output] of Object.entries(outputs as any)) {
       if (output instanceof GitHubOutputValue) {
         // Create a new GitHubOutputValue with the step-specific path
-        const newOutput = new GitHubOutputValue(`step.${stepId}.outputs.${key}`);
+        const newOutput = new GitHubOutputValue(
+          `step.${stepId}.outputs.${key}`
+        );
         (result as any)[key] = newOutput;
       } else {
         // Preserve non-GitHubOutputValue outputs as-is
         (result as any)[key] = output;
       }
     }
-    
+
     return result;
   }
 
@@ -55,7 +63,6 @@ export class StepChainBuilder<TOutputs = any> {
     return this;
   }
 
-
   /**
    * Finalizes the step chain and returns all steps
    * @returns Array of all steps in the chain
@@ -69,7 +76,7 @@ export class StepChainBuilder<TOutputs = any> {
    * @returns Outputs instance.
    */
   get outputs(): TOutputs {
-    return this.createOutputs(this._initialStep.id ?? '' , this._outputs);
+    return this.createOutputs(this._initialStep.id ?? '', this._outputs);
   }
 
   /**
@@ -106,21 +113,6 @@ export class ActionsHelper {
   }
 
   /**
-   * Creates a run step for executing shell commands
-   * @param name - The name of the step
-   * @param script - The shell script to execute
-   * @param step - Additional step configuration
-   * @returns A GitHub run step
-   */
-  run<T extends Partial<Omit<GitHubStepRun, "run" | "name">>>(
-    name: string,
-    script: string, 
-    step?: T
-  ): GitHubStepRun {
-    return run(name, script, step);
-  }
-
-  /**
    * Invokes a GitHub Action by resolving the correct ref from config and creating a step
    * @param uses - The action to use (e.g., "actions/checkout")
    * @param inputs - Input parameters for the action
@@ -131,13 +123,18 @@ export class ActionsHelper {
   invokeAction<T extends GitHubStepWith>(
     uses: string,
     inputs?: T,
-    step?: Partial<Omit<GitHubStep<T>, "uses">>,
+    step?: Partial<Omit<GitHubStep<T>, 'uses'>>,
     ref?: string
   ): GitHubStep<T> {
-    return createStep(uses, {
-      with: inputs,
-      ...step
-    }, ref, this.stack);
+    return createStep(
+      uses,
+      {
+        with: inputs,
+        ...step,
+      },
+      ref,
+      this.stack
+    );
   }
 
   /**
@@ -151,9 +148,11 @@ export class ActionsHelper {
     if (actionOverride) {
       return { orgRepo: uses, ref: actionOverride };
     }
-    
+
     // Fallback to looking up in the actions array (if it exists)
-    return this.stack.config?.actions?.find((action: any) => action.orgRepo === uses);
+    return this.stack.config?.actions?.find(
+      (action: any) => action.orgRepo === uses
+    );
   }
 
   /**
@@ -167,12 +166,14 @@ export class ActionsHelper {
   }
 
   /**
-   * Creates a step chain builder for chaining steps with output handling
-   * @param initialStep - The first step in the chain
-   * @param outputs - Optional outputs from the initial step
-   * @returns A StepChainBuilder instance
+   * Creates a run step with the specified name and script
+   * @param name - The name of the step
+   * @param script - The shell script to execute
+   * @param step - Additional step configuration options
+   * @param outputs - Optional outputs from the run step
+   * @returns A RunStep instance that provides toStep() and then() methods
    */
-  stepChain<T extends GitHubStepAny>(initialStep: GitHubStepAny, outputs?: any): StepChainBuilder<T> {
-    return new StepChainBuilder<T>(initialStep, outputs || {});
+  run<TOutputs = Record<string, GitHubOutputValue>>(name: string, script: string, step?: Partial<Omit<GitHubStepRun, "run" | "name">>, outputs?: TOutputs): RunStep<TOutputs> {
+    return new RunStep<TOutputs>(name, script, step, outputs || ({} as TOutputs));
   }
 }

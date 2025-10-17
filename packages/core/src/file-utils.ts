@@ -9,17 +9,16 @@ import { Project, SourceFile, SyntaxKind } from 'ts-morph';
 function toPascalCase(str: string): string {
   return str
     .split(/[-_\s]+/)
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join('');
 }
-
 
 /**
  * Gets all actions in a directory by scanning for .ts files
  */
 async function getAllActionsInDirectory(orgDir: string): Promise<string[]> {
   const actions: string[] = [];
-  
+
   // Scan for .ts files in the org directory
   const files = fs.readdirSync(orgDir);
   for (const file of files) {
@@ -29,7 +28,9 @@ async function getAllActionsInDirectory(orgDir: string): Promise<string[]> {
       const actionFilePath = path.join(orgDir, file);
       if (fs.existsSync(actionFilePath)) {
         const content = fs.readFileSync(actionFilePath, 'utf8');
-        const ActionName = actionName.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase()).replace(/^./, letter => letter.toUpperCase());
+        const ActionName = actionName
+          .replace(/-([a-z])/g, (_, letter) => letter.toUpperCase())
+          .replace(/^./, (letter) => letter.toUpperCase());
         // Check if the file exports the action class
         if (content.includes(`export class ${ActionName}`)) {
           actions.push(actionName);
@@ -37,27 +38,40 @@ async function getAllActionsInDirectory(orgDir: string): Promise<string[]> {
       }
     }
   }
-  
+
   return actions;
 }
 
 /**
  * Generates a full collection class with all actions
  */
-function generateFullCollectionClass(orgName: string, actions: string[]): string {
-  const imports = actions.map(action => {
-    const className = action.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase()).replace(/^./, letter => letter.toUpperCase());
-    return `import { ${className} } from "./${action}.js";`;
-  }).join('\n');
-  
-  const methodAssignments = actions.map(action => {
-    const className = action.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase()).replace(/^./, letter => letter.toUpperCase());
-    const methodName = action.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase()).replace(/^./, letter => letter.toLowerCase());
-    return `  ${methodName}(id: string, props: ActionConstructProps<any>) {
+function generateFullCollectionClass(
+  orgName: string,
+  actions: string[]
+): string {
+  const imports = actions
+    .map((action) => {
+      const className = action
+        .replace(/-([a-z])/g, (_, letter) => letter.toUpperCase())
+        .replace(/^./, (letter) => letter.toUpperCase());
+      return `import { ${className} } from "./${action}.js";`;
+    })
+    .join('\n');
+
+  const methodAssignments = actions
+    .map((action) => {
+      const className = action
+        .replace(/-([a-z])/g, (_, letter) => letter.toUpperCase())
+        .replace(/^./, (letter) => letter.toUpperCase());
+      const methodName = action
+        .replace(/-([a-z])/g, (_, letter) => letter.toUpperCase())
+        .replace(/^./, (letter) => letter.toLowerCase());
+      return `  ${methodName}(id: string, props: ActionConstructProps<any>) {
     return this.createActionConstruct(${className}, id, props);
   }`;
-  }).join('\n\n');
-  
+    })
+    .join('\n\n');
+
   return `import { ActionCollection } from '@dotgithub/core';
 import type { ActionConstructProps } from '@dotgithub/core';
 ${imports}
@@ -70,31 +84,41 @@ ${methodAssignments}
 /**
  * Generates method bindings for ActionCollection from a folder of actions
  */
-async function generateActionCollectionMethods(repoFolder: string): Promise<string> {
+async function generateActionCollectionMethods(
+  repoFolder: string
+): Promise<string> {
   const indexPath = path.join(repoFolder, 'index.ts');
-  
+
   if (!fs.existsSync(indexPath)) {
     return '';
   }
-  
+
   const indexContent = fs.readFileSync(indexPath, 'utf8');
-  
+
   // Extract exported class names from the index file
-  const exportMatches = indexContent.match(/export\s+class\s+(\w+)\s+extends\s+ActionConstruct/g);
+  const exportMatches = indexContent.match(
+    /export\s+class\s+(\w+)\s+extends\s+ActionConstruct/g
+  );
   if (!exportMatches) {
     return '';
   }
-  
-  const methodAssignments = exportMatches.map(match => {
-    const nameMatch = match.match(/export\s+class\s+(\w+)\s+extends\s+ActionConstruct/);
-    if (!nameMatch || !nameMatch[1]) return '';
-    const className = nameMatch[1];
-    const methodName = className.replace(/^./, letter => letter.toLowerCase());
-    return `  ${methodName}(id: string, props: ActionConstructProps<any>) {
+
+  const methodAssignments = exportMatches
+    .map((match) => {
+      const nameMatch = match.match(
+        /export\s+class\s+(\w+)\s+extends\s+ActionConstruct/
+      );
+      if (!nameMatch || !nameMatch[1]) return '';
+      const className = nameMatch[1];
+      const methodName = className.replace(/^./, (letter) =>
+        letter.toLowerCase()
+      );
+      return `  ${methodName}(id: string, props: ActionConstructProps<any>) {
     return this.createActionConstruct(${className}, id, props);
   }`;
-  }).join('\n\n');
-  
+    })
+    .join('\n\n');
+
   return methodAssignments;
 }
 
@@ -119,9 +143,12 @@ export async function formatWithPrettier(code: string): Promise<string> {
  * @param orgDir - Organization directory path
  * @param repoName - Repository name (folder name or file name)
  */
-export async function updateOrgIndexFile(orgDir: string, repoName: string): Promise<void> {
+export async function updateOrgIndexFile(
+  orgDir: string,
+  repoName: string
+): Promise<void> {
   const indexPath = path.join(orgDir, 'index.ts');
-  
+
   // Extract org name from the directory path
   const orgName = path.basename(orgDir);
 
@@ -132,7 +159,9 @@ export async function updateOrgIndexFile(orgDir: string, repoName: string): Prom
   let exportStatement: string;
   if (fs.existsSync(singleActionFile)) {
     // Single action at root - create ActionCollection
-    const functionName = repoName.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase()).replace(/^./, letter => letter.toLowerCase());
+    const functionName = repoName
+      .replace(/-([a-z])/g, (_, letter) => letter.toUpperCase())
+      .replace(/^./, (letter) => letter.toLowerCase());
     exportStatement = `import { ActionCollection } from '@dotgithub/core';
 import { ${functionName} } from './${repoName}.js';
 
@@ -167,14 +196,19 @@ export class ${toPascalCase(orgName)}Collection extends ActionCollection {
  * @param outputDir - Root output directory path
  * @param orgName - Organization name (folder name)
  */
-export async function updateRootIndexFile(outputDir: string, orgName: string): Promise<void> {
+export async function updateRootIndexFile(
+  outputDir: string,
+  orgName: string
+): Promise<void> {
   const indexPath = path.join(outputDir, 'index.ts');
   const exportStatement = `export * from './${orgName}/index.js';\n`;
-  
+
   if (fs.existsSync(indexPath)) {
     const existingContent = fs.readFileSync(indexPath, 'utf8');
     // Check if the export already exists to avoid duplicates
-    const exportPattern = new RegExp(`export\\s*\\*\\s*from\\s*['"]\\./${orgName}/index\\.js['"]`);
+    const exportPattern = new RegExp(
+      `export\\s*\\*\\s*from\\s*['"]\\./${orgName}/index\\.js['"]`
+    );
     if (!exportPattern.test(existingContent)) {
       const newContent = existingContent + exportStatement;
       const formattedContent = await formatWithPrettier(newContent);
@@ -191,7 +225,10 @@ export async function updateRootIndexFile(outputDir: string, orgName: string): P
  * @param outputDir - Root output directory path
  * @param orgName - Organization name (folder name)
  */
-export async function updateIndexFilesAfterRemoval(outputDir: string, orgName: string): Promise<void> {
+export async function updateIndexFilesAfterRemoval(
+  outputDir: string,
+  orgName: string
+): Promise<void> {
   const orgDir = path.join(outputDir, orgName);
 
   // Check if org directory still has any repos
@@ -199,12 +236,12 @@ export async function updateIndexFilesAfterRemoval(outputDir: string, orgName: s
     const items = fs.readdirSync(orgDir);
 
     // Find repo directories and single action files
-    const repoDirs = items.filter(item => {
+    const repoDirs = items.filter((item) => {
       const itemPath = path.join(orgDir, item);
       return fs.statSync(itemPath).isDirectory();
     });
 
-    const repoFiles = items.filter(item => {
+    const repoFiles = items.filter((item) => {
       return item.endsWith('.ts') && item !== 'index.ts';
     });
 
@@ -223,8 +260,8 @@ export async function updateIndexFilesAfterRemoval(outputDir: string, orgName: s
       if (fs.existsSync(rootIndexPath)) {
         const content = fs.readFileSync(rootIndexPath, 'utf8');
         const lines = content.split('\n');
-        const filteredLines = lines.filter(line =>
-          !line.includes(`export * from './${orgName}/index.js'`)
+        const filteredLines = lines.filter(
+          (line) => !line.includes(`export * from './${orgName}/index.js'`)
         );
         const newContent = filteredLines.join('\n');
         const formattedContent = await formatWithPrettier(newContent);
@@ -237,13 +274,17 @@ export async function updateIndexFilesAfterRemoval(outputDir: string, orgName: s
 
       // Add exports for directories
       for (const repoDir of repoDirs) {
-        exportStatements.push(`export * as ${sanitizeVarName(repoDir)} from './${repoDir}/index.js';`);
+        exportStatements.push(
+          `export * as ${sanitizeVarName(repoDir)} from './${repoDir}/index.js';`
+        );
       }
 
       // Add exports for single action files
       for (const repoFile of repoFiles) {
         const repoName = repoFile.replace('.ts', '');
-        exportStatements.push(`export * as ${sanitizeVarName(repoName)} from './${repoName}.js';`);
+        exportStatements.push(
+          `export * as ${sanitizeVarName(repoName)} from './${repoName}.js';`
+        );
       }
 
       const content = exportStatements.join('\n') + '\n';
@@ -316,7 +357,7 @@ export function addImportsToGeneratedTypes(generatedTypes: string): string {
 
   // Remove all existing import declarations to avoid duplicates
   const existingImports = sourceFile.getImportDeclarations();
-  existingImports.forEach(importDecl => importDecl.remove());
+  existingImports.forEach((importDecl) => importDecl.remove());
 
   // Analyze the generated code to determine which imports are actually used
   const usedImports = analyzeUsedImports(sourceFile);
@@ -332,7 +373,7 @@ export function addImportsToGeneratedTypes(generatedTypes: string): string {
   if (usedImports.has('ActionConstruct')) {
     valueImports.push('ActionConstruct');
   }
-  
+
   if (valueImports.length > 0) {
     sourceFile.addImportDeclaration({
       moduleSpecifier: '@dotgithub/core',
@@ -341,9 +382,19 @@ export function addImportsToGeneratedTypes(generatedTypes: string): string {
   }
 
   // Add type-only imports that are used
-  const typeImports = ['GitHubStep', 'GitHubStepBase', 'GitHubStepAction', 'GitHubInputValue', 'ActionInvocationResult', 'DotGithubConfig', 'PluginContext', 'ActionConstructProps', 'Construct'];
-  const usedTypeImports = typeImports.filter(imp => usedImports.has(imp));
-  
+  const typeImports = [
+    'GitHubStep',
+    'GitHubStepBase',
+    'GitHubStepAction',
+    'GitHubInputValue',
+    'ActionInvocationResult',
+    'DotGithubConfig',
+    'PluginContext',
+    'ActionConstructProps',
+    'Construct',
+  ];
+  const usedTypeImports = typeImports.filter((imp) => usedImports.has(imp));
+
   if (usedTypeImports.length > 0) {
     sourceFile.addImportDeclaration({
       moduleSpecifier: '@dotgithub/core',
@@ -378,17 +429,17 @@ export function addImportsToGeneratedTypes(generatedTypes: string): string {
  */
 function analyzeUsedImports(sourceFile: SourceFile): Set<string> {
   const usedImports = new Set<string>();
-  
+
   // Get all identifiers in the source file
   const identifiers = sourceFile.getDescendantsOfKind(SyntaxKind.Identifier);
-  
+
   for (const identifier of identifiers) {
     const text = identifier.getText();
-    
+
     // Check if this identifier matches any of our potential imports
     const potentialImports = [
       'GitHubStep',
-      'GitHubStepBase', 
+      'GitHubStepBase',
       'GitHubStepAction',
       'GitHubInputValue',
       'GitHubAction',
@@ -400,13 +451,13 @@ function analyzeUsedImports(sourceFile: SourceFile): Set<string> {
       'ActionCollection',
       'ActionConstruct',
       'ActionConstructProps',
-      'Construct'
+      'Construct',
     ];
-    
+
     if (potentialImports.includes(text)) {
       usedImports.add(text);
     }
   }
-  
+
   return usedImports;
 }

@@ -64,7 +64,9 @@ describe('generateTypesFromYml', () => {
       },
     };
     const code = generateTypesFromYml(ymlOptionalInputs);
-    expect(code).toContain('export function optionalTest(this: ActionCollection, inputs?: OptionalTestInputs,');
+    expect(code).toContain(
+      'export function optionalTest(this: ActionCollection, inputs?: OptionalTestInputs,'
+    );
   });
 
   it('makes inputs required when any input is required', () => {
@@ -77,7 +79,9 @@ describe('generateTypesFromYml', () => {
       },
     };
     const code = generateTypesFromYml(ymlRequiredInputs);
-    expect(code).toContain('export function requiredTest(this: ActionCollection, inputs?: RequiredTestInputs,');
+    expect(code).toContain(
+      'export function requiredTest(this: ActionCollection, inputs?: RequiredTestInputs,'
+    );
   });
 
   it('uses different refs for createStep and comment URL when versionRef is provided', () => {
@@ -88,7 +92,12 @@ describe('generateTypesFromYml', () => {
         foo: { required: true },
       },
     };
-    const code = generateTypesFromYml(ymlSample, 'actions/version-test', 'abc123sha', 'v4');
+    const code = generateTypesFromYml(
+      ymlSample,
+      'actions/version-test',
+      'abc123sha',
+      'v4'
+    );
     expect(code).toContain('fallbackRef: "abc123sha"');
   });
 
@@ -104,12 +113,17 @@ describe('generateTypesFromYml', () => {
         test: { required: true },
       },
     };
-    
+
     // When called with finalRef (SHA) as ref and resolvedRef (v4) as versionRef:
-    // - Should clone using resolvedRef (v4) 
+    // - Should clone using resolvedRef (v4)
     // - Should use finalRef (SHA) in createStep
     // - Should use resolvedRef (v4) in comments
-    const code = generateTypesFromYml(ymlSample, 'actions/clone-test', 'sha123abc', 'v4');
+    const code = generateTypesFromYml(
+      ymlSample,
+      'actions/clone-test',
+      'sha123abc',
+      'v4'
+    );
     expect(code).toContain('fallbackRef: "sha123abc"');
   });
 
@@ -130,8 +144,8 @@ describe('generateTypesFromYml', () => {
       description: 'Test output comment escaping',
       outputs: {
         result: {
-          description: 'Output with */ comment terminator'
-        }
+          description: 'Output with */ comment terminator',
+        },
       },
     };
     const code = generateTypesFromYml(ymlWithOutputComment);
@@ -144,30 +158,38 @@ describe('generateTypesFromYml', () => {
       description: 'This is a test action that does something useful',
       inputs: {
         param1: { required: true, description: 'First parameter' },
-        param2: { required: false, description: 'Second parameter' }
-      }
+        param2: { required: false, description: 'Second parameter' },
+      },
     };
     const code = generateTypesFromYml(ymlWithDescription);
-    
+
     // Check that JSDoc includes action description
-    expect(code).toContain('* This is a test action that does something useful');
-    
+    expect(code).toContain(
+      '* This is a test action that does something useful'
+    );
+
     // Check that JSDoc includes proper parameter documentation
-    expect(code).toContain('* @param inputs - Input parameters for the test-action action');
-    expect(code).toContain('* @param stepOptions - Additional step configuration options');
+    expect(code).toContain(
+      '* @param inputs - Input parameters for the test-action action'
+    );
+    expect(code).toContain(
+      '* @param stepOptions - Additional step configuration options'
+    );
     expect(code).toContain('* @param ref - Optional git reference override');
-    expect(code).toContain('* @returns ActionInvocationResult with step and outputs');
+    expect(code).toContain(
+      '* @returns ActionInvocationResult with step and outputs'
+    );
   });
 
   it('generates JSDoc for actions without description', () => {
     const ymlWithoutDescription: GitHubActionYml = {
       name: 'no-description-action',
       inputs: {
-        param: { required: true }
-      }
+        param: { required: true },
+      },
     };
     const code = generateTypesFromYml(ymlWithoutDescription);
-    
+
     // Should use fallback description
     expect(code).toContain('* NoDescriptionAction action');
   });
@@ -177,13 +199,19 @@ describe('generateTypesFromYml', () => {
       name: 'test-action',
       description: 'Test action with custom repo',
       inputs: {
-        param: { required: true }
-      }
+        param: { required: true },
+      },
     };
-    const code = generateTypesFromYml(ymlWithCustomRepo, 'custom-org/custom-repo', 'v2.1.0');
-    
+    const code = generateTypesFromYml(
+      ymlWithCustomRepo,
+      'custom-org/custom-repo',
+      'v2.1.0'
+    );
+
     // Should include GitHub link with custom repo and ref
-    expect(code).toContain('* @see {@link https://github.com/custom-org/custom-repo/tree/v2.1.0} - GitHub repository and documentation');
+    expect(code).toContain(
+      '* @see {@link https://github.com/custom-org/custom-repo/tree/v2.1.0} - GitHub repository and documentation'
+    );
   });
 
   it('uses versionRef for GitHub link when provided', () => {
@@ -191,13 +219,20 @@ describe('generateTypesFromYml', () => {
       name: 'version-test',
       description: 'Test version ref',
       inputs: {
-        foo: { required: true }
-      }
+        foo: { required: true },
+      },
     };
-    const code = generateTypesFromYml(ymlSample, 'actions/version-test', 'abc123sha', 'v4');
-    
+    const code = generateTypesFromYml(
+      ymlSample,
+      'actions/version-test',
+      'abc123sha',
+      'v4'
+    );
+
     // Should use versionRef (v4) for the GitHub link, not the SHA
-    expect(code).toContain('* @see {@link https://github.com/actions/version-test/tree/v4} - GitHub repository and documentation');
+    expect(code).toContain(
+      '* @see {@link https://github.com/actions/version-test/tree/v4} - GitHub repository and documentation'
+    );
   });
 
   it('includes all necessary imports', () => {
@@ -206,18 +241,22 @@ describe('generateTypesFromYml', () => {
       description: 'Action with all features',
       inputs: {
         param1: { required: true, description: 'First parameter' },
-        param2: { required: false, description: 'Second parameter' }
+        param2: { required: false, description: 'Second parameter' },
       },
       outputs: {
-        result: { description: 'The result' }
-      }
+        result: { description: 'The result' },
+      },
     };
     const code = generateTypesFromYml(ymlWithAllFeatures);
-    
+
     // Should include all necessary imports
-    expect(code).toContain('import { GitHubOutputValue } from "@dotgithub/core";');
-    expect(code).toContain('import type { GitHubStepAction, GitHubInputValue, ActionInvocationResult, ActionCollection } from "@dotgithub/core";');
-    
+    expect(code).toContain(
+      'import { GitHubOutputValue } from "@dotgithub/core";'
+    );
+    expect(code).toContain(
+      'import type { GitHubStepAction, GitHubInputValue, ActionInvocationResult, ActionCollection } from "@dotgithub/core";'
+    );
+
     // Should not have any missing imports that would cause TypeScript errors
     expect(code).toContain('): ActionInvocationResult<');
     expect(code).toContain('this: ActionCollection');

@@ -12,10 +12,12 @@ class Logger {
   private pretty: boolean;
 
   constructor(options: LoggerOptions = {}) {
-    this.isCli = typeof process !== 'undefined' && (process.stdout.isTTY === true);
-    this.pretty = options.pretty === true || (options.pretty !== false && this.isCli);
+    this.isCli =
+      typeof process !== 'undefined' && process.stdout.isTTY === true;
+    this.pretty =
+      options.pretty === true || (options.pretty !== false && this.isCli);
     this.level = options.level || (this.isCli ? 'info' : 'warn');
-    
+
     if (options.silent) {
       this.level = 'silent' as LogLevel;
     }
@@ -37,9 +39,9 @@ class Logger {
         info: '', // No icon for info logs
         warn: '⚠️',
         error: '❌',
-        fatal: '💀'
+        fatal: '💀',
       }[level];
-      
+
       let output = levelEmoji ? `${levelEmoji} ${message}` : message;
       if (data && Object.keys(data).length > 0) {
         output += ` ${JSON.stringify(data, null, 2)}`;
@@ -50,7 +52,7 @@ class Logger {
         level,
         time: new Date().toISOString(),
         msg: message,
-        ...data
+        ...data,
       };
       return JSON.stringify(logEntry);
     }

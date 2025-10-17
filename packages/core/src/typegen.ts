@@ -1,17 +1,29 @@
-
-import type { GitHubActionInput, GitHubActionOutput, GitHubActionYml, GitHubInputValue } from './types/common.js';
-import type { GitHubStepBase, GitHubStep, GitHubStepAction } from './types/workflow.js';
+import type {
+  GitHubActionInput,
+  GitHubActionOutput,
+  GitHubActionYml,
+  GitHubInputValue,
+} from './types/common.js';
+import type {
+  GitHubStepBase,
+  GitHubStep,
+  GitHubStepAction,
+} from './types/workflow.js';
 import type { GitHubStack } from './constructs/base.js';
 import type { ActionConstructProps } from './constructs/action.js';
 import { toProperCase } from './utils.js';
-import { Project, SourceFile, TypeAliasDeclaration, FunctionDeclaration, JSDocTag } from 'ts-morph';
-
-
+import {
+  Project,
+  SourceFile,
+  TypeAliasDeclaration,
+  FunctionDeclaration,
+  JSDocTag,
+} from 'ts-morph';
 
 // Helpers to keep generation logic small and testable
 function createLiteralFromValue(v: unknown): string {
   // GitHub Actions inputs are always strings, so convert everything to string literals
-  if (v === null || v === undefined) return `""`; 
+  if (v === null || v === undefined) return `""`;
   if (typeof v === 'string') return `"${v.replace(/"/g, '\"')}"`;
   return `"${String(v)}"`; // Convert numbers, booleans, etc. to string literals
 }
@@ -29,23 +41,23 @@ function escapeJSDocComment(text: string): string {
   return text.replace(/\*\//g, '*\\/');
 }
 
-
-
-
-import type { GitHubActionInputs, GitHubActionOutputs } from './types/common.js';
-
-
-
-
+import type {
+  GitHubActionInputs,
+  GitHubActionOutputs,
+} from './types/common.js';
 
 function hasRequiredInputs(inputs?: GitHubActionInputs): boolean {
   if (!inputs) return false;
-  return Object.values(inputs).some(input => input.required === true || input.required === 'true');
+  return Object.values(inputs).some(
+    (input) => input.required === true || input.required === 'true'
+  );
 }
 
 function hasRequiredInputsCheck(inputs?: GitHubActionInputs): boolean {
   if (!inputs) return false;
-  return Object.values(inputs).some(input => input.required === true || input.required === 'true');
+  return Object.values(inputs).some(
+    (input) => input.required === true || input.required === 'true'
+  );
 }
 
 /**
@@ -53,21 +65,23 @@ function hasRequiredInputsCheck(inputs?: GitHubActionInputs): boolean {
  */
 function buildInputMembers(inputs?: GitHubActionInputs): string {
   if (!inputs) return '{}';
-  
+
   const members = Object.entries(inputs).map(([key, val]) => {
     const required = val.required === true || val.required === 'true';
     const optionalToken = required ? '' : '?';
     const quotedKey = needsQuoting(key) ? `"${key}"` : key;
-    
+
     // Build JSDoc comment if description or default is present
     let commentParts: string[] = [];
     if (val.description) commentParts.push(escapeJSDocComment(val.description));
-    if (val.default !== undefined) commentParts.push(`default: ${JSON.stringify(val.default)}`);
-    
-    const comment = commentParts.length > 0 ? `/** ${commentParts.join(' | ')} */\n    ` : '';
+    if (val.default !== undefined)
+      commentParts.push(`default: ${JSON.stringify(val.default)}`);
+
+    const comment =
+      commentParts.length > 0 ? `/** ${commentParts.join(' | ')} */\n    ` : '';
     return `${comment}${quotedKey}${optionalToken}: GitHubInputValue`;
   });
-  
+
   return `{\n    ${members.join(';\n    ')};\n  }`;
 }
 
@@ -76,13 +90,15 @@ function buildInputMembers(inputs?: GitHubActionInputs): string {
  */
 function buildOutputMembers(outputs?: GitHubActionOutputs): string {
   if (!outputs) return '{}';
-  
+
   const members = Object.entries(outputs).map(([key, val]) => {
     const quotedKey = needsQuoting(key) ? `"${key}"` : key;
-    const comment = val.description ? `/** ${escapeJSDocComment(val.description)} */\n    ` : '';
+    const comment = val.description
+      ? `/** ${escapeJSDocComment(val.description)} */\n    `
+      : '';
     return `${comment}${quotedKey}: string`;
   });
-  
+
   return `{\n    ${members.join(';\n    ')};\n  }`;
 }
 
@@ -94,11 +110,11 @@ function createFactoryFunction(
   inputs?: GitHubActionInputs
 ): string {
   const inputsRequired = hasRequiredInputs(inputs);
-  const inputsParam = inputsRequired ? `inputs: ${ActionName}Inputs` : `inputs?: ${ActionName}Inputs`;
+  const inputsParam = inputsRequired
+    ? `inputs: ${ActionName}Inputs`
+    : `inputs?: ${ActionName}Inputs`;
   return `export function ${actionNameCamel}(${inputsParam}, step?: Partial<GitHubStepBase>, ref?: string): GitHubStep<${ActionName}Inputs> {\n    return createStep("${repo}", { ...step, with: inputs }, ref ?? "${ref}");\n}`;
 }
-
-
 
 /**
  * Generates TypeScript types and a factory function for a GitHub Action from its YAML definition.
@@ -129,15 +145,16 @@ export function generateTypesFromYml(
   // Use custom action name if provided, otherwise use the action name from YAML
   const baseActionName = customActionName || yml.name;
   let actionName = baseActionName.replace(/[^a-zA-Z0-9]/g, ' ');
-  
+
   // If actionPath is provided, append it to create unique class names
   if (actionPath) {
     const pathName = actionPath.replace(/[^a-zA-Z0-9]/g, ' ');
     actionName = `${actionName} ${pathName}`;
   }
-  
+
   const ActionName = toProperCase(actionName.replace(/\s+/g, ' '));
-  const actionNameCamel = ActionName.charAt(0).toLowerCase() + ActionName.slice(1);
+  const actionNameCamel =
+    ActionName.charAt(0).toLowerCase() + ActionName.slice(1);
 
   // Use versionRef for user-visible parts, fallback to ref if not provided
   const displayRef = versionRef || ref;
@@ -158,7 +175,6 @@ export function generateTypesFromYml(
 
   const fileName = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.ts`;
   const sourceFile = project.createSourceFile(fileName);
-
 
   // Generate inputs type
   const inputsType = sourceFile.addTypeAlias({
@@ -185,10 +201,12 @@ export function generateTypesFromYml(
   if (yml.outputs && Object.keys(yml.outputs).length > 0) {
     const outputMembers = Object.entries(yml.outputs).map(([key, val]) => {
       const quotedKey = needsQuoting(key) ? `"${key}"` : key;
-      const comment = val.description ? `  /** ${escapeJSDocComment(val.description)} */\n  ` : '';
+      const comment = val.description
+        ? `  /** ${escapeJSDocComment(val.description)} */\n  `
+        : '';
       return `${comment}${quotedKey}: new GitHubOutputValue("${key}"),`;
     });
-    
+
     outputsConst = `export const ${ActionName}Outputs = {\n${outputMembers.join('\n')}\n};`;
     outputsTypeName = `${ActionName}Outputs`;
   } else {
@@ -197,14 +215,17 @@ export function generateTypesFromYml(
   }
 
   // Generate action class with proper JSDoc
-  const actionDescription = yml.description ? escapeJSDocComment(yml.description) : `${ActionName} action`;
-  const inputsParamDoc = yml.inputs && Object.keys(yml.inputs).length > 0 
-    ? ` * @param inputs - Input parameters for the ${yml.name} action`
-    : ` * @param inputs - Input parameters (optional)`;
-  
+  const actionDescription = yml.description
+    ? escapeJSDocComment(yml.description)
+    : `${ActionName} action`;
+  const inputsParamDoc =
+    yml.inputs && Object.keys(yml.inputs).length > 0
+      ? ` * @param inputs - Input parameters for the ${yml.name} action`
+      : ` * @param inputs - Input parameters (optional)`;
+
   // Generate GitHub repository link
   const githubLink = `https://github.com/${repo}/tree/${displayRef}`;
-  
+
   const fullContent = `import { GitHubOutputValue } from "@dotgithub/core";
 import type {
   GitHubStepAction,
@@ -215,7 +236,10 @@ import type { ActionCollection } from "@dotgithub/core";
 import type { ActionConstructProps } from "@dotgithub/core";
 import type { Construct } from "@dotgithub/core";
 
-${sourceFile.getTypeAliases().map(alias => alias.getFullText()).join('\n')}
+${sourceFile
+  .getTypeAliases()
+  .map((alias) => alias.getFullText())
+  .join('\n')}
 
 ${outputsConst}
 
@@ -242,7 +266,7 @@ export class ${ActionName} extends ActionConstruct<${ActionName}Inputs, ${Action
 /**
  * Generates an ActionsConstruct class for a specific organization.
  * This creates a class that provides convenient access to all actions from an organization.
- * 
+ *
  * @param orgName - The organization name (e.g., 'actions')
  * @param actions - Array of action information for this organization
  * @returns Generated TypeScript code for the ActionsConstruct class
@@ -263,7 +287,7 @@ export function generateActionsConstructClass(
 ): string {
   const OrgName = toProperCase(orgName);
   const className = `${OrgName}`;
-  
+
   // Generate imports
   const imports = `import { ActionsConstruct } from "@dotgithub/core";
 import type {
@@ -274,49 +298,63 @@ import type {
   // Generate action imports (deduplicated by filename to handle same class names)
   const uniqueImports = new Map<string, string>();
   const classAliases = new Map<string, string>();
-  
+
   // First pass: collect all unique class names and create aliases
   const classCounts = new Map<string, number>();
-  actions.forEach(action => {
+  actions.forEach((action) => {
     const count = classCounts.get(action.ActionName) || 0;
     classCounts.set(action.ActionName, count + 1);
   });
-  
+
   // Second pass: create aliases for duplicate class names
-  actions.forEach(action => {
+  actions.forEach((action) => {
     const count = classCounts.get(action.ActionName) || 0;
     if (count > 1) {
       // Create unique alias using actionNameCamel
-      const alias = action.actionNameCamel.charAt(0).toUpperCase() + action.actionNameCamel.slice(1);
+      const alias =
+        action.actionNameCamel.charAt(0).toUpperCase() +
+        action.actionNameCamel.slice(1);
       classAliases.set(`${action.ActionName}:${action.actionNameCamel}`, alias);
     } else {
-      classAliases.set(`${action.ActionName}:${action.actionNameCamel}`, action.ActionName);
+      classAliases.set(
+        `${action.ActionName}:${action.actionNameCamel}`,
+        action.ActionName
+      );
     }
   });
-  
+
   // Third pass: generate imports
-  actions.forEach(action => {
+  actions.forEach((action) => {
     const importKey = action.filename;
     if (!uniqueImports.has(importKey)) {
-      const alias = classAliases.get(`${action.ActionName}:${action.actionNameCamel}`) || action.ActionName;
+      const alias =
+        classAliases.get(`${action.ActionName}:${action.actionNameCamel}`) ||
+        action.ActionName;
       const inputsType = `${alias}Inputs`;
-      
-      uniqueImports.set(importKey, `import { ${action.ActionName} as ${alias}, type ${action.ActionName}Inputs as ${inputsType} } from "./${action.filename}.js";`);
+
+      uniqueImports.set(
+        importKey,
+        `import { ${action.ActionName} as ${alias}, type ${action.ActionName}Inputs as ${inputsType} } from "./${action.filename}.js";`
+      );
     }
   });
   const actionImports = Array.from(uniqueImports.values()).join('\n');
 
   // Generate class methods (deduplicated by actionNameCamel)
   const uniqueMethods = new Map<string, string>();
-  actions.forEach(action => {
+  actions.forEach((action) => {
     if (!uniqueMethods.has(action.actionNameCamel)) {
       const inputsRequired = hasRequiredInputs(action.inputs);
-      
+
       // Get the correct class alias
-      const className = classAliases.get(`${action.ActionName}:${action.actionNameCamel}`) || action.ActionName;
+      const className =
+        classAliases.get(`${action.ActionName}:${action.actionNameCamel}`) ||
+        action.ActionName;
       const inputsType = `${className}Inputs`;
-      const inputsParam = inputsRequired ? `inputs: ${inputsType}` : `inputs?: ${inputsType}`;
-      
+      const inputsParam = inputsRequired
+        ? `inputs: ${inputsType}`
+        : `inputs?: ${inputsType}`;
+
       const method = `  /**
    * ${action.description || `${action.ActionName} action`}
    * 

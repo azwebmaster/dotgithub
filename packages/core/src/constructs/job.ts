@@ -1,7 +1,7 @@
-import { Construct } from "./base.js";
-import { createStep } from "../actions.js";
-import type { WorkflowConstruct } from "./workflow.js";
-import type { DotGithubConfig } from "../config.js";
+import { Construct } from './base.js';
+import { createStep } from '../actions.js';
+import type { WorkflowConstruct } from './workflow.js';
+import type { DotGithubConfig } from '../config.js';
 import type {
   GitHubJob,
   GitHubSteps,
@@ -10,9 +10,8 @@ import type {
   GitHubStepWith,
   GitHubStepRun,
   GitHubWorkflowInputs,
-} from "../types/workflow.js";
-import type { SharedWorkflowConstruct } from "./shared-workflow.js";
-
+} from '../types/workflow.js';
+import type { SharedWorkflowConstruct } from './shared-workflow.js';
 
 export class JobConstruct extends Construct {
   private readonly _id: string;
@@ -24,7 +23,6 @@ export class JobConstruct extends Construct {
     this._id = id;
     this._job = job;
     scope.addJob(id, this);
-
   }
 
   addStep(step: GitHubStepAny): this {
@@ -43,11 +41,17 @@ export class JobConstruct extends Construct {
     uses: string,
     inputs: T,
     step?: Partial<GitHubStep<T>>,
-    ref?: string,
+    ref?: string
   ): this {
-    const actionStep = createStep(uses, {
-      with: inputs, ...step
-    }, ref, undefined);
+    const actionStep = createStep(
+      uses,
+      {
+        with: inputs,
+        ...step,
+      },
+      ref,
+      undefined
+    );
     return this.addStep(actionStep);
   }
 
@@ -68,6 +72,6 @@ export class JobConstruct extends Construct {
   }
 
   get steps(): GitHubSteps {
-    return [...this._job.steps || []];
+    return [...(this._job.steps || [])];
   }
 }

@@ -52,6 +52,7 @@ Removes the version pin for the setup-node action from the "ci" stack.
 Actions must be specified in the format: `org/repo`
 
 Examples:
+
 - `actions/checkout` - GitHub's checkout action
 - `actions/setup-node` - GitHub's setup-node action
 - `myorg/my-action` - Custom organization action
@@ -61,17 +62,21 @@ Examples:
 You must specify exactly one scope:
 
 ### Plugin scope
+
 ```bash
 dotgithub unpin actions/checkout --plugin my-plugin
 ```
+
 - Removes the version pin for the specified plugin
 - Plugin will use the default version of the action
 - Other plugins are unaffected
 
 ### Stack scope
+
 ```bash
 dotgithub unpin actions/checkout --stack ci
 ```
+
 - Removes the version pin for the specified stack
 - Stack will use the default version of the action
 - Other stacks are unaffected
@@ -81,6 +86,7 @@ dotgithub unpin actions/checkout --stack ci
 Unpinning removes the pin from your `dotgithub.json` configuration:
 
 **Before:**
+
 ```json
 {
   "pins": {
@@ -94,6 +100,7 @@ Unpinning removes the pin from your `dotgithub.json` configuration:
 ```
 
 **After:**
+
 ```json
 {
   "pins": {
@@ -107,11 +114,13 @@ Unpinning removes the pin from your `dotgithub.json` configuration:
 ## Success and warning messages
 
 ### Successful unpin
+
 ```
 ✅ Unpinned actions/checkout from plugin "my-plugin"
 ```
 
 ### Action was not pinned
+
 ```
 ⚠️  actions/checkout was not pinned for plugin "my-plugin"
 ```
@@ -119,18 +128,21 @@ Unpinning removes the pin from your `dotgithub.json` configuration:
 ## Use cases
 
 ### Removing outdated pins
+
 ```bash
 # Remove pin to allow using latest version
 dotgithub unpin actions/checkout --plugin my-plugin
 ```
 
 ### Cleaning up configuration
+
 ```bash
 # Remove unnecessary pins
 dotgithub unpin actions/setup-node --stack ci
 ```
 
 ### Migrating to default versions
+
 ```bash
 # Remove custom pins to use standard versions
 dotgithub unpin actions/checkout --plugin legacy-plugin
@@ -139,6 +151,7 @@ dotgithub unpin actions/checkout --plugin legacy-plugin
 ## Error handling
 
 The command will fail if:
+
 - Action format is invalid (must be `org/repo`)
 - Neither `--stack` nor `--plugin` is specified
 - Both `--stack` and `--plugin` are specified

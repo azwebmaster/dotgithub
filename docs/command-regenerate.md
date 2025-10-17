@@ -134,6 +134,7 @@ Use this command to:
 The command handles various error scenarios:
 
 ### Partial failures
+
 ```
 Regenerating actions/checkout...
   ✓ Generated src/actions/actions/checkout.ts
@@ -142,11 +143,13 @@ Regenerating actions/invalid-action...
 ```
 
 ### No actions found
+
 ```
 No actions found in config file
 ```
 
 ### Pattern mismatch
+
 ```
 No actions match pattern "invalid-pattern"
 ```
@@ -154,17 +157,20 @@ No actions match pattern "invalid-pattern"
 ## Authentication
 
 Requires GitHub token for:
+
 - Accessing private repositories
 - Higher rate limits
 - Downloading action metadata
 
 Set via:
+
 - Environment variable: `GITHUB_TOKEN`
 - Command option: `--token <token>`
 
 ## Performance considerations
 
 Regeneration performance depends on:
+
 - Number of actions to regenerate
 - Network speed for downloading metadata
 - File I/O operations

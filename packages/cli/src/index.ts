@@ -1,4 +1,3 @@
-
 import { Command } from 'commander';
 import { DotGithubContext, logger } from '@dotgithub/core';
 import { createAddCommand } from './commands/add.js';
@@ -32,14 +31,18 @@ program
   .name('dotgithub')
   .description('GitHub Actions TypeScript generator and manager')
   .version('0.1.1')
-  .option('-c, --config <path>', 'path to config file (default: .github/dotgithub.json)', '.github/dotgithub.json')
+  .option(
+    '-c, --config <path>',
+    'path to config file (default: .github/dotgithub.json)',
+    '.github/dotgithub.json'
+  )
   .option('-v, --verbose', 'enable verbose logging')
   .option('--debug', 'enable debug logging')
   .option('--quiet', 'suppress all output except errors')
   .option('-t, --token <token>', 'GitHub token (overrides env GITHUB_TOKEN)')
   .hook('preAction', (thisCommand) => {
     const options = thisCommand.opts();
-    
+
     // Configure global logging
     if (options.quiet) {
       logger.setLevel('error');
@@ -51,7 +54,9 @@ program
   });
 
 // Create context function that can be called by commands
-function createContextForCommand(commandOptions: GlobalCliOptions = {}): DotGithubContext {
+function createContextForCommand(
+  commandOptions: GlobalCliOptions = {}
+): DotGithubContext {
   // Get global options from the program
   const globalOpts = program.opts();
   // Only use global config option, ignore any command-specific config options
@@ -75,7 +80,9 @@ program.addCommand(createAddCommand(createContextForCommandWithProgram()));
 program.addCommand(createUpdateCommand(createContextForCommandWithProgram()));
 program.addCommand(createConfigCommand(createContextForCommandWithProgram()));
 program.addCommand(createRemoveCommand(createContextForCommandWithProgram()));
-program.addCommand(createRegenerateCommand(createContextForCommandWithProgram()));
+program.addCommand(
+  createRegenerateCommand(createContextForCommandWithProgram())
+);
 program.addCommand(createListCommand(createContextForCommandWithProgram()));
 program.addCommand(createSynthCommand(createContextForCommandWithProgram()));
 program.addCommand(createPluginCommand(createContextForCommandWithProgram()));

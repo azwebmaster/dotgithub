@@ -1,9 +1,9 @@
-import { GitHubOutputValue, ActionConstruct } from "@dotgithub/core";
+import { GitHubOutputValue, ActionConstruct } from '@dotgithub/core';
 import type {
   GitHubInputValue,
   ActionConstructProps,
   Construct,
-} from "@dotgithub/core";
+} from '@dotgithub/core';
 
 /** Input parameters for the Checkout action */
 export type CheckoutInputs = {
@@ -25,18 +25,18 @@ export type CheckoutInputs = {
 
     [Learn more about creating and using encrypted secrets](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/creating-and-using-encrypted-secrets)
      */
-  "ssh-key"?: GitHubInputValue;
+  'ssh-key'?: GitHubInputValue;
   /** Known hosts in addition to the user and global host key database. The public SSH keys for a host may be obtained using the utility `ssh-keyscan`. For example, `ssh-keyscan github.com`. The public key for github.com is always implicitly added.
    */
-  "ssh-known-hosts"?: GitHubInputValue;
+  'ssh-known-hosts'?: GitHubInputValue;
   /** Whether to perform strict host key checking. When true, adds the options `StrictHostKeyChecking=yes` and `CheckHostIP=no` to the SSH command line. Use the input `ssh-known-hosts` to configure additional hosts.
      | default: true */
-  "ssh-strict"?: GitHubInputValue;
+  'ssh-strict'?: GitHubInputValue;
   /** The user to use when connecting to the remote SSH host. By default 'git' is used.
      | default: "git" */
-  "ssh-user"?: GitHubInputValue;
+  'ssh-user'?: GitHubInputValue;
   /** Whether to configure the token or SSH key with the local git config | default: true */
-  "persist-credentials"?: GitHubInputValue;
+  'persist-credentials'?: GitHubInputValue;
   /** Relative path under $GITHUB_WORKSPACE to place the repository */
   path?: GitHubInputValue;
   /** Whether to execute `git clean -ffdx && git reset --hard HEAD` before fetching | default: true */
@@ -46,16 +46,16 @@ export type CheckoutInputs = {
   filter?: GitHubInputValue;
   /** Do a sparse checkout on given patterns. Each pattern should be separated with new lines.
      | default: null */
-  "sparse-checkout"?: GitHubInputValue;
+  'sparse-checkout'?: GitHubInputValue;
   /** Specifies whether to use cone-mode when doing a sparse checkout.
      | default: true */
-  "sparse-checkout-cone-mode"?: GitHubInputValue;
+  'sparse-checkout-cone-mode'?: GitHubInputValue;
   /** Number of commits to fetch. 0 indicates all history for all branches and tags. | default: 1 */
-  "fetch-depth"?: GitHubInputValue;
+  'fetch-depth'?: GitHubInputValue;
   /** Whether to fetch tags, even if fetch-depth > 0. | default: false */
-  "fetch-tags"?: GitHubInputValue;
+  'fetch-tags'?: GitHubInputValue;
   /** Whether to show progress status output when fetching. | default: true */
-  "show-progress"?: GitHubInputValue;
+  'show-progress'?: GitHubInputValue;
   /** Whether to download Git-LFS files | default: false */
   lfs?: GitHubInputValue;
   /** Whether to checkout submodules: `true` to checkout submodules or `recursive` to recursively checkout submodules.
@@ -64,16 +64,16 @@ export type CheckoutInputs = {
      | default: false */
   submodules?: GitHubInputValue;
   /** Add repository path as safe.directory for Git global config by running `git config --global --add safe.directory <path>` | default: true */
-  "set-safe-directory"?: GitHubInputValue;
+  'set-safe-directory'?: GitHubInputValue;
   /** The base URL for the GitHub instance that you are trying to clone from, will use environment defaults to fetch from the same instance that the workflow is running from unless specified. Example URLs are https://github.com or https://my-ghes-server.example.com */
-  "github-server-url"?: GitHubInputValue;
+  'github-server-url'?: GitHubInputValue;
 };
 
 export const CheckoutOutputs = {
   /** The branch, tag or SHA that was checked out */
-  ref: new GitHubOutputValue("ref"),
+  ref: new GitHubOutputValue('ref'),
   /** The commit SHA that was checked out */
-  commit: new GitHubOutputValue("commit"),
+  commit: new GitHubOutputValue('commit'),
 };
 
 export type CheckoutOutputsType = typeof CheckoutOutputs;
@@ -87,14 +87,14 @@ export class Checkout extends ActionConstruct<
   CheckoutInputs,
   CheckoutOutputsType
 > {
-  protected readonly uses = "actions/checkout";
-  protected readonly fallbackRef = "08c6903cd8c0fde910a37f88322edcfb5dd907a8";
+  protected readonly uses = 'actions/checkout';
+  protected readonly fallbackRef = '08c6903cd8c0fde910a37f88322edcfb5dd907a8';
   protected readonly outputs = CheckoutOutputs;
 
   constructor(
     scope: Construct | undefined,
     id: string,
-    props: ActionConstructProps<CheckoutInputs>,
+    props: ActionConstructProps<CheckoutInputs>
   ) {
     super(scope, id, props);
   }

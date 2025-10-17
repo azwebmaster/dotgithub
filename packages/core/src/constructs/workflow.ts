@@ -1,10 +1,7 @@
 import { Construct, GitHubStack } from './base.js';
 import { JobConstruct } from './job.js';
 import type { DotGithubConfig } from '../config.js';
-import type {
-  GitHubWorkflow,
-  GitHubJobs
-} from '../types/workflow.js';
+import type { GitHubWorkflow, GitHubJobs } from '../types/workflow.js';
 
 export class WorkflowConstruct extends Construct {
   private readonly _workflow: GitHubWorkflow;
@@ -12,7 +9,7 @@ export class WorkflowConstruct extends Construct {
 
   constructor(scope: GitHubStack, id: string, workflow: GitHubWorkflow) {
     super(scope, id);
-    
+
     this._workflow = workflow;
 
     scope.addWorkflow(id, this._workflow);

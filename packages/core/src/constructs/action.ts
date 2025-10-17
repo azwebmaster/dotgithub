@@ -1,14 +1,24 @@
 import { Construct, GitHubStack } from './base.js';
 import type { IConstruct } from './base.js';
-import type { GitHubStepAction, GitHubStepWith, GitHubStepAny, GitHubSteps } from '../types/workflow.js';
+import type {
+  GitHubStepAction,
+  GitHubStepWith,
+  GitHubStepAny,
+  GitHubSteps,
+} from '../types/workflow.js';
 import type { GitHubInputValue } from '../types/common.js';
-import { GitHubOutputValue, ActionInvocationResult } from '../plugins/action-collection.js';
+import {
+  GitHubOutputValue,
+  ActionInvocationResult,
+} from '../plugins/action-collection.js';
 
-export interface ActionConstructProps<TInputs extends GitHubStepWith = GitHubStepWith> {
+export interface ActionConstructProps<
+  TInputs extends GitHubStepWith = GitHubStepWith,
+> {
   /** Input parameters for the action */
   inputs?: TInputs;
   /** Additional step configuration options */
-  stepOptions?: Partial<Omit<GitHubStepAction, "uses" | "with">>;
+  stepOptions?: Partial<Omit<GitHubStepAction, 'uses' | 'with'>>;
   /** Optional git reference override */
   ref?: string;
 }
@@ -17,9 +27,14 @@ export interface ActionConstructProps<TInputs extends GitHubStepWith = GitHubSte
  * Abstract base class for all GitHub Action constructs.
  * Provides common functionality for action execution and step generation.
  */
-export abstract class ActionConstruct<TInputs extends GitHubStepWith = GitHubStepWith, TOutputs = Record<string, GitHubOutputValue>> extends Construct {
+export abstract class ActionConstruct<
+  TInputs extends GitHubStepWith = GitHubStepWith,
+  TOutputs = Record<string, GitHubOutputValue>,
+> extends Construct {
   protected readonly _inputs: TInputs | undefined;
-  protected readonly _stepOptions: Partial<Omit<GitHubStepAction, "uses" | "with">> | undefined;
+  protected readonly _stepOptions:
+    | Partial<Omit<GitHubStepAction, 'uses' | 'with'>>
+    | undefined;
   protected readonly _ref: string | undefined;
 
   // These properties should be overridden by subclasses
@@ -27,9 +42,13 @@ export abstract class ActionConstruct<TInputs extends GitHubStepWith = GitHubSte
   protected abstract readonly fallbackRef: string;
   protected abstract readonly outputs: TOutputs;
 
-  constructor(scope: Construct | undefined, id: string, props: ActionConstructProps<TInputs>) {
+  constructor(
+    scope: Construct | undefined,
+    id: string,
+    props: ActionConstructProps<TInputs>
+  ) {
     super(scope, id);
-    
+
     this._inputs = props.inputs;
     this._stepOptions = props.stepOptions;
     this._ref = props.ref;
@@ -45,7 +64,9 @@ export abstract class ActionConstruct<TInputs extends GitHubStepWith = GitHubSte
   /**
    * Gets the current step options for this action
    */
-  get stepOptions(): Partial<Omit<GitHubStepAction, "uses" | "with">> | undefined {
+  get stepOptions():
+    | Partial<Omit<GitHubStepAction, 'uses' | 'with'>>
+    | undefined {
     return this._stepOptions;
   }
 
@@ -74,7 +95,9 @@ export abstract class ActionConstruct<TInputs extends GitHubStepWith = GitHubSte
   /**
    * Updates the step options for this action
    */
-  updateStepOptions(stepOptions: Partial<Omit<GitHubStepAction, "uses" | "with">>): this {
+  updateStepOptions(
+    stepOptions: Partial<Omit<GitHubStepAction, 'uses' | 'with'>>
+  ): this {
     (this as any)._stepOptions = stepOptions;
     return this;
   }
@@ -94,11 +117,11 @@ export abstract class ActionConstruct<TInputs extends GitHubStepWith = GitHubSte
     // Allow config to override the fallback reference
     const configRef = this.stack.config?.actions?.[this.uses];
     const finalRef = this._ref || configRef || this.fallbackRef;
-    
+
     return {
       uses: `${this.uses}@${finalRef}`,
       with: this._inputs,
-      ...this._stepOptions
+      ...this._stepOptions,
     };
   }
 
@@ -107,20 +130,22 @@ export abstract class ActionConstruct<TInputs extends GitHubStepWith = GitHubSte
    * @param stepFactory Optional function that receives the outputs from this action and returns a new step
    * @returns An ActionInvocationResult with the current step and outputs, plus any chained steps
    */
-  then(stepFactory?: (outputs: TOutputs) => GitHubStepAny): ActionInvocationResult<TOutputs> {
+  then(
+    stepFactory?: (outputs: TOutputs) => GitHubStepAny
+  ): ActionInvocationResult<TOutputs> {
     const step = this.toStep();
     const steps: GitHubSteps = [step];
-    
+
     // Create outputs with proper step ID references
     const outputs = this.createOutputs(step.id || this.node.id, this.outputs);
-    
+
     const result = new ActionInvocationResult(steps, outputs);
-    
+
     // If a step factory is provided, chain the additional step
     if (stepFactory) {
       return result.then(stepFactory);
     }
-    
+
     return result;
   }
 
@@ -129,18 +154,20 @@ export abstract class ActionConstruct<TInputs extends GitHubStepWith = GitHubSte
    */
   private createOutputs(stepId: string, outputs: TOutputs): TOutputs {
     const result = {} as TOutputs;
-    
+
     for (const [key, output] of Object.entries(outputs as any)) {
       if (output instanceof GitHubOutputValue) {
         // Create a new GitHubOutputValue with the step-specific path
-        const newOutput = new GitHubOutputValue(`step.${stepId}.outputs.${key}`);
+        const newOutput = new GitHubOutputValue(
+          `step.${stepId}.outputs.${key}`
+        );
         (result as any)[key] = newOutput;
       } else {
         // Preserve non-GitHubOutputValue outputs as-is
         (result as any)[key] = output;
       }
     }
-    
+
     return result;
   }
 
@@ -157,7 +184,9 @@ export abstract class ActionConstruct<TInputs extends GitHubStepWith = GitHubSte
   /**
    * Creates a copy of this action construct with new step options
    */
-  withStepOptions(stepOptions: Partial<Omit<GitHubStepAction, "uses" | "with">>): this {
+  withStepOptions(
+    stepOptions: Partial<Omit<GitHubStepAction, 'uses' | 'with'>>
+  ): this {
     const newInstance = Object.create(Object.getPrototypeOf(this));
     Object.assign(newInstance, this);
     newInstance._stepOptions = stepOptions;
@@ -180,7 +209,11 @@ export abstract class ActionConstruct<TInputs extends GitHubStepWith = GitHubSte
   withId(id: string): this {
     const newInstance = Object.create(Object.getPrototypeOf(this));
     Object.assign(newInstance, this);
-    newInstance.node = new (this.node.constructor as any)(newInstance, this.node.scope, id);
+    newInstance.node = new (this.node.constructor as any)(
+      newInstance,
+      this.node.scope,
+      id
+    );
     return newInstance;
   }
 }

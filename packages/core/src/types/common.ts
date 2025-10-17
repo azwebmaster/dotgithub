@@ -1,10 +1,12 @@
-import type { GitHubWorkflows } from "./workflow";
+import type { GitHubWorkflows } from './workflow';
 
 /**
  * Root resources for a .github directory structure including workflows.
  * Represents the complete .github directory with all workflows and other resources.
  */
-export type DotGitHubRootResources = DotGitHubResources & { workflows: GitHubWorkflows };
+export type DotGitHubRootResources = DotGitHubResources & {
+  workflows: GitHubWorkflows;
+};
 
 /**
  * Collection of resources in a .github directory.
@@ -21,7 +23,7 @@ export type DotGitHubResource = {
   content?: unknown;
   /** Child resources, if this resource is a directory */
   children?: DotGitHubResources;
-}
+};
 
 /**
  * Complete representation of a .github directory structure.
@@ -39,14 +41,14 @@ export type GitHubInputValue = string | boolean | number;
  * Configuration for a GitHub Action input parameter.
  * Defines how users can provide data to the action.
  */
-export type GitHubActionInput ={
+export type GitHubActionInput = {
   /** Description of what this input does */
   description?: string;
   /** Whether this input is required for the action to run */
   required?: boolean | string;
   /** Default value if not provided by the user */
   default?: string | number | boolean;
-}
+};
 
 /**
  * Configuration for a GitHub Action output.
@@ -55,8 +57,7 @@ export type GitHubActionInput ={
 export type GitHubActionOutput = {
   /** Description of what this output contains */
   description?: string;
-}
-
+};
 
 /**
  * Complete metadata for a GitHub Action as defined in action.yml.
@@ -82,8 +83,7 @@ export type GitHubActionYml = {
   outputs?: GitHubActionOutputs;
   /** Runtime configuration for how the action executes */
   runs?: GitHubActionRuns;
-}
-
+};
 
 /**
  * Runtime configuration for a GitHub Action.
@@ -107,7 +107,6 @@ export type GitHubActionRuns = {
   /** Environment variables for the action runtime */
   env?: EnvVars;
 };
-
 
 /**
  * Collection of input parameters for a GitHub Action.

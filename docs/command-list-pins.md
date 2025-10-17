@@ -55,6 +55,7 @@ Explicitly shows all pinned actions (same as no options).
 ## Output formats
 
 ### All pins (default)
+
 ```
 Plugin Overrides:
   my-plugin:
@@ -69,6 +70,7 @@ Stack Overrides:
 ```
 
 ### Plugin-specific pins
+
 ```
 Plugin Overrides (my-plugin):
   actions/checkout: v4
@@ -76,12 +78,14 @@ Plugin Overrides (my-plugin):
 ```
 
 ### Stack-specific pins
+
 ```
 Stack Overrides (ci):
   actions/checkout: v4
 ```
 
 ### No pins found
+
 ```
 No pinned actions found.
 ```
@@ -89,16 +93,19 @@ No pinned actions found.
 ## Understanding the output
 
 ### Plugin Overrides
+
 - Shows actions pinned for specific plugins
 - Each plugin can have its own version overrides
 - Affects only that plugin's workflow generation
 
 ### Stack Overrides
+
 - Shows actions pinned for specific stacks
 - Affects all plugins within that stack
 - Overrides plugin-level pins for that stack
 
 ### Version references
+
 - **Tags** - `v4`, `v5.1.0`, `latest`
 - **Branches** - `main`, `develop`
 - **Commit SHAs** - `abc1234`, `0057852b`
@@ -106,32 +113,41 @@ No pinned actions found.
 ## Use cases
 
 ### Audit current pins
+
 ```bash
 dotgithub list-pins
 ```
+
 Review all version overrides in your project.
 
 ### Debug plugin issues
+
 ```bash
 dotgithub list-pins --plugin problematic-plugin
 ```
+
 Check if version pins are causing issues.
 
 ### Verify stack configuration
+
 ```bash
 dotgithub list-pins --stack production
 ```
+
 Ensure production stack has correct version pins.
 
 ### Migration planning
+
 ```bash
 dotgithub list-pins --all
 ```
+
 Plan migration from pinned to default versions.
 
 ## Error handling
 
 The command will fail if:
+
 - Multiple options are specified (e.g., both `--stack` and `--plugin`)
 - Specified plugin doesn't exist
 - Specified stack doesn't exist

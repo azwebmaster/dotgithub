@@ -14,8 +14,7 @@
       "command": "bun test",
       "group": "test",
       "problemMatcher": []
-    }
-    ,
+    },
     {
       "label": "Install dependencies",
       "type": "shell",

@@ -1,9 +1,9 @@
 import { Construct, GitHubStack } from './base.js';
-import type { 
-  GitHubReusableWorkflow, 
-  GitHubWorkflowInputs, 
+import type {
+  GitHubReusableWorkflow,
+  GitHubWorkflowInputs,
   GitHubJob,
-  GitHubJobWith 
+  GitHubJobWith,
 } from '../types/workflow.js';
 import type { GitHubInputValue } from '../types/index.js';
 import { WorkflowConstruct } from './workflow.js';
@@ -24,15 +24,16 @@ export interface SharedWorkflowConfig {
  * A construct that represents a shared/reusable workflow.
  * Allows defining a workflow with typed inputs that can be called from other workflows.
  */
-export class SharedWorkflowConstruct<TInputs extends GitHubWorkflowInputs> extends WorkflowConstruct {
+export class SharedWorkflowConstruct<
+  TInputs extends GitHubWorkflowInputs,
+> extends WorkflowConstruct {
   private readonly _config: SharedWorkflowConfig;
   private readonly _workflowPath: string;
   private readonly _stack: GitHubStack;
 
-
   constructor(
-    scope: GitHubStack, 
-    id: string, 
+    scope: GitHubStack,
+    id: string,
     inputs: TInputs & GitHubWorkflowInputs,
     workflow: Omit<GitHubReusableWorkflow, 'on' | 'inputs'>
   ) {
@@ -41,21 +42,21 @@ export class SharedWorkflowConstruct<TInputs extends GitHubWorkflowInputs> exten
       // Ensure the workflow has the correct trigger for reusable workflows
       on: {
         workflow_call: {
-          inputs: inputs
-        }
-      }
+          inputs: inputs,
+        },
+      },
     });
 
     this._config = {
       inputs,
-      workflow
+      workflow,
     };
 
     // Generate a path for the shared workflow file
     this._workflowPath = `.github/workflows/${id}.yml`;
-    
+
     // Find the GitHubStack in the construct tree
-    this._stack = scope
+    this._stack = scope;
   }
 
   /**
@@ -65,7 +66,9 @@ export class SharedWorkflowConstruct<TInputs extends GitHubWorkflowInputs> exten
    * @returns A job configuration that calls the shared workflow
    */
   call(
-    inputs: { [K in keyof TInputs]?: GitHubInputValue } = {} as { [K in keyof TInputs]?: GitHubInputValue },
+    inputs: { [K in keyof TInputs]?: GitHubInputValue } = {} as {
+      [K in keyof TInputs]?: GitHubInputValue;
+    },
     jobConfig: Partial<GitHubJob> = {}
   ): GitHubJob {
     // Validate that required inputs are provided
@@ -74,7 +77,7 @@ export class SharedWorkflowConstruct<TInputs extends GitHubWorkflowInputs> exten
     return {
       uses: this._workflowPath,
       with: inputs,
-      ...jobConfig
+      ...jobConfig,
     };
   }
 

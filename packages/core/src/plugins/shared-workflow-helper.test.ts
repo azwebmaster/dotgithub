@@ -16,7 +16,7 @@ describe('SharedWorkflowHelper', () => {
       stackConfig: { name: 'test', plugins: [] },
       projectRoot: '/test',
       actions: {} as any,
-      sharedWorkflows: {} as any
+      sharedWorkflows: {} as any,
     };
     helper = new SharedWorkflowHelper(context);
   });
@@ -28,13 +28,13 @@ describe('SharedWorkflowHelper', () => {
           type: 'string' as const,
           description: 'Node.js version',
           required: false,
-          default: '20'
+          default: '20',
         },
         testCommand: {
           type: 'string' as const,
           description: 'Test command',
-          required: true
-        }
+          required: true,
+        },
       };
 
       const workflow = {
@@ -45,11 +45,11 @@ describe('SharedWorkflowHelper', () => {
             steps: [
               {
                 name: 'Run tests',
-                run: '${{ inputs.testCommand }}'
-              }
-            ]
-          }
-        }
+                run: '${{ inputs.testCommand }}',
+              },
+            ],
+          },
+        },
       };
 
       const sharedWorkflow = helper.create('test-workflow', inputs, workflow);
@@ -66,8 +66,8 @@ describe('SharedWorkflowHelper', () => {
           type: 'string' as const,
           description: 'Node.js version',
           required: false,
-          default: '20'
-        }
+          default: '20',
+        },
       };
 
       const workflow = {
@@ -75,17 +75,20 @@ describe('SharedWorkflowHelper', () => {
         jobs: {
           test: {
             'runs-on': 'ubuntu-latest',
-            steps: []
-          }
-        }
+            steps: [],
+          },
+        },
       };
 
       const sharedWorkflow = helper.create('test-workflow', inputs, workflow);
-      const job = sharedWorkflow.createJob({
-        nodeVersion: '18'
-      }, {
-        'runs-on': 'ubuntu-latest'
-      });
+      const job = sharedWorkflow.createJob(
+        {
+          nodeVersion: '18',
+        },
+        {
+          'runs-on': 'ubuntu-latest',
+        }
+      );
 
       expect(job.uses).toBe('.github/workflows/test-workflow.yml');
       expect(job.with).toEqual({ nodeVersion: '18' });
@@ -99,8 +102,8 @@ describe('SharedWorkflowHelper', () => {
         testCommand: {
           type: 'string' as const,
           description: 'Test command',
-          required: true
-        }
+          required: true,
+        },
       };
 
       const jobConfig = {
@@ -109,16 +112,22 @@ describe('SharedWorkflowHelper', () => {
         steps: [
           {
             name: 'Run tests',
-            run: '${{ inputs.testCommand }}'
-          }
-        ]
+            run: '${{ inputs.testCommand }}',
+          },
+        ],
       };
 
-      const sharedWorkflow = helper.createSimple('simple-test', inputs, jobConfig);
+      const sharedWorkflow = helper.createSimple(
+        'simple-test',
+        inputs,
+        jobConfig
+      );
 
       expect(sharedWorkflow.workflow.name).toBe('Simple Test');
       expect(sharedWorkflow.workflow.jobs['simple-test']).toBeDefined();
-      expect(sharedWorkflow.workflow.jobs['simple-test']['runs-on']).toBe('ubuntu-latest');
+      expect(sharedWorkflow.workflow.jobs['simple-test']['runs-on']).toBe(
+        'ubuntu-latest'
+      );
     });
   });
 
@@ -129,21 +138,21 @@ describe('SharedWorkflowHelper', () => {
           type: 'string' as const,
           description: 'Node.js version',
           required: false,
-          default: '20'
+          default: '20',
         },
         testCommand: {
           type: 'string' as const,
           description: 'Test command',
           required: false,
-          default: 'npm test'
-        }
+          default: 'npm test',
+        },
       };
 
       const sharedWorkflow = helper.createNodeTest('node-test', inputs);
 
       expect(sharedWorkflow.workflow.name).toBe('Node.js Test - node-test');
       expect(sharedWorkflow.workflow.jobs['node-test']).toBeDefined();
-      
+
       const job = sharedWorkflow.workflow.jobs['node-test'];
       expect(job.steps).toHaveLength(4); // checkout, setup-node, install, test
       expect(job.steps![0].uses).toBe('actions/checkout@v4');
@@ -156,18 +165,22 @@ describe('SharedWorkflowHelper', () => {
           type: 'string' as const,
           description: 'Node.js version',
           required: false,
-          default: '20'
-        }
+          default: '20',
+        },
       };
 
       const customSteps = [
         {
           name: 'Lint',
-          run: 'npm run lint'
-        }
+          run: 'npm run lint',
+        },
       ];
 
-      const sharedWorkflow = helper.createNodeTest('node-test', inputs, customSteps);
+      const sharedWorkflow = helper.createNodeTest(
+        'node-test',
+        inputs,
+        customSteps
+      );
 
       const job = sharedWorkflow.workflow.jobs['node-test'];
       expect(job.steps).toHaveLength(5); // checkout, setup-node, install, lint, test
@@ -183,21 +196,23 @@ describe('SharedWorkflowHelper', () => {
           type: 'string' as const,
           description: 'Node.js version',
           required: false,
-          default: '20'
+          default: '20',
         },
         buildCommand: {
           type: 'string' as const,
           description: 'Build command',
           required: false,
-          default: 'npm run build'
-        }
+          default: 'npm run build',
+        },
       };
 
       const sharedWorkflow = helper.createBuildPublish('build-publish', inputs);
 
-      expect(sharedWorkflow.workflow.name).toBe('Build and Publish - build-publish');
+      expect(sharedWorkflow.workflow.name).toBe(
+        'Build and Publish - build-publish'
+      );
       expect(sharedWorkflow.workflow.jobs['build-publish']).toBeDefined();
-      
+
       const job = sharedWorkflow.workflow.jobs['build-publish'];
       expect(job.steps).toHaveLength(5); // checkout, setup-node, install, build, publish
       expect(job.steps![3].name).toBe('Build');

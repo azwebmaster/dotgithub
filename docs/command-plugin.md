@@ -49,12 +49,14 @@ dotgithub plugin add --name <name> --package <package> [options]
 ```
 
 **Options:**
+
 - `--name <name>` - Plugin name (required)
 - `--package <package>` - Plugin package (npm package or local path) (required)
 - `--enabled` - Enable the plugin (default: true)
 - `--config <json>` - Plugin configuration as JSON string
 
 **Examples:**
+
 ```bash
 # Add a local plugin
 dotgithub plugin add --name "my-plugin" --package "./plugins/my-plugin"
@@ -75,6 +77,7 @@ dotgithub plugin remove --name <name>
 ```
 
 **Options:**
+
 - `--name <name>` - Plugin name to remove (required)
 
 ### plugin create
@@ -86,6 +89,7 @@ dotgithub plugin create --name <name> --source <path|repo|url> [options]
 ```
 
 **Options:**
+
 - `--name <name>` - Plugin name (required)
 - `--source <path|repo|url>` - Source of .github files (required)
 - `--description <desc>` - Plugin description
@@ -94,6 +98,7 @@ dotgithub plugin create --name <name> --source <path|repo|url> [options]
 - `--token <token>` - GitHub token for auto-adding actions
 
 **Examples:**
+
 ```bash
 # Create from local directory
 dotgithub plugin create --name "my-workflows" --source "./.github"
@@ -114,6 +119,7 @@ dotgithub plugin describe [options]
 ```
 
 **Options:**
+
 - `--name <name>` - Specific plugin name to describe
 - `--format <format>` - Output format (text|markdown|json) (default: text)
 - `--search <keyword>` - Search plugins by keyword
@@ -121,6 +127,7 @@ dotgithub plugin describe [options]
 - `--all` - Describe all loaded plugins
 
 **Examples:**
+
 ```bash
 # Describe specific plugin
 dotgithub plugin describe --name "my-plugin"
@@ -159,11 +166,13 @@ dotgithub plugin stack add --name <name> --plugins <plugins> [options]
 ```
 
 **Options:**
+
 - `--name <name>` - Stack name (required)
 - `--plugins <plugins>` - Comma-separated list of plugin names (required)
 - `--config <json>` - Stack configuration as JSON string
 
 **Examples:**
+
 ```bash
 # Add a CI stack
 dotgithub plugin stack add --name "ci" --plugins "checkout,setup-node,test"
@@ -181,6 +190,7 @@ dotgithub plugin stack remove --name <name>
 ```
 
 **Options:**
+
 - `--name <name>` - Stack name to remove (required)
 
 ## Plugin Development

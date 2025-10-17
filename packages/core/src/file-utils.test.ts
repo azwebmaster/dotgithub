@@ -80,7 +80,9 @@ describe('sanitizeVarName', () => {
     it('handles common GitHub action patterns', () => {
       expect(sanitizeVarName('actions/checkout')).toBe('actionsCheckout');
       expect(sanitizeVarName('actions/setup-node')).toBe('actionsSetupNode');
-      expect(sanitizeVarName('github/codeql-action')).toBe('githubCodeqlAction');
+      expect(sanitizeVarName('github/codeql-action')).toBe(
+        'githubCodeqlAction'
+      );
     });
 
     it('handles versioned actions', () => {
@@ -89,8 +91,12 @@ describe('sanitizeVarName', () => {
     });
 
     it('handles organization/repo patterns', () => {
-      expect(sanitizeVarName('microsoft/setup-msbuild')).toBe('microsoftSetupMsbuild');
-      expect(sanitizeVarName('aws-actions/configure-aws-credentials')).toBe('awsActionsConfigureAwsCredentials');
+      expect(sanitizeVarName('microsoft/setup-msbuild')).toBe(
+        'microsoftSetupMsbuild'
+      );
+      expect(sanitizeVarName('aws-actions/configure-aws-credentials')).toBe(
+        'awsActionsConfigureAwsCredentials'
+      );
     });
   });
 });

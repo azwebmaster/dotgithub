@@ -97,6 +97,7 @@ The main configuration file controls all aspects of your DotGitHub project:
 #### Actions Configuration
 
 Each action entry contains:
+
 - **orgRepo** - GitHub repository (org/repo)
 - **ref** - Specific commit SHA
 - **versionRef** - Version reference (tag or branch)
@@ -191,11 +192,11 @@ dotgithub regenerate --prune
 Plugins are TypeScript classes that implement the `DotGitHubPlugin` interface:
 
 ```typescript
-import { 
-  DotGitHubPlugin, 
-  GitHubStack, 
-  WorkflowConstruct, 
-  JobConstruct 
+import {
+  DotGitHubPlugin,
+  GitHubStack,
+  WorkflowConstruct,
+  JobConstruct,
 } from '@dotgithub/core';
 
 export class MyPlugin implements DotGitHubPlugin {
@@ -334,11 +335,11 @@ Create workflows using the `WorkflowConstruct`:
 ```typescript
 const wf = new WorkflowConstruct(stack, 'ci', {
   name: 'CI Workflow',
-  on: { 
+  on: {
     push: { branches: ['main'] },
-    pull_request: {}
+    pull_request: {},
   },
-  jobs: {}
+  jobs: {},
 });
 ```
 
@@ -352,11 +353,11 @@ new JobConstruct(wf, 'test', {
   steps: [
     checkout('Checkout code').toStep(),
     setupNode('Setup Node.js', {
-      'node-version': '18'
+      'node-version': '18',
     }).toStep(),
     run('Install dependencies', 'npm install').toStep(),
-    run('Run tests', 'npm test').toStep()
-  ]
+    run('Run tests', 'npm test').toStep(),
+  ],
 });
 ```
 
@@ -370,7 +371,7 @@ const { checkout, setupNode, uploadArtifact } = new Actions(stack, 'actions');
 // Type-safe usage
 checkout('Checkout code', {
   'fetch-depth': 1,
-  'submodules': 'recursive'
+  submodules: 'recursive',
 }).toStep();
 ```
 
@@ -385,7 +386,7 @@ new JobConstruct(wf, 'deploy', {
   needs: ['test', 'build'],
   steps: [
     // ... deployment steps
-  ]
+  ],
 });
 
 // Matrix job
@@ -394,14 +395,14 @@ new JobConstruct(wf, 'test', {
   strategy: {
     matrix: {
       'node-version': ['16', '18', '20'],
-      'os': ['ubuntu-latest', 'windows-latest', 'macos-latest']
-    }
+      os: ['ubuntu-latest', 'windows-latest', 'macos-latest'],
+    },
   },
   steps: [
     setupNode('Setup Node.js', {
-      'node-version': '${{ matrix.node-version }}'
-    }).toStep()
-  ]
+      'node-version': '${{ matrix.node-version }}',
+    }).toStep(),
+  ],
 });
 
 // Conditional job
@@ -410,7 +411,7 @@ new JobConstruct(wf, 'deploy', {
   if: "github.ref == 'refs/heads/main'",
   steps: [
     // ... deployment steps
-  ]
+  ],
 });
 ```
 
@@ -423,11 +424,11 @@ new JobConstruct(wf, 'test', {
   'runs-on': 'ubuntu-latest',
   env: {
     NODE_ENV: 'test',
-    CI: 'true'
+    CI: 'true',
   },
   steps: [
     // ... test steps
-  ]
+  ],
 });
 ```
 
@@ -439,8 +440,8 @@ Use GitHub secrets and variables:
 new JobConstruct(wf, 'deploy', {
   'runs-on': 'ubuntu-latest',
   steps: [
-    run('Deploy', 'echo "Deploying to ${{ secrets.ENVIRONMENT }}"').toStep()
-  ]
+    run('Deploy', 'echo "Deploying to ${{ secrets.ENVIRONMENT }}"').toStep(),
+  ],
 });
 ```
 

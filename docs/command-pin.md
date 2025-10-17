@@ -61,6 +61,7 @@ Pins the checkout action to a specific commit SHA for the "deploy" plugin.
 Actions must be specified in the format: `org/repo`
 
 Examples:
+
 - `actions/checkout` - GitHub's checkout action
 - `actions/setup-node` - GitHub's setup-node action
 - `myorg/my-action` - Custom organization action
@@ -68,6 +69,7 @@ Examples:
 ## Version references
 
 Version references can be:
+
 - **Tags** - `v4`, `v5.1.0`, `latest`
 - **Branches** - `main`, `develop`
 - **Commit SHAs** - `abc1234`, `0057852b`
@@ -77,17 +79,21 @@ Version references can be:
 You must specify exactly one scope:
 
 ### Plugin scope
+
 ```bash
 dotgithub pin actions/checkout v4 --plugin my-plugin
 ```
+
 - Overrides the action version for the specified plugin
 - Only affects that plugin's workflow generation
 - Other plugins use their default versions
 
 ### Stack scope
+
 ```bash
 dotgithub pin actions/checkout v4 --stack ci
 ```
+
 - Overrides the action version for the specified stack
 - Affects all plugins in that stack
 - Other stacks use their default versions
@@ -116,6 +122,7 @@ Pins are stored in your `dotgithub.json` configuration:
 ## Use cases
 
 ### Plugin-specific versions
+
 ```bash
 # Use older version for legacy plugin
 dotgithub pin actions/checkout v3 --plugin legacy-plugin
@@ -125,6 +132,7 @@ dotgithub pin actions/checkout v4 --plugin modern-plugin
 ```
 
 ### Stack-specific versions
+
 ```bash
 # Use stable version for production stack
 dotgithub pin actions/setup-node v4.1.0 --stack production
@@ -134,6 +142,7 @@ dotgithub pin actions/setup-node v5 --stack development
 ```
 
 ### Security patches
+
 ```bash
 # Pin to patched version
 dotgithub pin actions/checkout v4.1.1 --stack security-critical
@@ -142,6 +151,7 @@ dotgithub pin actions/checkout v4.1.1 --stack security-critical
 ## Error handling
 
 The command will fail if:
+
 - Action format is invalid (must be `org/repo`)
 - Neither `--stack` nor `--plugin` is specified
 - Both `--stack` and `--plugin` are specified
@@ -151,6 +161,7 @@ The command will fail if:
 ## Success output
 
 When successful, the command shows:
+
 ```
 ✅ Pinned actions/checkout to v4 for plugin "my-plugin"
 ```

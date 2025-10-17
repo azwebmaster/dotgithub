@@ -1,42 +1,42 @@
-import { ActionsConstruct } from "@dotgithub/core";
-import type { Construct, GitHubStepAction } from "@dotgithub/core";
+import { ActionsConstruct } from '@dotgithub/core';
+import type { Construct, GitHubStepAction } from '@dotgithub/core';
 
 import {
   Cache as Cache,
   type CacheInputs as CacheInputs,
-} from "./cache/cache.js";
+} from './cache/cache.js';
 import {
   RestoreCacheRestore as RestoreCacheRestore,
   type RestoreCacheRestoreInputs as RestoreCacheRestoreInputs,
-} from "./cache/restore/restore-cache.js";
+} from './cache/restore/restore-cache.js';
 import {
   SaveACacheSave as SaveACacheSave,
   type SaveACacheSaveInputs as SaveACacheSaveInputs,
-} from "./cache/save/save-a-cache.js";
+} from './cache/save/save-a-cache.js';
 import {
   Checkout as Checkout,
   type CheckoutInputs as CheckoutInputs,
-} from "./checkout.js";
+} from './checkout.js';
 import {
   DownloadABuildArtifact as DownloadABuildArtifact,
   type DownloadABuildArtifactInputs as DownloadABuildArtifactInputs,
-} from "./download-artifact.js";
+} from './download-artifact.js';
 import {
   SetupNode as SetupNode,
   type SetupNodeInputs as SetupNodeInputs,
-} from "./setup-node.js";
+} from './setup-node.js';
 import {
   SetupPython as SetupPython,
   type SetupPythonInputs as SetupPythonInputs,
-} from "./setup-python.js";
+} from './setup-python.js';
 import {
   UploadABuildArtifact as UploadABuildArtifact,
   type UploadABuildArtifactInputs as UploadABuildArtifactInputs,
-} from "./upload-artifact/upload-a-build-artifact.js";
+} from './upload-artifact/upload-a-build-artifact.js';
 import {
   MergeBuildArtifactsMerge as MergeBuildArtifactsMerge,
   type MergeBuildArtifactsMergeInputs as MergeBuildArtifactsMergeInputs,
-} from "./upload-artifact/merge/merge-build-artifacts.js";
+} from './upload-artifact/merge/merge-build-artifacts.js';
 
 /**
  * Actions organization actions.
@@ -65,10 +65,10 @@ export class Actions extends ActionsConstruct {
   public cache = (
     name: string,
     inputs?: CacheInputs,
-    stepOptions?: Partial<Omit<GitHubStepAction, "uses" | "with" | "name">>,
-    ref?: string,
+    stepOptions?: Partial<Omit<GitHubStepAction, 'uses' | 'with' | 'name'>>,
+    ref?: string
   ): Cache => {
-    return this.createActionConstruct(Cache, "Cache", {
+    return this.createActionConstruct(Cache, 'Cache', {
       inputs,
       stepOptions: { name, ...stepOptions },
       ref,
@@ -87,13 +87,13 @@ export class Actions extends ActionsConstruct {
   public restoreCache = (
     name: string,
     inputs?: RestoreCacheRestoreInputs,
-    stepOptions?: Partial<Omit<GitHubStepAction, "uses" | "with" | "name">>,
-    ref?: string,
+    stepOptions?: Partial<Omit<GitHubStepAction, 'uses' | 'with' | 'name'>>,
+    ref?: string
   ): RestoreCacheRestore => {
     return this.createActionConstruct(
       RestoreCacheRestore,
-      "RestoreCacheRestore",
-      { inputs, stepOptions: { name, ...stepOptions }, ref },
+      'RestoreCacheRestore',
+      { inputs, stepOptions: { name, ...stepOptions }, ref }
     );
   };
 
@@ -109,10 +109,10 @@ export class Actions extends ActionsConstruct {
   public saveACache = (
     name: string,
     inputs?: SaveACacheSaveInputs,
-    stepOptions?: Partial<Omit<GitHubStepAction, "uses" | "with" | "name">>,
-    ref?: string,
+    stepOptions?: Partial<Omit<GitHubStepAction, 'uses' | 'with' | 'name'>>,
+    ref?: string
   ): SaveACacheSave => {
-    return this.createActionConstruct(SaveACacheSave, "SaveACacheSave", {
+    return this.createActionConstruct(SaveACacheSave, 'SaveACacheSave', {
       inputs,
       stepOptions: { name, ...stepOptions },
       ref,
@@ -131,10 +131,10 @@ export class Actions extends ActionsConstruct {
   public checkout = (
     name: string,
     inputs?: CheckoutInputs,
-    stepOptions?: Partial<Omit<GitHubStepAction, "uses" | "with" | "name">>,
-    ref?: string,
+    stepOptions?: Partial<Omit<GitHubStepAction, 'uses' | 'with' | 'name'>>,
+    ref?: string
   ): Checkout => {
-    return this.createActionConstruct(Checkout, "Checkout", {
+    return this.createActionConstruct(Checkout, 'Checkout', {
       inputs,
       stepOptions: { name, ...stepOptions },
       ref,
@@ -153,13 +153,13 @@ export class Actions extends ActionsConstruct {
   public downloadABuildArtifact = (
     name: string,
     inputs?: DownloadABuildArtifactInputs,
-    stepOptions?: Partial<Omit<GitHubStepAction, "uses" | "with" | "name">>,
-    ref?: string,
+    stepOptions?: Partial<Omit<GitHubStepAction, 'uses' | 'with' | 'name'>>,
+    ref?: string
   ): DownloadABuildArtifact => {
     return this.createActionConstruct(
       DownloadABuildArtifact,
-      "DownloadABuildArtifact",
-      { inputs, stepOptions: { name, ...stepOptions }, ref },
+      'DownloadABuildArtifact',
+      { inputs, stepOptions: { name, ...stepOptions }, ref }
     );
   };
 
@@ -175,10 +175,10 @@ export class Actions extends ActionsConstruct {
   public setupNode = (
     name: string,
     inputs?: SetupNodeInputs,
-    stepOptions?: Partial<Omit<GitHubStepAction, "uses" | "with" | "name">>,
-    ref?: string,
+    stepOptions?: Partial<Omit<GitHubStepAction, 'uses' | 'with' | 'name'>>,
+    ref?: string
   ): SetupNode => {
-    return this.createActionConstruct(SetupNode, "SetupNode", {
+    return this.createActionConstruct(SetupNode, 'SetupNode', {
       inputs,
       stepOptions: { name, ...stepOptions },
       ref,
@@ -197,10 +197,10 @@ export class Actions extends ActionsConstruct {
   public setupPython = (
     name: string,
     inputs?: SetupPythonInputs,
-    stepOptions?: Partial<Omit<GitHubStepAction, "uses" | "with" | "name">>,
-    ref?: string,
+    stepOptions?: Partial<Omit<GitHubStepAction, 'uses' | 'with' | 'name'>>,
+    ref?: string
   ): SetupPython => {
-    return this.createActionConstruct(SetupPython, "SetupPython", {
+    return this.createActionConstruct(SetupPython, 'SetupPython', {
       inputs,
       stepOptions: { name, ...stepOptions },
       ref,
@@ -219,13 +219,13 @@ export class Actions extends ActionsConstruct {
   public uploadABuildArtifact = (
     name: string,
     inputs?: UploadABuildArtifactInputs,
-    stepOptions?: Partial<Omit<GitHubStepAction, "uses" | "with" | "name">>,
-    ref?: string,
+    stepOptions?: Partial<Omit<GitHubStepAction, 'uses' | 'with' | 'name'>>,
+    ref?: string
   ): UploadABuildArtifact => {
     return this.createActionConstruct(
       UploadABuildArtifact,
-      "UploadABuildArtifact",
-      { inputs, stepOptions: { name, ...stepOptions }, ref },
+      'UploadABuildArtifact',
+      { inputs, stepOptions: { name, ...stepOptions }, ref }
     );
   };
 
@@ -241,13 +241,13 @@ export class Actions extends ActionsConstruct {
   public mergeBuildArtifacts = (
     name: string,
     inputs?: MergeBuildArtifactsMergeInputs,
-    stepOptions?: Partial<Omit<GitHubStepAction, "uses" | "with" | "name">>,
-    ref?: string,
+    stepOptions?: Partial<Omit<GitHubStepAction, 'uses' | 'with' | 'name'>>,
+    ref?: string
   ): MergeBuildArtifactsMerge => {
     return this.createActionConstruct(
       MergeBuildArtifactsMerge,
-      "MergeBuildArtifactsMerge",
-      { inputs, stepOptions: { name, ...stepOptions }, ref },
+      'MergeBuildArtifactsMerge',
+      { inputs, stepOptions: { name, ...stepOptions }, ref }
     );
   };
 }

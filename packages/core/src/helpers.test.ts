@@ -2,14 +2,17 @@ import { describe, it, expect } from 'vitest';
 
 describe('parseOrgRepoRef helper', () => {
   // Test the parseOrgRepoRef function by extracting it from the implementation
-  function parseOrgRepoRef(orgRepoRef: string): { orgRepo: string; ref?: string } {
+  function parseOrgRepoRef(orgRepoRef: string): {
+    orgRepo: string;
+    ref?: string;
+  } {
     const atIndex = orgRepoRef.lastIndexOf('@');
     if (atIndex === -1) {
       return { orgRepo: orgRepoRef };
     }
     return {
       orgRepo: orgRepoRef.substring(0, atIndex),
-      ref: orgRepoRef.substring(atIndex + 1)
+      ref: orgRepoRef.substring(atIndex + 1),
     };
   }
 
@@ -41,8 +44,12 @@ describe('parseOrgRepoRef helper', () => {
 
   it('generates correct filename from action name', () => {
     expect(generateFilenameFromActionName('MyAction')).toBe('myaction');
-    expect(generateFilenameFromActionName('My Action Name')).toBe('my-action-name');
+    expect(generateFilenameFromActionName('My Action Name')).toBe(
+      'my-action-name'
+    );
     expect(generateFilenameFromActionName('checkout-v2')).toBe('checkout-v2');
-    expect(generateFilenameFromActionName('My-Special_Action@v1')).toBe('my-special-action-v1');
+    expect(generateFilenameFromActionName('My-Special_Action@v1')).toBe(
+      'my-special-action-v1'
+    );
   });
 });

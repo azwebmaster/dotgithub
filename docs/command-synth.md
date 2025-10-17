@@ -85,6 +85,7 @@ Generated workflows are organized as:
 ## Stack execution
 
 Each stack in your configuration:
+
 1. Loads its configured plugins
 2. Validates plugin configurations
 3. Executes the plugin's `synthesize` method
@@ -94,6 +95,7 @@ Each stack in your configuration:
 ## Plugin integration
 
 Plugins generate workflows by:
+
 - Creating `WorkflowConstruct` instances
 - Adding jobs with `JobConstruct`
 - Using type-safe action wrappers
@@ -123,12 +125,14 @@ async synthesize(stack: GitHubStack): Promise<void> {
 ## Dry run mode
 
 Use `--dry-run` to:
+
 - Preview generated files without writing
 - Validate your configuration
 - Debug plugin issues
 - See file structure before committing
 
 Dry run output shows:
+
 - Files that would be written
 - File contents (truncated)
 - Plugin execution results
@@ -137,6 +141,7 @@ Dry run output shows:
 ## Error handling
 
 The command will fail if:
+
 - Configuration file is invalid
 - Plugins fail to load
 - Plugin synthesis errors occur
@@ -146,6 +151,7 @@ The command will fail if:
 ## Performance
 
 Synthesis performance depends on:
+
 - Number of configured stacks
 - Plugin complexity
 - Network operations (if any)

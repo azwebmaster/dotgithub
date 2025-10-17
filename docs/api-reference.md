@@ -73,7 +73,7 @@ validate(stack: GitHubStack): void {
     environment: z.enum(['development', 'staging', 'production']),
     timeout: z.number().min(1).max(60).default(10)
   });
-  
+
   schema.parse(stack.config);
 }
 ```
@@ -123,11 +123,7 @@ Creates and configures GitHub workflows.
 
 ```typescript
 class WorkflowConstruct {
-  constructor(
-    stack: GitHubStack,
-    id: string,
-    props: WorkflowProps
-  );
+  constructor(stack: GitHubStack, id: string, props: WorkflowProps);
 }
 ```
 
@@ -178,11 +174,7 @@ Creates and configures workflow jobs.
 
 ```typescript
 class JobConstruct {
-  constructor(
-    workflow: WorkflowConstruct,
-    id: string,
-    props: JobProps
-  );
+  constructor(workflow: WorkflowConstruct, id: string, props: JobProps);
 }
 ```
 
@@ -223,7 +215,7 @@ Provides type-safe access to GitHub Actions.
 ```typescript
 class Actions {
   constructor(stack: GitHubStack, id: string);
-  
+
   // Generated methods for each action
   checkout(name: string, inputs?: CheckoutInputs): ActionConstruct;
   setupNode(name: string, inputs?: SetupNodeInputs): ActionConstruct;
@@ -238,7 +230,7 @@ Base class for all action wrappers.
 ```typescript
 class ActionConstruct {
   constructor(name: string, inputs?: Record<string, any>);
-  
+
   toStep(): Step;
   withInputs(inputs: Record<string, any>): ActionConstruct;
 }
@@ -306,11 +298,7 @@ Creates reusable workflow definitions.
 
 ```typescript
 class SharedWorkflowConstruct {
-  constructor(
-    stack: GitHubStack,
-    id: string,
-    props: SharedWorkflowProps
-  );
+  constructor(stack: GitHubStack, id: string, props: SharedWorkflowProps);
 }
 ```
 
@@ -435,18 +423,18 @@ interface GitHubWorkflowSecret {
 
 ```typescript
 interface CheckoutInputs {
-  'repository'?: string;
-  'ref'?: string;
-  'token'?: string;
+  repository?: string;
+  ref?: string;
+  token?: string;
   'ssh-key'?: string;
   'ssh-known-hosts'?: string;
   'ssh-strict'?: boolean;
   'persist-credentials'?: boolean;
-  'path'?: string;
-  'clean'?: boolean;
+  path?: string;
+  clean?: boolean;
   'fetch-depth'?: number;
-  'lfs'?: boolean;
-  'submodules'?: boolean | 'recursive';
+  lfs?: boolean;
+  submodules?: boolean | 'recursive';
   'set-safe-directory'?: boolean;
 }
 ```
@@ -457,13 +445,13 @@ interface CheckoutInputs {
 interface SetupNodeInputs {
   'node-version'?: string;
   'node-version-file'?: string;
-  'cache'?: string;
+  cache?: string;
   'cache-dependency-path'?: string;
   'check-latest'?: boolean;
   'always-auth'?: boolean;
   'registry-url'?: string;
-  'scope'?: string;
-  'token'?: string;
+  scope?: string;
+  token?: string;
 }
 ```
 
@@ -473,10 +461,10 @@ interface SetupNodeInputs {
 interface SetupPythonInputs {
   'python-version'?: string;
   'python-version-file'?: string;
-  'cache'?: string;
+  cache?: string;
   'cache-dependency-path'?: string;
-  'token'?: string;
-  'architecture'?: string;
+  token?: string;
+  architecture?: string;
   'update-environment'?: boolean;
 }
 ```
@@ -544,7 +532,7 @@ const SUPPORTED_RUNNERS = [
   'windows-2022',
   'macos-latest',
   'macos-13',
-  'macos-12'
+  'macos-12',
 ];
 ```
 
@@ -553,7 +541,12 @@ const SUPPORTED_RUNNERS = [
 ### Basic Plugin
 
 ```typescript
-import { DotGitHubPlugin, GitHubStack, WorkflowConstruct, JobConstruct } from '@dotgithub/core';
+import {
+  DotGitHubPlugin,
+  GitHubStack,
+  WorkflowConstruct,
+  JobConstruct,
+} from '@dotgithub/core';
 
 export class BasicPlugin implements DotGitHubPlugin {
   readonly name = 'basic-plugin';
@@ -568,7 +561,7 @@ export class BasicPlugin implements DotGitHubPlugin {
     return {
       name: this.name,
       version: this.version,
-      description: this.description
+      description: this.description,
     };
   }
 
@@ -576,7 +569,7 @@ export class BasicPlugin implements DotGitHubPlugin {
     const wf = new WorkflowConstruct(stack, 'ci', {
       name: 'CI Workflow',
       on: { push: { branches: ['main'] } },
-      jobs: {}
+      jobs: {},
     });
 
     new JobConstruct(wf, 'test', {
@@ -584,13 +577,13 @@ export class BasicPlugin implements DotGitHubPlugin {
       steps: [
         {
           name: 'Checkout',
-          uses: 'actions/checkout@v4'
+          uses: 'actions/checkout@v4',
         },
         {
           name: 'Run tests',
-          run: 'npm test'
-        }
-      ]
+          run: 'npm test',
+        },
+      ],
     });
   }
 }
@@ -602,7 +595,13 @@ export default new BasicPlugin();
 
 ```typescript
 import { z } from 'zod';
-import { DotGitHubPlugin, GitHubStack, WorkflowConstruct, JobConstruct, Actions } from '@dotgithub/core';
+import {
+  DotGitHubPlugin,
+  GitHubStack,
+  WorkflowConstruct,
+  JobConstruct,
+  Actions,
+} from '@dotgithub/core';
 
 export class AdvancedPlugin implements DotGitHubPlugin {
   readonly name = 'advanced-plugin';
@@ -613,7 +612,7 @@ export class AdvancedPlugin implements DotGitHubPlugin {
     environment: z.enum(['development', 'staging', 'production']),
     nodeVersion: z.string().default('18'),
     testCommand: z.string().default('npm test'),
-    deployCommand: z.string().default('npm run deploy')
+    deployCommand: z.string().default('npm run deploy'),
   });
 
   validate(stack: GitHubStack): void {
@@ -625,7 +624,7 @@ export class AdvancedPlugin implements DotGitHubPlugin {
       name: this.name,
       version: this.version,
       description: this.description,
-      configSchema: this.configSchema
+      configSchema: this.configSchema,
     };
   }
 
@@ -635,11 +634,11 @@ export class AdvancedPlugin implements DotGitHubPlugin {
 
     const wf = new WorkflowConstruct(stack, 'ci', {
       name: 'CI/CD Workflow',
-      on: { 
+      on: {
         push: { branches: ['main'] },
-        pull_request: {}
+        pull_request: {},
       },
-      jobs: {}
+      jobs: {},
     });
 
     // Test job
@@ -648,17 +647,17 @@ export class AdvancedPlugin implements DotGitHubPlugin {
       steps: [
         checkout('Checkout code').toStep(),
         setupNode('Setup Node.js', {
-          'node-version': config.nodeVersion
+          'node-version': config.nodeVersion,
         }).toStep(),
         {
           name: 'Install dependencies',
-          run: 'npm install'
+          run: 'npm install',
         },
         {
           name: 'Run tests',
-          run: config.testCommand
-        }
-      ]
+          run: config.testCommand,
+        },
+      ],
     });
 
     // Deploy job (only on main branch)
@@ -670,16 +669,16 @@ export class AdvancedPlugin implements DotGitHubPlugin {
         steps: [
           checkout('Checkout code').toStep(),
           setupNode('Setup Node.js', {
-            'node-version': config.nodeVersion
+            'node-version': config.nodeVersion,
           }).toStep(),
           {
             name: 'Deploy',
             run: config.deployCommand,
             env: {
-              NODE_ENV: config.environment
-            }
-          }
-        ]
+              NODE_ENV: config.environment,
+            },
+          },
+        ],
       });
     }
   }

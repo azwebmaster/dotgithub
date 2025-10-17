@@ -81,9 +81,7 @@
   "stacks": [
     {
       "name": "app",
-      "plugins": [
-        "local"
-      ],
+      "plugins": ["local"],
       "config": {
         "environment": "production"
       }
