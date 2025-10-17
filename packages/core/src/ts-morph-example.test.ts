@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { TypeScriptGenerator, createExampleActionModule, createExamplePlugin } from './ts-morph-example';
+import { TypeScriptGenerator, createExampleActionModule, createExamplePlugin } from './ts-morph-example.js';
 
 describe('TypeScriptGenerator', () => {
   let generator: TypeScriptGenerator;

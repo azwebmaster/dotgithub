@@ -1,7 +1,8 @@
 import { z } from 'zod';
-import { GitHubStack } from '../constructs/base';
-import { ActionsHelper } from './actions-helper';
-import { DotGitHubPlugin } from './types';
+import { GitHubStack } from '../constructs/base.js';
+import { ActionsHelper } from './actions-helper.js';
+import { SharedWorkflowHelper } from './shared-workflow-helper.js';
+import { DotGitHubPlugin } from './types.js';
 
 /**
  * Base schema for plugin configuration
@@ -104,16 +105,6 @@ export interface PluginMetadata {
   conflicts?: string[];
 }
 
-/**
- * Plugin context type
- */
-export interface PluginContext {
-  stack: GitHubStack;
-  config: Record<string, any>;
-  stackConfig: StackConfig;
-  projectRoot: string;
-  actions: ActionsHelper;
-}
 
 /**
  * Plugin execution result type

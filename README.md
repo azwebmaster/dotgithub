@@ -1,46 +1,75 @@
 
-# dotgithub Monorepo
+# DotGitHub
 
-This is a monorepo for TypeScript packages using [Bun](https://bun.sh) as the primary runtime and package manager, [Vitest](https://vitest.dev/) for testing (managed centrally from the repo root, pinned to ^3.2.4), and [jsii](https://github.com/aws/jsii) to compile packages to Python.
+A powerful TypeScript framework for managing GitHub Actions workflows and configurations. DotGitHub provides a type-safe, plugin-based approach to generating and managing GitHub Actions, making it easier to maintain complex CI/CD pipelines.
 
-## Packages
+## Features
 
-- `@dotgithub/cli` — CLI utilities
-- `@dotgithub/core` — Core logic
+- 🚀 **Type-Safe Actions**: Generate TypeScript wrappers for GitHub Actions with full type safety
+- 🔌 **Plugin System**: Extensible plugin architecture for custom workflow generation
+- 📦 **Action Management**: Automatically download and manage GitHub Actions with version pinning
+- 🏗️ **Workflow Synthesis**: Generate complete GitHub workflows from TypeScript code
+- 🎯 **Configuration-Driven**: Declarative configuration for actions, plugins, and stacks
+- 🔄 **Auto-Generation**: Automatically generate action types and workflow files
 
-## Getting Started
+## Quick Start
 
-Install dependencies (using bun):
-
-```bash
-bun install
-```
-
-## Scripts
-
-Build all packages:
+### Installation
 
 ```bash
-bun run build
+# Install globally
+npm install -g @dotgithub/cli
+
+# Or use with npx
+npx @dotgithub/cli
 ```
 
-Test all packages (run from the repo root):
+### Initialize a Project
 
 ```bash
-bun test
+# Initialize a new DotGitHub project
+dotgithub init
+
+# Or specify a custom directory
+dotgithub init --output ./my-workflows
 ```
 
-## Using Bun
-
-You can use Bun to run scripts as well:
+### Add GitHub Actions
 
 ```bash
-bun run index.ts
+# Add a specific action
+dotgithub add actions/checkout@v4
+
+# Add multiple actions
+dotgithub add actions/setup-node@v4 actions/setup-python@v5
 ```
 
-## Compiling to Python
+### Generate Workflows
 
-Each package is configured with jsii to compile to Python. See the `jsii` section in each package's `package.json` for details.
+```bash
+# Synthesize workflows from your TypeScript code
+dotgithub synth
+```
 
----
-This project pins Vitest centrally at ^3.2.4 for consistent test runs across all packages.
+## Basic Usage
+
+1. **Initialize** your project with `dotgithub init`
+2. **Configure** actions in `dotgithub.json`
+3. **Write** your workflow logic in TypeScript
+4. **Synthesize** workflows with `dotgithub synth`
+
+## Documentation
+
+- 📖 [Installation Guide](docs/installation.md)
+- 🚀 [Getting Started](docs/getting-started.md)
+- 📚 [User Guide](docs/user-guide.md)
+- 🔧 [API Reference](docs/api-reference.md)
+- 🔌 [Plugin Development](docs/plugin-development.md)
+
+## Contributing
+
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details on how to get started.
+
+## License
+
+MIT License - see [LICENSE](LICENSE) file for details.

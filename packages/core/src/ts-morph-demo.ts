@@ -10,7 +10,7 @@
  * 4. Formatting and saving generated code
  */
 
-import { TypeScriptGenerator } from './ts-morph-example';
+import { TypeScriptGenerator } from './ts-morph-example.js';
 // Note: MonorepoPlugin would be imported from the actual plugin location
 // import { MonorepoPlugin } from '../../.github/src/plugins/monorepo-plugin';
 

@@ -1,10 +1,10 @@
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { getDefaultBranch } from './github';
-import { cloneRepo } from './git';
-import { readActionYml } from './action-yml';
-import { generateTypesFromYml } from './typegen';
+import { getDefaultBranch } from './github.js';
+import { cloneRepo } from './git.js';
+import { readActionYml } from './action-yml.js';
+import { generateTypesFromYml } from './typegen.js';
 
 export interface GenerateTypesResult {
   yaml: any;
@@ -19,7 +19,7 @@ export interface GenerateTypesResult {
  * @param versionRef user-friendly version reference to use in generated code
  * @param customActionName custom action name to override the YAML name
  */
-export async function generateTypesFromActionYml(orgRepo: string, ref?: string, token?: string, versionRef?: string, customActionName?: string): Promise<GenerateTypesResult> {
+export async function generateTypesFromActionYml(orgRepo: string, ref?: string, token?: string, versionRef?: string, customActionName?: string, actionPath?: string): Promise<GenerateTypesResult> {
   const [owner, repo] = orgRepo.split('/');
   if (!owner || !repo) throw new Error('orgRepo must be in the form org/repo');
   token = token || process.env.GITHUB_TOKEN;
@@ -38,10 +38,19 @@ export async function generateTypesFromActionYml(orgRepo: string, ref?: string, 
 
   const tmpDir = createTempDir();
   await cloneRepoToTemp(owner, repo, cloneRefToUse, token, tmpDir);
-  const yml = readActionYml(tmpDir);
-  const type = generateTypesFromYml(yml, orgRepo, ref, versionRef, customActionName);
-  cleanupTempDir(tmpDir);
-  return { yaml: yml, type };
+  
+  if (actionPath) {
+    // Use generateTypesFromActionYmlAtPath for actions with actionPath
+    const result = generateTypesFromActionYmlAtPath(tmpDir, actionPath, orgRepo, ref, versionRef, customActionName);
+    cleanupTempDir(tmpDir);
+    return result;
+  } else {
+    // Use the original logic for actions without actionPath
+    const yml = readActionYml(tmpDir);
+    const type = generateTypesFromYml(yml, orgRepo, ref, versionRef, customActionName, undefined);
+    cleanupTempDir(tmpDir);
+    return { yaml: yml, type };
+  }
 }
 
 function createTempDir(): string {
@@ -118,6 +127,6 @@ export function generateTypesFromActionYmlAtPath(
   const yml = readActionYml(actionDir);
   // For actions in subdirectories, include the action path in the repo string
   const repoForUses = actionPath ? `${orgRepo}/${actionPath}` : orgRepo;
-  const type = generateTypesFromYml(yml, repoForUses, ref, versionRef, customActionName);
+  const type = generateTypesFromYml(yml, repoForUses, ref, versionRef, customActionName, actionPath);
   return { yaml: yml, type };
 }

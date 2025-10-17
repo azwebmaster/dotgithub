@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { generateWorkflowYaml, createWorkflow, createJob } from './workflow-generator';
-import type { GitHubWorkflow, GitHubJob } from './types/workflow';
+import { generateWorkflowYaml, createWorkflow, createJob } from './workflow-generator.js';
+import type { GitHubWorkflow, GitHubJob } from './types/workflow.js';
 
 describe('workflow-generator', () => {
   describe('generateWorkflowYaml', () => {

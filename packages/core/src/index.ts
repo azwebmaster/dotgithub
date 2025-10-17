@@ -2,7 +2,7 @@
 
 // Export types and functions that will be used by generated code
 export { createStep, run } from './actions.js';
-export type { GitHubStep, GitHubStepBase, GitHubStepAction, GitHubStepWith, GitHubWorkflow, GitHubJob, GitHubWorkflows } from './types/workflow.js';
+export * from './types/index.js';
 
 // Export construct classes for CDK-style workflow building
 export * from './constructs/index.js';
@@ -39,7 +39,12 @@ export {
   // Path resolution utilities
   getConfigDir,
   // OutputPath validation and fixing
-  validateAndFixOutputPaths
+  validateAndFixOutputPaths,
+  // Action pinning functionality
+  setPinnedAction,
+  removePinnedAction,
+  getPinnedActions,
+  getAllPinnedActions
 } from './config.js';
 export type {
   DotGithubConfig,
@@ -53,6 +58,7 @@ export * from './context.js';
 export * from './plugins/index.js';
 export { ActionCollection } from './plugins/action-collection.js';
 export { StepChainBuilder } from './plugins/actions-helper.js';
+export { SharedWorkflowHelper } from './plugins/shared-workflow-helper.js';
 export { StackSynthesizer } from './stack-synthesizer.js';
 export type { StackSynthesizerOptions, SynthesisResult, SynthesisResults } from './stack-synthesizer.js';
 
@@ -87,9 +93,25 @@ export type {
 
 // Export type generation functionality
 export {
-  generateTypesFromActionYml
+  generateTypesFromActionYml,
+  generateTypesFromActionYmlAtPath
 } from './types-generator.js';
 export type {
   GenerateTypesResult
 } from './types-generator.js';
+
+// Export type generation utilities
+export {
+  generateActionsConstructClass
+} from './typegen.js';
+
+// Export logging functionality
+export { logger, createLogger, Logger } from './logger.js';
+export type { LogLevel, LoggerOptions } from './logger.js';
+
+// Export utility functions
+export { generateFunctionName, toProperCase, dedent } from './utils.js';
+
+// Export file utilities
+export { addImportsToGeneratedTypes, updateOrgIndexFile, updateRootIndexFile } from './file-utils.js';
 

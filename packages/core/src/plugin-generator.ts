@@ -2,11 +2,11 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as yaml from 'yaml';
 import { format } from 'prettier';
-import { cloneRepo } from './git';
-import { getDefaultBranch } from './github';
-import type { DotGithubContext } from './context';
+import { cloneRepo } from './git.js';
+import { getDefaultBranch } from './github.js';
+import type { DotGithubContext } from './context.js';
 import { Project, SourceFile, ClassDeclaration, MethodDeclaration, PropertyDeclaration } from 'ts-morph';
-import { generateActionFiles } from './actions-manager';
+import { generateActionFiles } from './actions-manager.js';
 
 // Enhanced TypeScript interfaces for better type safety
 interface WorkflowSchema {
@@ -1213,10 +1213,10 @@ async function generateClassDefinition(
   for (const file of generatedFiles) {
     if (file.type === 'workflow') {
       const importName = toCamelCase(file.name) + 'Handler';
-      workflowImports.push(`import { ${importName} } from './workflows/${file.name}';`);
+      workflowImports.push(`import { ${importName} } from './workflows/${file.name}.js';`);
     } else if (file.type === 'resource') {
       const importName = toCamelCase(file.name) + 'Handler';
-      resourceImports.push(`import { ${importName} } from './resources/${file.name}';`);
+      resourceImports.push(`import { ${importName} } from './resources/${file.name}.js';`);
     }
   }
   

@@ -2,8 +2,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import { createPluginFromFiles, generatePluginFromGitHubFiles } from './plugin-generator';
-import type { DotGithubContext } from './context';
+import { createPluginFromFiles, generatePluginFromGitHubFiles } from './plugin-generator.js';
+import type { DotGithubContext } from './context.js';
 
 // Mock dependencies
 vi.mock('./git', () => ({

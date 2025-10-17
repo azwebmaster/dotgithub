@@ -1,7 +1,7 @@
 import type { GitHubStep, GitHubStepWith, GitHubStepRun } from "./types/workflow";
 import type { DotGithubConfig, DotGithubAction } from "./config";
-import { dedent } from "./utils";
-import type { PluginContext } from "./plugins/types";
+import { dedent } from "./utils.js";
+import type { GitHubStack } from "./constructs/base";
 
 export function run(name: string, script: string, step?: Partial<Omit<GitHubStepRun, "run" | "name">>): GitHubStepRun {
     const runStep: GitHubStepRun = {
@@ -17,22 +17,22 @@ export function run(name: string, script: string, step?: Partial<Omit<GitHubStep
  * @param uses - The action to use (e.g., "actions/checkout")
  * @param step - Additional step configuration
  * @param ref - Optional ref override
- * @param context - Optional plugin context to look up action ref overrides
+ * @param stack - Optional GitHub stack to look up action ref overrides
  * @returns A GitHub step configuration
  */
 export function createStep<T extends GitHubStepWith>(
     uses: string, 
     step?: Partial<Omit<GitHubStep<T>, "uses">>, 
     ref?: string,
-    context?: PluginContext,
+    stack?: GitHubStack,
     fallbackRef?: string
 ): GitHubStep<T> {
     let version: string | undefined;
     
     // Priority order: 1. Stack config (highest), 2. Plugin config, 3. Action function ref, 4. Hardcoded ref
-    if (context) {
+    if (stack) {
         // Check for action overrides in the merged config (stack config takes priority over plugin config)
-        const actionOverride = context.config.actions?.[uses];
+        const actionOverride = stack.config?.actions?.[uses];
         if (actionOverride) {
             version = actionOverride;
         }

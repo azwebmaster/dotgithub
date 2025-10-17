@@ -1,11 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { StackSynthesizer } from './stack-synthesizer';
-import { readConfig, writeConfig, setConfigPath, createDefaultConfig } from './config';
-import { DotGithubContext } from './context';
+import { StackSynthesizer } from './stack-synthesizer.js';
+import { readConfig, writeConfig, setConfigPath, createDefaultConfig } from './config.js';
+import { DotGithubContext } from './context.js';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import type { DotGithubConfig } from './config';
+import type { DotGithubConfig } from './config.js';
 
 // Mock fs module
 vi.mock('fs');

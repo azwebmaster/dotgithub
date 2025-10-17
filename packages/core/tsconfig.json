@@ -5,7 +5,10 @@
     "rootDir": "src",
     "declaration": true,
     "declarationMap": true,
-    "noEmit": false
+    "noEmit": false,
+    "moduleResolution": "bundler",
+    "module": "ESNext",
+    "target": "ESNext"
   },
   "include": ["src/**/*.ts"],
   "exclude": ["src/**/*.test.ts"]

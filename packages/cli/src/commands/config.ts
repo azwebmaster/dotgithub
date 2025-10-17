@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import { readConfig, writeConfig, getConfigPath, updateRootDir, getActionsFromConfig, getResolvedOutputPath, removeActionFromConfig, createConfigFile, type DotGithubContext } from '@dotgithub/core';
+import { readConfig, writeConfig, getConfigPath, updateRootDir, getActionsFromConfig, getResolvedOutputPath, removeActionFromConfig, createConfigFile, type DotGithubContext, logger } from '@dotgithub/core';
 
 export function createConfigCommand(createContext: (options?: any) => DotGithubContext): Command {
   const configCmd = new Command('config')
@@ -13,11 +13,11 @@ export function createConfigCommand(createContext: (options?: any) => DotGithubC
       try {
         const context = createContext(options);
         
-        console.log(`Configuration file: ${context.configPath}`);
-        console.log('\nCurrent configuration:');
-        console.log(JSON.stringify(context.config, null, 2));
+        logger.info(`Configuration file: ${context.configPath}`);
+        logger.info('Current configuration:');
+        logger.info(JSON.stringify(context.config, null, 2));
       } catch (err) {
-        console.error(err instanceof Error ? err.message : err);
+        logger.error('Configuration error', { error: err instanceof Error ? err.message : String(err) });
         process.exit(1);
       }
     });
@@ -33,27 +33,27 @@ export function createConfigCommand(createContext: (options?: any) => DotGithubC
         const actions = context.config.actions;
         
         if (options.json) {
-          console.log(JSON.stringify(actions, null, 2));
+          logger.info(JSON.stringify(actions, null, 2));
           return;
         }
         
         if (actions.length === 0) {
-          console.log('No actions tracked yet. Add actions with "dotgithub add <action>"');
+          logger.info('No actions tracked yet. Add actions with "dotgithub add <action>"');
           return;
         }
         
-        console.log('Tracked actions:');
-        console.log('================');
+        logger.info('Tracked actions:');
+        logger.info('================');
         
         actions.forEach(action => {
           const { generateFunctionName } = require('@dotgithub/core/utils');
           const functionName = action.actionName ? generateFunctionName(action.actionName) : action.orgRepo;
-          console.log(`\n• ${functionName}()`);
-          console.log(`  Repository: ${action.orgRepo}@${action.versionRef} (SHA: ${action.ref.substring(0, 8)})`);
-          console.log(`  Output: ${action.outputPath ? context.resolvePath(action.outputPath) : 'Not generated'}`);
+          logger.info(`\n• ${functionName}()`);
+          logger.info(`  Repository: ${action.orgRepo}@${action.versionRef} (SHA: ${action.ref.substring(0, 8)})`);
+          logger.info(`  Output: ${action.outputPath ? context.resolvePath(action.outputPath) : 'Not generated'}`);
         });
       } catch (err) {
-        console.error(err instanceof Error ? err.message : err);
+        logger.error('Configuration error', { error: err instanceof Error ? err.message : String(err) });
         process.exit(1);
       }
     });
@@ -67,9 +67,9 @@ export function createConfigCommand(createContext: (options?: any) => DotGithubC
         const context = createContext(options);
         context.config.rootDir = directory;
         writeConfig(context.config);
-        console.log(`Updated default output directory to: ${directory}`);
+        logger.info(`Updated default output directory to: ${directory}`);
       } catch (err) {
-        console.error(err instanceof Error ? err.message : err);
+        logger.error('Configuration error', { error: err instanceof Error ? err.message : String(err) });
         process.exit(1);
       }
     });
@@ -88,12 +88,12 @@ export function createConfigCommand(createContext: (options?: any) => DotGithubC
         
         if (context.config.actions.length !== originalLength) {
           writeConfig(context.config);
-          console.log(`Removed ${orgRepo} from tracking`);
+          logger.info(`Removed ${orgRepo} from tracking`);
         } else {
-          console.log(`Action ${orgRepo} was not being tracked`);
+          logger.info(`Action ${orgRepo} was not being tracked`);
         }
       } catch (err) {
-        console.error(err instanceof Error ? err.message : err);
+        logger.error('Configuration error', { error: err instanceof Error ? err.message : String(err) });
         process.exit(1);
       }
     });
@@ -110,7 +110,7 @@ export function createConfigCommand(createContext: (options?: any) => DotGithubC
         
         // Validate format
         if (!['json', 'js', 'yaml', 'yml'].includes(format)) {
-          console.error('Invalid format. Supported formats: json, js, yaml, yml');
+          logger.error('Invalid format. Supported formats: json, js, yaml, yml');
           process.exit(1);
         }
         
@@ -118,8 +118,8 @@ export function createConfigCommand(createContext: (options?: any) => DotGithubC
         const context = createContext(options);
         const fs = require('fs');
         if (fs.existsSync(context.configPath)) {
-          console.log(`Configuration file already exists at: ${context.configPath}`);
-          console.log('Use "dotgithub config show" to view current configuration');
+          logger.info(`Configuration file already exists at: ${context.configPath}`);
+          logger.info('Use "dotgithub config show" to view current configuration');
           return;
         }
         
@@ -134,11 +134,11 @@ export function createConfigCommand(createContext: (options?: any) => DotGithubC
         }
         
         const config = readConfig(configPath);
-        console.log(`Initialized dotgithub configuration at: ${configPath}`);
-        console.log(`Format: ${format}`);
-        console.log(`Default root directory: ${config.rootDir}`);
+        logger.info(`Initialized dotgithub configuration at: ${configPath}`);
+        logger.info(`Format: ${format}`);
+        logger.info(`Default root directory: ${config.rootDir}`);
       } catch (err) {
-        console.error(err instanceof Error ? err.message : err);
+        logger.error('Configuration error', { error: err instanceof Error ? err.message : String(err) });
         process.exit(1);
       }
     });

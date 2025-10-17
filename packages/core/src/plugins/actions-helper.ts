@@ -1,6 +1,7 @@
-import { createStep, run } from '../actions';
-import type { PluginContext } from './types';
-import type { GitHubStep, GitHubStepWith, GitHubStepRun, GitHubSteps, GitHubStepAny } from '../types/workflow';
+import { createStep, run } from '../actions.js';
+import type { GitHubStack } from '../constructs/base.js';
+import type { GitHubStep, GitHubStepWith, GitHubStepRun, GitHubSteps, GitHubStepAny } from '../types/workflow.js';
+import { GitHubOutputValue } from './index.js';
 
 /**
  * Builder class for creating step chains with output handling
@@ -8,10 +9,32 @@ import type { GitHubStep, GitHubStepWith, GitHubStepRun, GitHubSteps, GitHubStep
 export class StepChainBuilder<TOutputs = any> {
   private _steps: GitHubSteps = [];
   private _outputs: TOutputs;
+  private _initialStep: GitHubStepAny;
 
   constructor(initialStep: GitHubStepAny, outputs: TOutputs) {
+    this._initialStep = initialStep;
     this._steps.push(initialStep);
     this._outputs = outputs;
+  }
+
+  /**
+   * Creates outputs with proper step ID references
+   */
+  private createOutputs<TOutputs>(stepId: string, outputs: TOutputs): TOutputs {
+    const result = {} as TOutputs;
+    
+    for (const [key, output] of Object.entries(outputs as any)) {
+      if (output instanceof GitHubOutputValue) {
+        // Create a new GitHubOutputValue with the step-specific path
+        const newOutput = new GitHubOutputValue(`step.${stepId}.outputs.${key}`);
+        (result as any)[key] = newOutput;
+      } else {
+        // Preserve non-GitHubOutputValue outputs as-is
+        (result as any)[key] = output;
+      }
+    }
+    
+    return result;
   }
 
   /**
@@ -22,8 +45,13 @@ export class StepChainBuilder<TOutputs = any> {
   then(
     stepFactory: (outputs: TOutputs) => GitHubStepAny
   ): StepChainBuilder<TOutputs> {
-    const newStep = stepFactory(this._outputs);
+    const newStep = stepFactory(this.outputs);
     this._steps.push(newStep);
+    return this;
+  }
+
+  withId(id: string): StepChainBuilder<TOutputs> {
+    this._initialStep.id = id;
     return this;
   }
 
@@ -34,6 +62,14 @@ export class StepChainBuilder<TOutputs = any> {
    */
   steps(): GitHubSteps {
     return [...this._steps];
+  }
+
+  /**
+   * Outputs from the initial step.
+   * @returns Outputs instance.
+   */
+  get outputs(): TOutputs {
+    return this.createOutputs(this._initialStep.id ?? '' , this._outputs);
   }
 
   /**
@@ -63,10 +99,10 @@ export class StepChainBuilder<TOutputs = any> {
  * Actions helper for plugins that provides convenient methods for creating GitHub Action steps
  */
 export class ActionsHelper {
-  private readonly context: PluginContext;
+  private readonly stack: GitHubStack;
 
-  constructor(context: PluginContext) {
-    this.context = context;
+  constructor(stack: GitHubStack) {
+    this.stack = stack;
   }
 
   /**
@@ -101,7 +137,7 @@ export class ActionsHelper {
     return createStep(uses, {
       with: inputs,
       ...step
-    }, ref, this.context);
+    }, ref, this.stack);
   }
 
   /**
@@ -111,13 +147,13 @@ export class ActionsHelper {
    */
   findAction(uses: string) {
     // First check for action overrides in the merged config
-    const actionOverride = this.context.config.actions?.[uses];
+    const actionOverride = this.stack.config?.actions?.[uses];
     if (actionOverride) {
       return { orgRepo: uses, ref: actionOverride };
     }
     
     // Fallback to looking up in the actions array (if it exists)
-    return this.context.config.actions?.find((action: any) => action.orgRepo === uses);
+    return this.stack.config?.actions?.find((action: any) => action.orgRepo === uses);
   }
 
   /**

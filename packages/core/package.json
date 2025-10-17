@@ -1,6 +1,7 @@
 {
   "name": "@dotgithub/core",
   "version": "0.1.1",
+  "type": "module",
   "description": "Core package for @dotgithub monorepo.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -25,5 +26,10 @@
   "publishConfig": {
     "registry": "https://npm.pkg.github.com",
     "access": "public"
+  },
+  "devoptimizer": {
+    "devcheck": {
+      "exclude": ["prettier"]
+    }
   }
 }

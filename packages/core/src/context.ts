@@ -23,7 +23,6 @@ export class DotGithubContext {
   }
 
   relativePath(absolutePath: string): string {
-    console.log(`Calculating relative path from ${this.rootPath} to ${absolutePath}`);
     return path.relative(this.rootPath, absolutePath);
   }
 

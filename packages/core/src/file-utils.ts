@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as prettier from 'prettier';
+import { Project, SourceFile, SyntaxKind } from 'ts-morph';
 
 /**
  * Converts a string to PascalCase
@@ -45,21 +46,24 @@ async function getAllActionsInDirectory(orgDir: string): Promise<string[]> {
  */
 function generateFullCollectionClass(orgName: string, actions: string[]): string {
   const imports = actions.map(action => {
-    const ActionName = action.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase()).replace(/^./, letter => letter.toUpperCase());
-    return `import { ${ActionName} } from "./${action}.js";`;
+    const className = action.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase()).replace(/^./, letter => letter.toUpperCase());
+    return `import { ${className} } from "./${action}.js";`;
   }).join('\n');
   
-  const propertyAssignments = actions.map(action => {
-    const ActionName = action.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase()).replace(/^./, letter => letter.toUpperCase());
-    const propertyName = action.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
-    return `  ${propertyName} = new ${ActionName}(this);`;
-  }).join('\n');
+  const methodAssignments = actions.map(action => {
+    const className = action.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase()).replace(/^./, letter => letter.toUpperCase());
+    const methodName = action.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase()).replace(/^./, letter => letter.toLowerCase());
+    return `  ${methodName}(id: string, props: ActionConstructProps<any>) {
+    return this.createActionConstruct(${className}, id, props);
+  }`;
+  }).join('\n\n');
   
   return `import { ActionCollection } from '@dotgithub/core';
+import type { ActionConstructProps } from '@dotgithub/core';
 ${imports}
 
 export class ${toPascalCase(orgName)}Collection extends ActionCollection {
-${propertyAssignments}
+${methodAssignments}
 }`;
 }
 
@@ -76,20 +80,22 @@ async function generateActionCollectionMethods(repoFolder: string): Promise<stri
   const indexContent = fs.readFileSync(indexPath, 'utf8');
   
   // Extract exported class names from the index file
-  const exportMatches = indexContent.match(/export\s+class\s+(\w+)/g);
+  const exportMatches = indexContent.match(/export\s+class\s+(\w+)\s+extends\s+ActionConstruct/g);
   if (!exportMatches) {
     return '';
   }
   
-  const propertyAssignments = exportMatches.map(match => {
-    const nameMatch = match.match(/export\s+class\s+(\w+)/);
+  const methodAssignments = exportMatches.map(match => {
+    const nameMatch = match.match(/export\s+class\s+(\w+)\s+extends\s+ActionConstruct/);
     if (!nameMatch || !nameMatch[1]) return '';
     const className = nameMatch[1];
-    const propertyName = className.charAt(0).toLowerCase() + className.slice(1);
-    return `  ${propertyName} = new ${className}(this);`;
-  }).join('\n');
+    const methodName = className.replace(/^./, letter => letter.toLowerCase());
+    return `  ${methodName}(id: string, props: ActionConstructProps<any>) {
+    return this.createActionConstruct(${className}, id, props);
+  }`;
+  }).join('\n\n');
   
-  return propertyAssignments;
+  return methodAssignments;
 }
 
 /**
@@ -126,13 +132,12 @@ export async function updateOrgIndexFile(orgDir: string, repoName: string): Prom
   let exportStatement: string;
   if (fs.existsSync(singleActionFile)) {
     // Single action at root - create ActionCollection
-    const ActionName = repoName.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase()).replace(/^./, letter => letter.toUpperCase());
-    const propertyName = repoName.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
+    const functionName = repoName.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase()).replace(/^./, letter => letter.toLowerCase());
     exportStatement = `import { ActionCollection } from '@dotgithub/core';
-import { ${ActionName} } from './${repoName}.js';
+import { ${functionName} } from './${repoName}.js';
 
 export class ${toPascalCase(orgName)}Collection extends ActionCollection {
-  ${propertyName} = new ${ActionName}(this);
+  ${functionName} = ${functionName}.bind(this);
 }
 `;
   } else if (fs.existsSync(repoFolder)) {
@@ -164,15 +169,13 @@ export class ${toPascalCase(orgName)}Collection extends ActionCollection {
  */
 export async function updateRootIndexFile(outputDir: string, orgName: string): Promise<void> {
   const indexPath = path.join(outputDir, 'index.ts');
-  // Convert org name to valid TypeScript identifier (replace hyphens with underscores)
-  const validOrgName = orgName.replace(/-/g, '_');
-  const exportStatement = `export { ${toPascalCase(orgName)}Collection } from './${orgName}/index.js';\n`;
+  const exportStatement = `export * from './${orgName}/index.js';\n`;
   
   if (fs.existsSync(indexPath)) {
     const existingContent = fs.readFileSync(indexPath, 'utf8');
-    // Check if the ActionCollection export already exists to avoid duplicates
-    const actionCollectionPattern = new RegExp(`export\\s*{\\s*${toPascalCase(orgName)}Collection`);
-    if (!actionCollectionPattern.test(existingContent)) {
+    // Check if the export already exists to avoid duplicates
+    const exportPattern = new RegExp(`export\\s*\\*\\s*from\\s*['"]\\./${orgName}/index\\.js['"]`);
+    if (!exportPattern.test(existingContent)) {
       const newContent = existingContent + exportStatement;
       const formattedContent = await formatWithPrettier(newContent);
       fs.writeFileSync(indexPath, formattedContent, 'utf8');
@@ -221,7 +224,7 @@ export async function updateIndexFilesAfterRemoval(outputDir: string, orgName: s
         const content = fs.readFileSync(rootIndexPath, 'utf8');
         const lines = content.split('\n');
         const filteredLines = lines.filter(line =>
-          !line.includes(`export * as ${orgName} from`)
+          !line.includes(`export * from './${orgName}/index.js'`)
         );
         const newContent = filteredLines.join('\n');
         const formattedContent = await formatWithPrettier(newContent);
@@ -286,4 +289,124 @@ export function sanitizeVarName(name: string): string {
   }
 
   return result;
+}
+
+/**
+ * Adds necessary import statements to the generated TypeScript code and removes unused imports
+ * @param generatedTypes - The generated TypeScript code
+ * @returns TypeScript code with only necessary import statements
+ */
+export function addImportsToGeneratedTypes(generatedTypes: string): string {
+  // Create a new ts-morph project for code generation
+  const project = new Project({
+    useInMemoryFileSystem: true,
+    compilerOptions: {
+      target: 5, // ES2022
+      module: 1, // CommonJS
+      declaration: true,
+      strict: true,
+      esModuleInterop: true,
+      skipLibCheck: true,
+      forceConsistentCasingInFileNames: true,
+    },
+  });
+
+  const fileName = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.ts`;
+  const sourceFile = project.createSourceFile(fileName, generatedTypes);
+
+  // Remove all existing import declarations to avoid duplicates
+  const existingImports = sourceFile.getImportDeclarations();
+  existingImports.forEach(importDecl => importDecl.remove());
+
+  // Analyze the generated code to determine which imports are actually used
+  const usedImports = analyzeUsedImports(sourceFile);
+
+  // Add all value imports together (these are used as values, not type-only)
+  const valueImports = [];
+  if (usedImports.has('GitHubOutputValue')) {
+    valueImports.push('GitHubOutputValue');
+  }
+  if (usedImports.has('GitHubAction')) {
+    valueImports.push('GitHubAction');
+  }
+  if (usedImports.has('ActionConstruct')) {
+    valueImports.push('ActionConstruct');
+  }
+  
+  if (valueImports.length > 0) {
+    sourceFile.addImportDeclaration({
+      moduleSpecifier: '@dotgithub/core',
+      namedImports: valueImports,
+    });
+  }
+
+  // Add type-only imports that are used
+  const typeImports = ['GitHubStep', 'GitHubStepBase', 'GitHubStepAction', 'GitHubInputValue', 'ActionInvocationResult', 'DotGithubConfig', 'PluginContext', 'ActionConstructProps', 'Construct'];
+  const usedTypeImports = typeImports.filter(imp => usedImports.has(imp));
+  
+  if (usedTypeImports.length > 0) {
+    sourceFile.addImportDeclaration({
+      moduleSpecifier: '@dotgithub/core',
+      namedImports: usedTypeImports,
+      isTypeOnly: true,
+    });
+  }
+
+  if (usedImports.has('StepChainBuilder')) {
+    sourceFile.addImportDeclaration({
+      moduleSpecifier: '@dotgithub/core',
+      namedImports: ['StepChainBuilder'],
+      isTypeOnly: true,
+    });
+  }
+
+  if (usedImports.has('ActionCollection')) {
+    sourceFile.addImportDeclaration({
+      moduleSpecifier: '@dotgithub/core',
+      namedImports: ['ActionCollection'],
+      isTypeOnly: true,
+    });
+  }
+
+  return sourceFile.getFullText();
+}
+
+/**
+ * Analyzes a TypeScript source file to determine which imports are actually used
+ * @param sourceFile - The TypeScript source file to analyze
+ * @returns Set of import names that are actually used in the code
+ */
+function analyzeUsedImports(sourceFile: SourceFile): Set<string> {
+  const usedImports = new Set<string>();
+  
+  // Get all identifiers in the source file
+  const identifiers = sourceFile.getDescendantsOfKind(SyntaxKind.Identifier);
+  
+  for (const identifier of identifiers) {
+    const text = identifier.getText();
+    
+    // Check if this identifier matches any of our potential imports
+    const potentialImports = [
+      'GitHubStep',
+      'GitHubStepBase', 
+      'GitHubStepAction',
+      'GitHubInputValue',
+      'GitHubAction',
+      'GitHubOutputValue',
+      'ActionInvocationResult',
+      'DotGithubConfig',
+      'PluginContext',
+      'StepChainBuilder',
+      'ActionCollection',
+      'ActionConstruct',
+      'ActionConstructProps',
+      'Construct'
+    ];
+    
+    if (potentialImports.includes(text)) {
+      usedImports.add(text);
+    }
+  }
+  
+  return usedImports;
 }

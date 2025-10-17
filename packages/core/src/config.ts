@@ -1,8 +1,8 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as yaml from 'yaml';
-import type { PluginConfig, StackConfig } from './plugins/types';
-import type { DotGithubContext } from './context';
+import type { PluginConfig, StackConfig } from './plugins/types.js';
+import type { DotGithubContext } from './context.js';
 
 export interface DotGithubAction {
   /** GitHub repository in org/repo format */
@@ -398,8 +398,8 @@ export function getStacksFromConfig(): StackConfig[] {
 /**
  * Adds or updates a plugin in the config
  */
-export function addPluginToConfig(pluginConfig: PluginConfig): void {
-  const config = readConfig();
+export function addPluginToConfig(pluginConfig: PluginConfig, customConfigPath?: string): void {
+  const config = readConfig(customConfigPath);
   if (!config.plugins) config.plugins = [];
   
   const existingIndex = config.plugins.findIndex(p => p.name === pluginConfig.name);
@@ -411,21 +411,21 @@ export function addPluginToConfig(pluginConfig: PluginConfig): void {
   }
   
   config.plugins.sort((a, b) => a.name.localeCompare(b.name));
-  writeConfig(config);
+  writeConfig(config, customConfigPath);
 }
 
 /**
  * Removes a plugin from the config
  */
-export function removePluginFromConfig(pluginName: string): boolean {
-  const config = readConfig();
+export function removePluginFromConfig(pluginName: string, customConfigPath?: string): boolean {
+  const config = readConfig(customConfigPath);
   if (!config.plugins) return false;
   
   const originalLength = config.plugins.length;
   config.plugins = config.plugins.filter(p => p.name !== pluginName);
   
   if (config.plugins.length !== originalLength) {
-    writeConfig(config);
+    writeConfig(config, customConfigPath);
     return true;
   }
   
@@ -435,8 +435,8 @@ export function removePluginFromConfig(pluginName: string): boolean {
 /**
  * Adds or updates a stack in the config
  */
-export function addStackToConfig(stackConfig: StackConfig): void {
-  const config = readConfig();
+export function addStackToConfig(stackConfig: StackConfig, customConfigPath?: string): void {
+  const config = readConfig(customConfigPath);
   if (!config.stacks) config.stacks = [];
   
   const existingIndex = config.stacks.findIndex(s => s.name === stackConfig.name);
@@ -448,21 +448,21 @@ export function addStackToConfig(stackConfig: StackConfig): void {
   }
   
   config.stacks.sort((a, b) => a.name.localeCompare(b.name));
-  writeConfig(config);
+  writeConfig(config, customConfigPath);
 }
 
 /**
  * Removes a stack from the config
  */
-export function removeStackFromConfig(stackName: string): boolean {
-  const config = readConfig();
+export function removeStackFromConfig(stackName: string, customConfigPath?: string): boolean {
+  const config = readConfig(customConfigPath);
   if (!config.stacks) return false;
   
   const originalLength = config.stacks.length;
   config.stacks = config.stacks.filter(s => s.name !== stackName);
   
   if (config.stacks.length !== originalLength) {
-    writeConfig(config);
+    writeConfig(config, customConfigPath);
     return true;
   }
   
@@ -578,4 +578,190 @@ function validateAndMigrateConfig(config: any): DotGithubConfig {
   });
   
   return config as DotGithubConfig;
+}
+
+/**
+ * Sets a pinned action for a specific scope (plugin or stack)
+ */
+export function setPinnedAction(
+  action: string, 
+  ref: string, 
+  scope: { plugin?: string; stack?: string }, 
+  context: DotGithubContext
+): void {
+  if (!scope.plugin && !scope.stack) {
+    throw new Error('Must specify either plugin or stack scope');
+  }
+  
+  if (scope.plugin && scope.stack) {
+    throw new Error('Cannot specify both plugin and stack scope');
+  }
+
+  const config = context.config;
+  
+  if (scope.plugin) {
+    // Find the plugin and update its actions
+    const pluginIndex = config.plugins?.findIndex(p => p.name === scope.plugin);
+    if (pluginIndex === undefined || pluginIndex === -1) {
+      throw new Error(`Plugin "${scope.plugin}" not found`);
+    }
+    
+    if (!config.plugins) {
+      throw new Error('Plugins configuration not found');
+    }
+    
+    if (!config.plugins[pluginIndex]!.actions) {
+      config.plugins[pluginIndex]!.actions = {};
+    }
+    
+    config.plugins[pluginIndex]!.actions![action] = ref;
+  } else if (scope.stack) {
+    // Find the stack and update its actions
+    const stackIndex = config.stacks?.findIndex(s => s.name === scope.stack);
+    if (stackIndex === undefined || stackIndex === -1) {
+      throw new Error(`Stack "${scope.stack}" not found`);
+    }
+    
+    if (!config.stacks) {
+      throw new Error('Stacks configuration not found');
+    }
+    
+    if (!config.stacks[stackIndex]!.actions) {
+      config.stacks[stackIndex]!.actions = {};
+    }
+    
+    config.stacks[stackIndex]!.actions![action] = ref;
+  }
+  
+  writeConfig(config, context.configPath);
+}
+
+/**
+ * Removes a pinned action from a specific scope (plugin or stack)
+ */
+export function removePinnedAction(
+  action: string, 
+  scope: { plugin?: string; stack?: string }, 
+  context: DotGithubContext
+): boolean {
+  if (!scope.plugin && !scope.stack) {
+    throw new Error('Must specify either plugin or stack scope');
+  }
+  
+  if (scope.plugin && scope.stack) {
+    throw new Error('Cannot specify both plugin and stack scope');
+  }
+
+  const config = context.config;
+  let removed = false;
+  
+  if (scope.plugin) {
+    // Find the plugin and remove the action
+    const pluginIndex = config.plugins?.findIndex(p => p.name === scope.plugin);
+    if (pluginIndex === undefined || pluginIndex === -1) {
+      throw new Error(`Plugin "${scope.plugin}" not found`);
+    }
+    
+    if (!config.plugins) {
+      throw new Error('Plugins configuration not found');
+    }
+    
+    if (config.plugins[pluginIndex]!.actions && config.plugins[pluginIndex]!.actions![action]) {
+      delete config.plugins[pluginIndex]!.actions![action];
+      removed = true;
+    }
+  } else if (scope.stack) {
+    // Find the stack and remove the action
+    const stackIndex = config.stacks?.findIndex(s => s.name === scope.stack);
+    if (stackIndex === undefined || stackIndex === -1) {
+      throw new Error(`Stack "${scope.stack}" not found`);
+    }
+    
+    if (!config.stacks) {
+      throw new Error('Stacks configuration not found');
+    }
+    
+    if (config.stacks[stackIndex]!.actions && config.stacks[stackIndex]!.actions![action]) {
+      delete config.stacks[stackIndex]!.actions![action];
+      removed = true;
+    }
+  }
+  
+  if (removed) {
+    writeConfig(config, context.configPath);
+  }
+  
+  return removed;
+}
+
+/**
+ * Gets all pinned actions for a specific scope (plugin or stack)
+ */
+export function getPinnedActions(
+  scope: { plugin?: string; stack?: string }, 
+  context: DotGithubContext
+): Record<string, string> {
+  if (!scope.plugin && !scope.stack) {
+    throw new Error('Must specify either plugin or stack scope');
+  }
+  
+  if (scope.plugin && scope.stack) {
+    throw new Error('Cannot specify both plugin and stack scope');
+  }
+
+  const config = context.config;
+  
+  if (scope.plugin) {
+    // Find the plugin and return its actions
+    const plugin = config.plugins?.find(p => p.name === scope.plugin);
+    if (!plugin) {
+      throw new Error(`Plugin "${scope.plugin}" not found`);
+    }
+    
+    return plugin.actions || {};
+  } else if (scope.stack) {
+    // Find the stack and return its actions
+    const stack = config.stacks?.find(s => s.name === scope.stack);
+    if (!stack) {
+      throw new Error(`Stack "${scope.stack}" not found`);
+    }
+    
+    return stack.actions || {};
+  }
+  
+  return {};
+}
+
+/**
+ * Gets all pinned actions across all scopes
+ */
+export function getAllPinnedActions(context: DotGithubContext): {
+  plugins: Record<string, Record<string, string>>;
+  stacks: Record<string, Record<string, string>>;
+} {
+  const config = context.config;
+  const result = {
+    plugins: {} as Record<string, Record<string, string>>,
+    stacks: {} as Record<string, Record<string, string>>
+  };
+  
+  // Collect plugin actions
+  if (config.plugins) {
+    for (const plugin of config.plugins) {
+      if (plugin.actions && Object.keys(plugin.actions).length > 0) {
+        result.plugins[plugin.name] = plugin.actions;
+      }
+    }
+  }
+  
+  // Collect stack actions
+  if (config.stacks) {
+    for (const stack of config.stacks) {
+      if (stack.actions && Object.keys(stack.actions).length > 0) {
+        result.stacks[stack.name] = stack.actions;
+      }
+    }
+  }
+  
+  return result;
 }

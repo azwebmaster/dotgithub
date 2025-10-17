@@ -1,5 +1,5 @@
-import { Construct, GitHubStack } from './base';
-import type { DotGitHubResource, DotGitHubResources } from '../types/common';
+import { Construct, GitHubStack } from './base.js';
+import type { DotGitHubResource, DotGitHubResources } from '../types/common.js';
 
 export interface ResourceProps {
   content?: unknown;

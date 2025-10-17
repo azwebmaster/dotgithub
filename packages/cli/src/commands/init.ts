@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import * as fs from 'fs';
 import * as path from 'path';
-import { createConfigFile, writeConfig, createDefaultConfig, type DotGithubContext } from '@dotgithub/core';
+import { createConfigFile, writeConfig, createDefaultConfig, type DotGithubContext, logger } from '@dotgithub/core';
 
 export interface InitCommandOptions {
   force?: boolean;
@@ -16,9 +16,11 @@ export function createInitCommand(createContext: (options?: any) => DotGithubCon
     .action(async (options: InitCommandOptions) => {
       try {
         await initializeWorkspace(options, createContext);
-        console.log(`✓ Initialized GitHub Actions workspace`);
+        logger.success('Initialized GitHub Actions workspace');
       } catch (err) {
-        console.error('Error:', err instanceof Error ? err.message : String(err));
+        logger.failure('Failed to initialize workspace', { 
+          error: err instanceof Error ? err.message : String(err)
+        });
         process.exit(1);
       }
     });
@@ -48,7 +50,7 @@ async function initializeWorkspace(options: InitCommandOptions, createContext: (
   
   // Write the config file to the output directory
   fs.writeFileSync(configPath, JSON.stringify(defaultConfig, null, 2) + '\n');
-  console.log(`✓ Created dotgithub.json configuration file in ${outputDir}`);
+  logger.info(`✓ Created dotgithub.json configuration file in ${outputDir}`);
 
   // Step 3: Read the config file to get the workspace directory
   const configContent = fs.readFileSync(configPath, 'utf8');
@@ -73,7 +75,7 @@ async function initializeWorkspace(options: InitCommandOptions, createContext: (
   // Generate tsconfig.json
   const tsconfigPath = path.join(workspaceDir, 'tsconfig.json');
   if (fs.existsSync(tsconfigPath) && !options.force) {
-    console.log('✓ tsconfig.json already exists, skipping');
+    logger.info('✓ tsconfig.json already exists, skipping');
   } else {
     const tsconfig = generateTsConfig();
     fs.writeFileSync(tsconfigPath, JSON.stringify(tsconfig, null, 2) + '\n');
@@ -86,15 +88,14 @@ async function initializeWorkspace(options: InitCommandOptions, createContext: (
     fs.writeFileSync(indexPath, indexContent);
   }
 
-  console.log('Generated files:');
-  console.log(`  ${outputDir}/dotgithub.json`);
-  console.log(`  ${workspaceDir}/package.json`);
-  console.log(`  ${workspaceDir}/tsconfig.json`);
-  console.log(`  ${workspaceDir}/index.ts`);
-  console.log('');
-  console.log('Next steps:');
-  console.log(`  cd ${workspaceDir}`);
-  console.log('  npm install');
+  logger.info('Generated files:');
+  logger.debug(`  ${outputDir}/dotgithub.json`);
+  logger.debug(`  ${workspaceDir}/package.json`);
+  logger.debug(`  ${workspaceDir}/tsconfig.json`);
+  logger.debug(`  ${workspaceDir}/index.ts`);
+  logger.info('Next steps:');
+  logger.info(`  cd ${workspaceDir}`);
+  logger.info('  npm install');
 }
 
 function generatePackageJson(): object {

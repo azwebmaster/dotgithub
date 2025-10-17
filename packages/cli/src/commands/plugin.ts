@@ -12,7 +12,8 @@ import {
   generatePluginMarkdown,
   searchPluginsByKeyword,
   filterPluginsByCategory,
-  type DotGithubContext
+  type DotGithubContext,
+  logger
 } from '@dotgithub/core';
 import type { PluginConfig, StackConfig } from '@dotgithub/core';
 import * as path from 'path';
@@ -29,20 +30,19 @@ export function createPluginCommand(createContext: (options?: any) => DotGithubC
       const plugins = context.config.plugins || [];
       
       if (plugins.length === 0) {
-        console.log('📝 No plugins configured');
+        logger.info('📝 No plugins configured');
         return;
       }
 
-      console.log(`🔌 Configured plugins (${plugins.length}):\n`);
+      logger.info(`🔌 Configured plugins (${plugins.length}):`);
       
       for (const plugin of plugins) {
         const status = plugin.enabled !== false ? '✅' : '❌';
-        console.log(`${status} ${plugin.name}`);
-        console.log(`   Package: ${plugin.package}`);
+        logger.info(`${status} ${plugin.name}`);
+        logger.debug(`   Package: ${plugin.package}`);
         if (plugin.config && Object.keys(plugin.config).length > 0) {
-          console.log(`   Config: ${JSON.stringify(plugin.config, null, 2).split('\n').map((line, i) => i === 0 ? line : '           ' + line).join('\n')}`);
+          logger.debug(`   Config: ${JSON.stringify(plugin.config, null, 2).split('\n').map((line, i) => i === 0 ? line : '           ' + line).join('\n')}`);
         }
-        console.log();
       }
     });
 
@@ -50,16 +50,17 @@ export function createPluginCommand(createContext: (options?: any) => DotGithubC
     .description('Add a plugin configuration')
     .requiredOption('--name <name>', 'plugin name')
     .requiredOption('--package <package>', 'plugin package (npm package or local path)')
-    .option('--config <json>', 'plugin configuration as JSON string')
     .option('--enabled', 'enable the plugin (default: true)', true)
     .action((options) => {
       try {
+        const context = createContext(options);
+        
         let config = {};
         if (options.config) {
           try {
             config = JSON.parse(options.config);
           } catch (error) {
-            console.error('❌ Invalid JSON configuration:', error instanceof Error ? error.message : error);
+            logger.error('❌ Invalid JSON configuration:', error instanceof Error ? error.message : error);
             process.exit(1);
           }
         }
@@ -71,11 +72,11 @@ export function createPluginCommand(createContext: (options?: any) => DotGithubC
           enabled: options.enabled
         };
 
-        addPluginToConfig(pluginConfig);
-        console.log(`✅ Added plugin "${options.name}"`);
+        addPluginToConfig(pluginConfig, context.configPath);
+        logger.info(`✅ Added plugin "${options.name}"`);
         
       } catch (error) {
-        console.error('❌ Failed to add plugin:', error instanceof Error ? error.message : error);
+        logger.error('❌ Failed to add plugin:', error instanceof Error ? error.message : error);
         process.exit(1);
       }
     });
@@ -85,17 +86,18 @@ export function createPluginCommand(createContext: (options?: any) => DotGithubC
     .requiredOption('--name <name>', 'plugin name')
     .action((options) => {
       try {
-        const removed = removePluginFromConfig(options.name);
+        const context = createContext(options);
+        const removed = removePluginFromConfig(options.name, context.configPath);
         
         if (removed) {
-          console.log(`✅ Removed plugin "${options.name}"`);
+          logger.info(`✅ Removed plugin "${options.name}"`);
         } else {
-          console.log(`❌ Plugin "${options.name}" not found`);
+          logger.info(`❌ Plugin "${options.name}" not found`);
           process.exit(1);
         }
         
       } catch (error) {
-        console.error('❌ Failed to remove plugin:', error instanceof Error ? error.message : error);
+        logger.error('❌ Failed to remove plugin:', error instanceof Error ? error.message : error);
         process.exit(1);
       }
     });
@@ -110,7 +112,7 @@ export function createPluginCommand(createContext: (options?: any) => DotGithubC
     .option('--token <token>', 'GitHub token for auto-adding actions (overrides env GITHUB_TOKEN)')
     .action(async (options) => {
       try {
-        console.log(`🔌 Creating plugin "${options.name}" from ${options.source}...`);
+        logger.info(`🔌 Creating plugin "${options.name}" from ${options.source}...`);
         
         const context = createContext(options);
         const result = await generatePluginFromGitHubFiles({
@@ -123,24 +125,24 @@ export function createPluginCommand(createContext: (options?: any) => DotGithubC
           token: options.token
         });
         
-        console.log(`✅ Plugin created successfully!`);
-        console.log(`   Plugin file: ${result.pluginPath}`);
-        console.log(`   Files included: ${result.filesFound.length}`);
+        logger.info(`✅ Plugin created successfully!`);
+        logger.info(`   Plugin file: ${result.pluginPath}`);
+        logger.info(`   Files included: ${result.filesFound.length}`);
         
         if (result.filesFound.length > 0) {
-          console.log(`   📁 Files found:`);
+          logger.info(`   📁 Files found:`);
           result.filesFound.forEach(file => {
-            console.log(`      - ${file}`);
+            logger.info(`      - ${file}`);
           });
         }
         
-        console.log();
-        console.log(`🔧 To use this plugin, add it to your configuration:`);
+        logger.info('');
+        logger.info(`🔧 To use this plugin, add it to your configuration:`);
         const relativePluginPath = path.relative(process.cwd(), result.pluginPath);
-        console.log(`   dotgithub plugin add --name "${options.name}" --package "./${relativePluginPath}"`);
+        logger.info(`   dotgithub plugin add --name "${options.name}" --package "./${relativePluginPath}"`);
         
       } catch (error) {
-        console.error('❌ Failed to create plugin:', error instanceof Error ? error.message : error);
+        logger.error('❌ Failed to create plugin:', error instanceof Error ? error.message : error);
         process.exit(1);
       }
     });
@@ -163,7 +165,7 @@ export function createPluginCommand(createContext: (options?: any) => DotGithubC
         // Load plugins from config using the context
         const pluginConfigs = context.config.plugins || [];
         if (pluginConfigs.length === 0) {
-          console.log('📝 No plugins configured');
+          logger.info('📝 No plugins configured');
           return;
         }
 
@@ -173,20 +175,20 @@ export function createPluginCommand(createContext: (options?: any) => DotGithubC
           // Describe specific plugin
           const description = await manager.describePlugin(options.name);
           if (!description) {
-            console.log(`❌ Plugin "${options.name}" not found or not loaded`);
+            logger.info(`❌ Plugin "${options.name}" not found or not loaded`);
             process.exit(1);
           }
 
           switch (options.format) {
             case 'markdown':
-              console.log(generatePluginMarkdown(description));
+              logger.info(generatePluginMarkdown(description));
               break;
             case 'json':
-              console.log(JSON.stringify(description, null, 2));
+              logger.info(JSON.stringify(description, null, 2));
               break;
             default:
-              console.log(`\n🔌 Plugin: ${description.name}\n`);
-              console.log(formatPluginDescription(description));
+              logger.info(`\n🔌 Plugin: ${description.name}\n`);
+              logger.info(formatPluginDescription(description));
           }
         } else if (options.search) {
           // Search plugins by keyword
@@ -198,16 +200,16 @@ export function createPluginCommand(createContext: (options?: any) => DotGithubC
           const searchResults = searchPluginsByKeyword(descriptions, options.search);
           
           if (searchResults.length === 0) {
-            console.log(`🔍 No plugins found matching "${options.search}"`);
+            logger.info(`🔍 No plugins found matching "${options.search}"`);
             return;
           }
 
-          console.log(`🔍 Found ${searchResults.length} plugin(s) matching "${options.search}":\n`);
+          logger.info(`🔍 Found ${searchResults.length} plugin(s) matching "${options.search}":\n`);
           
           for (const description of searchResults) {
-            console.log(`\n🔌 Plugin: ${description.name}\n`);
-            console.log(formatPluginDescription(description));
-            console.log('\n' + '─'.repeat(50) + '\n');
+            logger.info(`\n🔌 Plugin: ${description.name}\n`);
+            logger.info(formatPluginDescription(description));
+            logger.info('\n' + '─'.repeat(50) + '\n');
           }
         } else if (options.category) {
           // Filter plugins by category
@@ -219,70 +221,70 @@ export function createPluginCommand(createContext: (options?: any) => DotGithubC
           const categoryResults = filterPluginsByCategory(descriptions, options.category);
           
           if (categoryResults.length === 0) {
-            console.log(`📂 No plugins found in category "${options.category}"`);
+            logger.info(`📂 No plugins found in category "${options.category}"`);
             return;
           }
 
-          console.log(`📂 Found ${categoryResults.length} plugin(s) in category "${options.category}":\n`);
+          logger.info(`📂 Found ${categoryResults.length} plugin(s) in category "${options.category}":\n`);
           
           for (const description of categoryResults) {
-            console.log(`\n🔌 Plugin: ${description.name}\n`);
-            console.log(formatPluginDescription(description));
-            console.log('\n' + '─'.repeat(50) + '\n');
+            logger.info(`\n🔌 Plugin: ${description.name}\n`);
+            logger.info(formatPluginDescription(description));
+            logger.info('\n' + '─'.repeat(50) + '\n');
           }
         } else if (options.all) {
           // Describe all plugins
           const pluginList = await manager.listPlugins();
           
           if (pluginList.length === 0) {
-            console.log('📝 No plugins loaded');
+            logger.info('📝 No plugins loaded');
             return;
           }
 
-          console.log(`🔌 Loaded plugins (${pluginList.length}):\n`);
+          logger.info(`🔌 Loaded plugins (${pluginList.length}):\n`);
           
           for (const { name, description } of pluginList) {
-            console.log(`\n🔌 Plugin: ${name}\n`);
+            logger.info(`\n🔌 Plugin: ${name}\n`);
             if (description) {
-              console.log(formatPluginDescription(description));
+              logger.info(formatPluginDescription(description));
             } else {
-              console.log('No description available');
+              logger.info('No description available');
             }
-            console.log('\n' + '─'.repeat(50) + '\n');
+            logger.info('\n' + '─'.repeat(50) + '\n');
           }
         } else {
           // List available plugins with basic info
           const pluginList = await manager.listPlugins();
           
           if (pluginList.length === 0) {
-            console.log('📝 No plugins loaded');
+            logger.info('📝 No plugins loaded');
             return;
           }
 
-          console.log(`🔌 Available plugins (${pluginList.length}):\n`);
+          logger.info(`🔌 Available plugins (${pluginList.length}):\n`);
           
           for (const { name, description } of pluginList) {
             const status = description ? '✅' : '❌';
-            console.log(`${status} ${name}`);
+            logger.info(`${status} ${name}`);
             if (description) {
-              if (description.version) console.log(`   Version: ${description.version}`);
-              if (description.description) console.log(`   Description: ${description.description}`);
-              if (description.category) console.log(`   Category: ${description.category}`);
+              if (description.version) logger.info(`   Version: ${description.version}`);
+              if (description.description) logger.info(`   Description: ${description.description}`);
+              if (description.category) logger.info(`   Category: ${description.category}`);
               if (description.keywords && description.keywords.length > 0) {
-                console.log(`   Keywords: ${description.keywords.join(', ')}`);
+                logger.info(`   Keywords: ${description.keywords.join(', ')}`);
               }
             }
-            console.log();
+            logger.info('');
           }
           
-          console.log('💡 Use --name <plugin> to get detailed information about a specific plugin');
-          console.log('💡 Use --search <keyword> to search plugins by keyword');
-          console.log('💡 Use --category <category> to filter by category');
-          console.log('💡 Use --all to describe all plugins');
+          logger.info('💡 Use --name <plugin> to get detailed information about a specific plugin');
+          logger.info('💡 Use --search <keyword> to search plugins by keyword');
+          logger.info('💡 Use --category <category> to filter by category');
+          logger.info('💡 Use --all to describe all plugins');
         }
         
       } catch (error) {
-        console.error('❌ Failed to describe plugins:', error instanceof Error ? error.message : error);
+        logger.error('❌ Failed to describe plugins:', error instanceof Error ? error.message : error);
         process.exit(1);
       }
     });
@@ -297,19 +299,19 @@ export function createPluginCommand(createContext: (options?: any) => DotGithubC
       const stacks = getStacksFromConfig();
       
       if (stacks.length === 0) {
-        console.log('📝 No stacks configured');
+        logger.info('📝 No stacks configured');
         return;
       }
 
-      console.log(`🏗️  Configured stacks (${stacks.length}):\n`);
+      logger.info(`🏗️  Configured stacks (${stacks.length}):\n`);
       
       for (const stack of stacks) {
-        console.log(`📦 ${stack.name}`);
-        console.log(`   Plugins: ${stack.plugins.length > 0 ? stack.plugins.join(', ') : '(none)'}`);
+        logger.info(`📦 ${stack.name}`);
+        logger.info(`   Plugins: ${stack.plugins.length > 0 ? stack.plugins.join(', ') : '(none)'}`);
         if (stack.config && Object.keys(stack.config).length > 0) {
-          console.log(`   Config: ${JSON.stringify(stack.config, null, 2).split('\n').map((line, i) => i === 0 ? line : '           ' + line).join('\n')}`);
+          logger.info(`   Config: ${JSON.stringify(stack.config, null, 2).split('\n').map((line, i) => i === 0 ? line : '           ' + line).join('\n')}`);
         }
-        console.log();
+        logger.info('');
       }
     });
 
@@ -317,15 +319,16 @@ export function createPluginCommand(createContext: (options?: any) => DotGithubC
     .description('Add a stack configuration')
     .requiredOption('--name <name>', 'stack name')
     .requiredOption('--plugins <plugins>', 'comma-separated list of plugin names')
-    .option('--config <json>', 'stack configuration as JSON string')
     .action((options) => {
       try {
+        const context = createContext(options);
+        
         let config = {};
         if (options.config) {
           try {
             config = JSON.parse(options.config);
           } catch (error) {
-            console.error('❌ Invalid JSON configuration:', error instanceof Error ? error.message : error);
+            logger.error('❌ Invalid JSON configuration:', error instanceof Error ? error.message : error);
             process.exit(1);
           }
         }
@@ -341,11 +344,11 @@ export function createPluginCommand(createContext: (options?: any) => DotGithubC
           config
         };
 
-        addStackToConfig(stackConfig);
-        console.log(`✅ Added stack "${options.name}" with plugins: ${plugins.join(', ')}`);
+        addStackToConfig(stackConfig, context.configPath);
+        logger.info(`✅ Added stack "${options.name}" with plugins: ${plugins.join(', ')}`);
         
       } catch (error) {
-        console.error('❌ Failed to add stack:', error instanceof Error ? error.message : error);
+        logger.error('❌ Failed to add stack:', error instanceof Error ? error.message : error);
         process.exit(1);
       }
     });
@@ -355,17 +358,18 @@ export function createPluginCommand(createContext: (options?: any) => DotGithubC
     .requiredOption('--name <name>', 'stack name')
     .action((options) => {
       try {
-        const removed = removeStackFromConfig(options.name);
+        const context = createContext(options);
+        const removed = removeStackFromConfig(options.name, context.configPath);
         
         if (removed) {
-          console.log(`✅ Removed stack "${options.name}"`);
+          logger.info(`✅ Removed stack "${options.name}"`);
         } else {
-          console.log(`❌ Stack "${options.name}" not found`);
+          logger.info(`❌ Stack "${options.name}" not found`);
           process.exit(1);
         }
         
       } catch (error) {
-        console.error('❌ Failed to remove stack:', error instanceof Error ? error.message : error);
+        logger.error('❌ Failed to remove stack:', error instanceof Error ? error.message : error);
         process.exit(1);
       }
     });

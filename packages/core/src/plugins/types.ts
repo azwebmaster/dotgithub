@@ -1,22 +1,20 @@
-import type { GitHubStack } from '../constructs/base';
+import type { GitHubStack } from '../constructs/base.js';
 import type { 
   PluginConfig, 
   StackConfig, 
-  PluginContext,
   PluginLoadResult, 
   PluginExecutionResult,
   PluginDescription
-} from './schemas';
+} from './schemas.js';
 
 // Re-export types for backward compatibility
 export type { 
   PluginConfig, 
   StackConfig, 
-  PluginContext,
   PluginLoadResult, 
   PluginExecutionResult,
   PluginDescription
-} from './schemas';
+} from './schemas.js';
 
 export abstract class DotGitHubPlugin {
   readonly name: string;
@@ -29,9 +27,9 @@ export abstract class DotGitHubPlugin {
     this.name = 'base-plugin';
   }
   
-  validate?(context: PluginContext): Promise<void> | void;
+  validate?(stack: GitHubStack): Promise<void> | void;
 
-  synthesize(context: PluginContext): Promise<void> | void {
+  synthesize(stack: GitHubStack): Promise<void> | void {
     // Default implementation does nothing
   }
 

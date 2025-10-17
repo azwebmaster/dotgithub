@@ -1,5 +1,5 @@
 import * as yaml from 'yaml';
-import type { GitHubWorkflow, GitHubJob, GitHubStep, GitHubEnv, GitHubPermissions, GitHubPermissionsAll, GitHubStepAny } from './types/workflow';
+import type { GitHubWorkflow, GitHubJob, GitHubStep, GitHubEnv, GitHubPermissions, GitHubPermissionsAll, GitHubStepAny } from './types/workflow.js';
 
 export interface WorkflowGenerationOptions {
   indentSize?: number;
@@ -17,136 +17,190 @@ export function generateWorkflowYaml(workflow: GitHubWorkflow, options: Workflow
     doubleQuotedMinMultiLineLength: 40
   };
 
-  // const processedWorkflow = processWorkflowForYaml(workflow);
+  const processedWorkflow = processWorkflowForYaml(workflow);
 
-  return yaml.stringify(workflow, yamlOptions);
+  return yaml.stringify(processedWorkflow, yamlOptions);
 }
 
 
-// function processWorkflowForYaml(workflow: GitHubWorkflow): any {
-//   const processed: any = {};
+function processWorkflowForYaml(workflow: GitHubWorkflow): any {
+  // Create ordered workflow object to control YAML property order
+  const processed: any = {};
+  
+  // Define the desired order for workflow properties
+  const workflowOrder = [
+    'name',
+    'run-name', 
+    'on',
+    'permissions',
+    'env',
+    'defaults',
+    'concurrency',
+    'jobs'
+  ];
+  
+  // Add properties in the specified order
+  for (const key of workflowOrder) {
+    if (workflow[key as keyof GitHubWorkflow] !== undefined) {
+      if (key === 'on') {
+        processed.on = processWorkflowOn(workflow.on);
+      } else if (key === 'permissions' && workflow.permissions) {
+        processed.permissions = processPermissions(workflow.permissions);
+      } else if (key === 'env' && workflow.env) {
+        processed.env = processEnv(workflow.env);
+      } else if (key === 'jobs') {
+        processed.jobs = processJobs(workflow.jobs);
+      } else {
+        processed[key] = workflow[key as keyof GitHubWorkflow];
+      }
+    }
+  }
 
-//   if (workflow.name) processed.name = workflow.name;
-//   if (workflow['run-name']) processed['run-name'] = workflow['run-name'];
+  return processed;
+}
 
-//   processed.on = processWorkflowOn(workflow.on);
+function processWorkflowOn(on: any): any {
+  if (typeof on === 'string') return on;
+  if (Array.isArray(on)) return on;
 
-//   if (workflow.permissions) processed.permissions = processPermissions(workflow.permissions);
-//   if (workflow.env) processed.env = processEnv(workflow.env);
-//   if (workflow.defaults) processed.defaults = workflow.defaults;
-//   if (workflow.concurrency) processed.concurrency = workflow.concurrency;
+  const processed: any = {};
+  for (const [event, config] of Object.entries(on)) {
+    if (config === null || config === undefined) {
+      processed[event] = null;
+    } else {
+      processed[event] = config;
+    }
+  }
+  return processed;
+}
 
-//   processed.jobs = processJobs(workflow.jobs);
+function processPermissions(permissions: GitHubPermissions | GitHubPermissionsAll): any {
+  if (typeof permissions === 'string' || typeof permissions === 'object' && Object.keys(permissions).length === 0) {
+    return permissions;
+  }
 
-//   return processed;
-// }
+  const processed: any = {};
+  const perms = permissions as GitHubPermissions;
 
-// function processWorkflowOn(on: any): any {
-//   if (typeof on === 'string') return on;
-//   if (Array.isArray(on)) return on;
+  if (perms.actions) processed.actions = perms.actions;
+  if (perms.attestations) processed.attestations = perms.attestations;
+  if (perms.checks) processed.checks = perms.checks;
+  if (perms.contents) processed.contents = perms.contents;
+  if (perms.deployments) processed.deployments = perms.deployments;
+  if (perms['id-token']) processed['id-token'] = perms['id-token'];
+  if (perms.issues) processed.issues = perms.issues;
+  if (perms.models) processed.models = perms.models;
+  if (perms.discussions) processed.discussions = perms.discussions;
+  if (perms.packages) processed.packages = perms.packages;
+  if (perms.pages) processed.pages = perms.pages;
+  if (perms['pull-requests']) processed['pull-requests'] = perms['pull-requests'];
+  if (perms['security-events']) processed['security-events'] = perms['security-events'];
+  if (perms.statuses) processed.statuses = perms.statuses;
 
-//   const processed: any = {};
-//   for (const [event, config] of Object.entries(on)) {
-//     if (config === null || config === undefined) {
-//       processed[event] = null;
-//     } else {
-//       processed[event] = config;
-//     }
-//   }
-//   return processed;
-// }
+  return processed;
+}
 
-// function processPermissions(permissions: GitHubPermissions | GitHubPermissionsAll): any {
-//   if (typeof permissions === 'string' || typeof permissions === 'object' && Object.keys(permissions).length === 0) {
-//     return permissions;
-//   }
+function processEnv(env: GitHubEnv): any {
+  const processed: any = {};
+  for (const [key, value] of Object.entries(env)) {
+    processed[key] = value;
+  }
+  return processed;
+}
 
-//   const processed: any = {};
-//   const perms = permissions as GitHubPermissions;
+function processJobs(jobs: { [jobId: string]: GitHubJob }): any {
+  const processed: any = {};
 
-//   if (perms.actions) processed.actions = perms.actions;
-//   if (perms.attestations) processed.attestations = perms.attestations;
-//   if (perms.checks) processed.checks = perms.checks;
-//   if (perms.contents) processed.contents = perms.contents;
-//   if (perms.deployments) processed.deployments = perms.deployments;
-//   if (perms.idToken) processed['id-token'] = perms.idToken;
-//   if (perms.issues) processed.issues = perms.issues;
-//   if (perms.models) processed.models = perms.models;
-//   if (perms.discussions) processed.discussions = perms.discussions;
-//   if (perms.packages) processed.packages = perms.packages;
-//   if (perms.pages) processed.pages = perms.pages;
-//   if (perms.pullRequests) processed['pull-requests'] = perms.pullRequests;
-//   if (perms.securityEvents) processed['security-events'] = perms.securityEvents;
-//   if (perms.statuses) processed.statuses = perms.statuses;
+  for (const [jobId, job] of Object.entries(jobs)) {
+    processed[jobId] = processJob(job);
+  }
 
-//   return processed;
-// }
+  return processed;
+}
 
-// function processEnv(env: GitHubEnv): any {
-//   const processed: any = {};
-//   for (const [key, value] of Object.entries(env)) {
-//     processed[key] = value;
-//   }
-//   return processed;
-// }
+function processJob(job: GitHubJob): any {
+  // Define the desired order for job properties
+  const jobOrder = [
+    'name',
+    'permissions',
+    'needs',
+    'if',
+    'runs-on',
+    'environment',
+    'concurrency',
+    'outputs',
+    'env',
+    'defaults',
+    'steps',
+    'strategy',
+    'container',
+    'services',
+    'uses',
+    'with',
+    'secrets',
+    'timeout-minutes',
+    'continue-on-error'
+  ];
+  
+  const processed: any = {};
+  
+  // Add properties in the specified order
+  for (const key of jobOrder) {
+    if (job[key as keyof GitHubJob] !== undefined) {
+      if (key === 'permissions' && job.permissions) {
+        processed.permissions = processPermissions(job.permissions);
+      } else if (key === 'env' && job.env) {
+        processed.env = processEnv(job.env);
+      } else if (key === 'steps' && job.steps) {
+        processed.steps = processSteps(job.steps);
+      } else if (key === 'timeout-minutes' && job['timeout-minutes']) {
+        processed['timeout-minutes'] = job['timeout-minutes'];
+      } else if (key === 'continue-on-error' && job['continue-on-error']) {
+        processed['continue-on-error'] = job['continue-on-error'];
+      } else {
+        processed[key] = job[key as keyof GitHubJob];
+      }
+    }
+  }
 
-// function processJobs(jobs: { [jobId: string]: GitHubJob }): any {
-//   const processed: any = {};
+  return processed;
+}
 
-//   for (const [jobId, job] of Object.entries(jobs)) {
-//     processed[jobId] = processJob(job);
-//   }
+function processSteps(steps: GitHubStepAny[]): any[] {
+  return steps.map(step => processStep(step));
+}
 
-//   return processed;
-// }
+function processStep(step: GitHubStepAny): any {
+  // Define the desired order for step properties
+  const stepOrder = [
+    'id',
+    'if',
+    'name',
+    'uses',
+    'run',
+    'shell',
+    'with',
+    'env',
+    'continue-on-error',
+    'timeout-minutes',
+    'working-directory'
+  ];
+  
+  const processed: any = {};
+  
+  // Add properties in the specified order
+  for (const key of stepOrder) {
+    if (step[key as keyof GitHubStepAny] !== undefined) {
+      if (key === 'env' && step.env) {
+        processed.env = processEnv(step.env);
+      } else {
+        processed[key] = step[key as keyof GitHubStepAny];
+      }
+    }
+  }
 
-// function processJob(job: GitHubJob): any {
-//   const processed: any = {};
-
-//   if (job.name) processed.name = job.name;
-//   if (job.permissions) processed.permissions = processPermissions(job.permissions);
-//   if (job.needs) processed.needs = job.needs;
-//   if (job.if) processed.if = job.if;
-//   if (job['runs-on']) processed['runs-on'] = job['runs-on'];
-//   if (job.environment) processed.environment = job.environment;
-//   if (job.concurrency) processed.concurrency = job.concurrency;
-//   if (job.outputs) processed.outputs = job.outputs;
-//   if (job.env) processed.env = processEnv(job.env);
-//   if (job.defaults) processed.defaults = job.defaults;
-//   if (job.steps) processed.steps = processSteps(job.steps);
-//   if (job.strategy) processed.strategy = job.strategy;
-//   if (job.container) processed.container = job.container;
-//   if (job.services) processed.services = job.services;
-//   if (job.uses) processed.uses = job.uses;
-//   if (job.with) processed.with = job.with;
-//   if (job.secrets) processed.secrets = job.secrets;
-//   if (job.timeoutMinutes) processed['timeout-minutes'] = job.timeoutMinutes;
-//   if (job.continueOnError) processed['continue-on-error'] = job.continueOnError;
-
-//   return processed;
-// }
-
-// function processSteps(steps: GitHubStepAny[]): any[] {
-//   return steps.map(step => processStep(step));
-// }
-
-// function processStep(step: GitHubStepAny): any {
-//   const processed: any = {};
-
-//   if (step.id) processed.id = step.id;
-//   if (step.if) processed.if = step.if;
-//   if (step.name) processed.name = step.name;
-//   if (step.uses) processed.uses = step.uses;
-//   if (step.run) processed.run = step.run;
-//   if (step.shell) processed.shell = step.shell;
-//   if (step.with) processed.with = step.with;
-//   if (step.env) processed.env = processEnv(step.env);
-//   if (step['continue-on-error']) processed['continue-on-error'] = step['continue-on-error'];
-//   if (step['timeout-minutes']) processed['timeout-minutes'] = step['timeout-minutes'];
-//   if (step['working-directory']) processed['working-directory'] = step['working-directory'];
-
-//   return processed;
-// }
+  return processed;
+}
 
 export function createWorkflow(config: Partial<GitHubWorkflow>): GitHubWorkflow {
   if (!config.on) {

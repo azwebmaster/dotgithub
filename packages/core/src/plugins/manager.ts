@@ -1,24 +1,24 @@
 import * as path from 'path';
-import { GitHubStack } from '../constructs/base';
-import { PluginResolver } from './resolver';
-import { ActionsHelper } from './actions-helper';
+import { GitHubStack } from '../constructs/base.js';
+import { PluginResolver } from './resolver.js';
+import { ActionsHelper } from './actions-helper.js';
+import { SharedWorkflowHelper } from './shared-workflow-helper.js';
 import type { 
   PluginConfig, 
   StackConfig, 
   DotGitHubPlugin, 
-  PluginContext, 
   PluginLoadResult,
   PluginExecutionResult
-} from './types';
-import type { PluginDescription } from './schemas';
-import type { DotGithubContext } from '../context';
+} from './types.js';
+import type { PluginDescription } from './schemas.js';
+import type { DotGithubContext } from '../context.js';
 import { 
   validatePluginConfig, 
   validateStackConfig, 
   safeValidate,
   PluginConfigSchema,
   StackConfigSchema
-} from './schemas';
+} from './schemas.js';
 
 export interface PluginManagerOptions {
   projectRoot: string;
@@ -104,25 +104,26 @@ export class PluginManager {
         };
         
 
-        const context: PluginContext = {
-          stack,
-          config: mergedConfig,
-          stackConfig,
-          projectRoot: this.options.projectRoot,
-          actions: null as any // Will be set after context creation
-        };
+        // Set plugin context properties directly on the stack
+        stack.config = mergedConfig;
+        stack.stackConfig = stackConfig;
+        stack.projectRoot = this.options.projectRoot;
 
-        // Create actions helper with the context
-        const actionsHelper = new ActionsHelper(context);
-        context.actions = actionsHelper;
+        // Create actions helper with the stack
+        const actionsHelper = new ActionsHelper(stack);
+        stack.actions = actionsHelper;
+
+        // Create shared workflow helper with the stack
+        const sharedWorkflowHelper = new SharedWorkflowHelper(stack);
+        stack.sharedWorkflows = sharedWorkflowHelper;
 
         // Run validation if the plugin implements it
         if (plugin.validate) {
-          await plugin.validate(context);
+          await plugin.validate(stack);
         }
 
         // Synthesize the plugin
-        await plugin.synthesize(context);
+        await plugin.synthesize(stack);
 
         const duration = Date.now() - startTime;
         results.push({
@@ -211,30 +212,6 @@ export class PluginManager {
     }
   }
 
-  /**
-   * Validate plugin context using Zod schemas
-   */
-  private validatePluginContext(context: PluginContext): void {
-    // Basic type checking for PluginContext
-    if (!context || typeof context !== 'object') {
-      throw new Error('Plugin context must be an object');
-    }
-    if (!context.stack) {
-      throw new Error('Plugin context must have a stack');
-    }
-    if (!context.config || typeof context.config !== 'object') {
-      throw new Error('Plugin context must have a config object');
-    }
-    if (!context.stackConfig || typeof context.stackConfig !== 'object') {
-      throw new Error('Plugin context must have a stackConfig object');
-    }
-    if (!context.projectRoot || typeof context.projectRoot !== 'string') {
-      throw new Error('Plugin context must have a valid projectRoot string');
-    }
-    if (!context.actions) {
-      throw new Error('Plugin context must have an actions helper');
-    }
-  }
 
   /**
    * Public method to validate plugin configurations

@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import { updateActionFiles, type DotGithubContext } from '@dotgithub/core';
+import { updateActionFiles, type DotGithubContext, logger } from '@dotgithub/core';
 
 export function createUpdateCommand(createContext: (options?: any) => DotGithubContext): Command {
   return new Command('update')
@@ -21,24 +21,24 @@ export function createUpdateCommand(createContext: (options?: any) => DotGithubC
         });
 
         if (result.updated.length === 0 && result.errors.length === 0) {
-          console.log('No actions needed updating.');
+          logger.info('No actions needed updating.');
           return;
         }
 
         // Report successful updates
         if (result.updated.length > 0) {
-          console.log(`Successfully updated ${result.updated.length} action(s):`);
+          logger.success(`Successfully updated ${result.updated.length} action(s):`);
           for (const update of result.updated) {
-            console.log(`  ${update.orgRepo}: ${update.previousVersion} → ${update.newVersion}`);
-            console.log(`    Generated: ${update.filePath}`);
+            logger.info(`  ${update.orgRepo}: ${update.previousVersion} → ${update.newVersion}`);
+            logger.debug(`    Generated: ${update.filePath}`);
           }
         }
 
         // Report errors
         if (result.errors.length > 0) {
-          console.error(`\nFailed to update ${result.errors.length} action(s):`);
+          logger.error(`Failed to update ${result.errors.length} action(s):`);
           for (const error of result.errors) {
-            console.error(`  ${error.orgRepo}: ${error.error}`);
+            logger.error(`  ${error.orgRepo}: ${error.error}`);
           }
           
           if (result.updated.length === 0) {
@@ -47,10 +47,12 @@ export function createUpdateCommand(createContext: (options?: any) => DotGithubC
         }
 
         if (result.updated.length > 0) {
-          console.log('\nActions updated in dotgithub.json config file');
+          logger.info('Actions updated in dotgithub.json config file');
         }
       } catch (err) {
-        console.error(err instanceof Error ? err.message : err);
+        logger.failure('Failed to update actions', { 
+          error: err instanceof Error ? err.message : String(err)
+        });
         process.exit(1);
       }
     });

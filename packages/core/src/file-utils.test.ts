@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { sanitizeVarName } from './file-utils';
+import { sanitizeVarName } from './file-utils.js';
 
 describe('sanitizeVarName', () => {
   describe('kebab-case to camelCase conversion', () => {

@@ -15,8 +15,8 @@ import {
   getConfigPath,
   setConfigPath,
   createConfigFile
-} from './config';
-import { DotGithubContext } from './context';
+} from './config.js';
+import { DotGithubContext } from './context.js';
 
 describe('config', () => {
   let tempDir: string;

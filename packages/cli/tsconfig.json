@@ -4,7 +4,7 @@
     "outDir": "dist",
     "baseUrl": "./src",
     "paths": {
-      "@dotgithub/core": ["../../core/src"]
+      "@dotgithub/core": ["../../core/dist"]
     },
     "moduleResolution": "node",
     "noEmit": false,

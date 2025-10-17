@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import * as path from 'path';
-import { DotGithubContext } from './context';
-import type { DotGithubConfig } from './config';
+import { DotGithubContext } from './context.js';
+import type { DotGithubConfig } from './config.js';
 
 // Mock the config module
 vi.mock('./config', () => ({

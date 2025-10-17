@@ -1,5 +1,5 @@
-import type { PluginDescription } from './schemas';
-import type { DotGitHubPlugin } from './types';
+import type { PluginDescription } from './schemas.js';
+import type { DotGitHubPlugin } from './types.js';
 
 /**
  * Utility functions for working with plugins

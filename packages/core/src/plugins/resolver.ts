@@ -1,8 +1,8 @@
 import * as path from 'path';
 import * as fs from 'fs';
-import type { PluginConfig, PluginModule, DotGitHubPlugin, PluginLoadResult } from './types';
+import type { PluginConfig, PluginModule, DotGitHubPlugin, PluginLoadResult } from './types.js';
 // Removed import - using direct path resolution
-import type { DotGithubContext } from '../context';
+import type { DotGithubContext } from '../context.js';
 
 export class PluginResolver {
   constructor(private readonly projectRoot: string, private readonly context?: DotGithubContext) {}

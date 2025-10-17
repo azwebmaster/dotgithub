@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { GitHubStack } from '../constructs/base';
-import { PluginManager } from './manager';
-import type { PluginConfig, StackConfig, DotGitHubPlugin } from './types';
+import { PluginManager } from './manager.js';
+import type { PluginConfig, StackConfig, DotGitHubPlugin } from './types.js';
 
 // Mock plugins for testing
 const ciPlugin: DotGitHubPlugin = {

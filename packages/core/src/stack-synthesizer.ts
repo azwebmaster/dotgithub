@@ -1,14 +1,14 @@
 import * as path from 'path';
 import * as fs from 'fs';
-import { GitHubStack } from './constructs/base';
-import { PluginManager } from './plugins/manager';
+import { GitHubStack } from './constructs/base.js';
+import { PluginManager } from './plugins/manager.js';
 // Removed import - using direct path resolution
 import type { 
   StackConfig, 
   PluginConfig, 
   PluginExecutionResult
-} from './plugins/types';
-import type { DotGithubContext } from './context';
+} from './plugins/types.js';
+import type { DotGithubContext } from './context.js';
 
 export interface StackSynthesizerOptions {
   context: DotGithubContext;

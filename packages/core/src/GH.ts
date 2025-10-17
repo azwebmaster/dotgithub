@@ -1,6 +1,6 @@
 
-import type { GitHubStepRun } from './types/workflow';
-import { dedent } from './utils';
+import type { GitHubStepRun } from './types/workflow.js';
+import { dedent } from './utils.js';
 
 export class GH {
 

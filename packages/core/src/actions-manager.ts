@@ -1,15 +1,17 @@
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { getDefaultBranch, getRefSha, getLatestTag, getLatestTagSafe } from './github';
-import { generateTypesFromActionYml, findAllActionsInRepo, generateTypesFromActionYmlAtPath } from './types-generator';
-import { cloneRepo } from './git';
-import { addActionToConfig, writeConfig } from './config';
-import type { DotGithubAction } from './config';
-import { formatWithPrettier, updateOrgIndexFile, updateRootIndexFile, updateIndexFilesAfterRemoval } from './file-utils';
+import { getDefaultBranch, getRefSha, getLatestTag, getLatestTagSafe } from './github.js';
+import { generateTypesFromActionYml, findAllActionsInRepo, generateTypesFromActionYmlAtPath } from './types-generator.js';
+import { generateActionsConstructClass } from './typegen.js';
+import { cloneRepo } from './git.js';
+import { addActionToConfig, writeConfig } from './config.js';
+import type { DotGithubAction } from './config.js';
+import { formatWithPrettier, updateOrgIndexFile, updateRootIndexFile, updateIndexFilesAfterRemoval, addImportsToGeneratedTypes } from './file-utils.js';
+import { logger } from './logger.js';
 import { Project, SourceFile, SyntaxKind } from 'ts-morph';
-import { toProperCase } from './utils';
-import type { DotGithubContext } from './context';
+import { toProperCase } from './utils.js';
+import type { DotGithubContext } from './context.js';
 
 export interface GenerateActionFilesOptions {
   orgRepoRef: string;
@@ -110,7 +112,7 @@ export async function lookupActionInfo(options: LookupActionInfoOptions): Promis
       resolvedRef = await getLatestTag(owner, repo, token);
     } catch (error) {
       // Fallback to default branch if no tags available
-      console.warn(`No tags found for ${orgRepo}, falling back to default branch`);
+      // Fallback to default branch if no tags available
       resolvedRef = await getDefaultBranch(owner, repo, token);
     }
   } else {
@@ -181,7 +183,7 @@ export async function generateActionFiles(context: DotGithubContext, options: Ge
       resolvedRef = await getLatestTag(owner, repo, token);
     } catch (error) {
       // Fallback to default branch if no tags available
-      console.warn(`No tags found for ${orgRepo}, falling back to default branch`);
+      // Fallback to default branch if no tags available
       resolvedRef = await getDefaultBranch(owner, repo, token);
     }
   } else {
@@ -204,7 +206,7 @@ export async function generateActionFiles(context: DotGithubContext, options: Ge
       throw new Error(`No action.yml or action.yaml files found in ${orgRepo}`);
     }
 
-    console.log(`Found ${actionPaths.length} action(s) in ${orgRepo}: ${actionPaths.join(', ') || 'root'}`);
+    // Found actions in repository
 
     // Remove existing actions for this specific orgRepo/actionPath combination
     // We need to remove actions that match the specific actionPath being added
@@ -228,7 +230,7 @@ export async function generateActionFiles(context: DotGithubContext, options: Ge
           }
         }
       } catch (error) {
-        console.warn(`Warning: Could not remove existing action files: ${error instanceof Error ? error.message : error}`);
+        logger.warn(`Could not remove existing action files: ${error instanceof Error ? error.message : error}`);
       }
     }
     
@@ -243,7 +245,7 @@ export async function generateActionFiles(context: DotGithubContext, options: Ge
     const generatedActions: GeneratedAction[] = [];
     // Use provided outputDir or fall back to config's rootDir + 'actions'
     const rootActionDir = options.outputDir ? path.resolve(options.outputDir) : context.resolvePath('actions');
-    console.log(`Generating action files to ${rootActionDir}`);
+    // Generating action files to output directory
     const repoDir = path.join(rootActionDir, owner, repo);
 
     for (const actionPath of actionPaths) {
@@ -254,7 +256,7 @@ export async function generateActionFiles(context: DotGithubContext, options: Ge
 
       // Generate filename from action name
       // Use custom action name if provided, otherwise use the action name from YAML
-      const baseActionName = options.customActionName || result.yaml.name;
+      const baseActionName = options.customActionName || result.yaml.name || repo;
       const actionNameForFile = generateFilenameFromActionName(baseActionName);
       const fileName = `${actionNameForFile}.ts`;
 
@@ -283,7 +285,7 @@ export async function generateActionFiles(context: DotGithubContext, options: Ge
       // Format the code with prettier
       const formattedCode = await formatWithPrettier(typesWithImports);
 
-      console.log(`Writing generated types for ${orgRepo}/${actionPath || 'root'}@${finalRef} to ${filePath}`);
+      // Writing generated types to file
       // Write the TypeScript file
       fs.writeFileSync(filePath, formattedCode, 'utf8');
 
@@ -301,7 +303,7 @@ export async function generateActionFiles(context: DotGithubContext, options: Ge
         orgRepo,
         ref: useSha ? finalRef : resolvedRef,
         versionRef: resolvedRef,
-        actionName: options.customActionName,
+        actionName: functionName, // Store the camelCase actionName to avoid recalculating
         outputPath: relativeOutputPath,
         actionPath: actionPath || undefined
       }, context);
@@ -321,6 +323,12 @@ export async function generateActionFiles(context: DotGithubContext, options: Ge
     }
     await updateOrgIndexFile(path.join(rootActionDir, owner), repo);
     await updateRootIndexFile(rootActionDir, owner);
+    
+    // Check if we need to update a shared actions directory index file
+    await updateSharedActionsIndexFile(rootActionDir, generatedActions);
+
+    // Generate ActionsConstruct class for this organization
+    await generateActionsConstructForOrg(context, owner, generatedActions, rootActionDir);
 
     // Return result for the first action (for backwards compatibility)
     // But include all actions in the actions field
@@ -378,7 +386,7 @@ export async function removeActionFiles(context: DotGithubContext, options: Remo
           }
         }
       } catch (error) {
-        console.warn(`Warning: Could not remove action file: ${error instanceof Error ? error.message : error}`);
+        logger.warn(`Could not remove action file: ${error instanceof Error ? error.message : error}`);
       }
     }
 
@@ -386,13 +394,13 @@ export async function removeActionFiles(context: DotGithubContext, options: Remo
     try {
       if (fs.existsSync(repoDir)) {
         fs.rmSync(repoDir, { recursive: true, force: true });
-        console.log(`Removed repository directory: ${repoDir}`);
+        logger.debug(`Removed repository directory: ${repoDir}`);
       }
 
       // Remove single action file if it exists (single root action case)
       if (fs.existsSync(singleActionFile)) {
         fs.unlinkSync(singleActionFile);
-        console.log(`Removed single action file: ${singleActionFile}`);
+        logger.debug(`Removed single action file: ${singleActionFile}`);
       }
 
       // Update index files
@@ -410,7 +418,7 @@ export async function removeActionFiles(context: DotGithubContext, options: Remo
         }
       }
     } catch (error) {
-      console.warn(`Warning: Could not clean up directories: ${error instanceof Error ? error.message : error}`);
+      logger.warn(`Could not clean up directories: ${error instanceof Error ? error.message : error}`);
     }
   }
 
@@ -427,7 +435,7 @@ export async function removeActionFiles(context: DotGithubContext, options: Remo
     }
     return a.orgRepo;
   }).join(', ');
-  console.log(`Removed ${actionsToRemove.length} action(s) from ${orgRepo}`);
+  logger.debug(`Removed ${actionsToRemove.length} action(s) from ${orgRepo}`);
 
   return {
     removed: true,
@@ -497,7 +505,7 @@ export async function updateActionFiles(context: DotGithubContext, options: Upda
         continue; // Skip if no update needed
       }
 
-      console.log(`Updating ${orgRepo} from ${previousVersion} to ${newVersionRef}`);
+      logger.debug(`Updating ${orgRepo} from ${previousVersion} to ${newVersionRef}`);
 
       // Update all actions from this repo using the add function (which handles replacement)
       const addOptions: GenerateActionFilesOptions = {
@@ -586,118 +594,6 @@ function generateFilenameFromActionName(actionName: string): string {
     .toLowerCase();
 }
 
-/**
- * Adds necessary import statements to the generated TypeScript code and removes unused imports
- * @param generatedTypes - The generated TypeScript code
- * @returns TypeScript code with only necessary import statements
- */
-function addImportsToGeneratedTypes(generatedTypes: string): string {
-  // Create a new ts-morph project for code generation
-  const project = new Project({
-    useInMemoryFileSystem: true,
-    compilerOptions: {
-      target: 5, // ES2022
-      module: 1, // CommonJS
-      declaration: true,
-      strict: true,
-      esModuleInterop: true,
-      skipLibCheck: true,
-      forceConsistentCasingInFileNames: true,
-    },
-  });
-
-  const fileName = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.ts`;
-  const sourceFile = project.createSourceFile(fileName, generatedTypes);
-
-  // Remove all existing import declarations to avoid duplicates
-  const existingImports = sourceFile.getImportDeclarations();
-  existingImports.forEach(importDecl => importDecl.remove());
-
-  // Analyze the generated code to determine which imports are actually used
-  const usedImports = analyzeUsedImports(sourceFile);
-
-  // Add all value imports together (these are used as values, not type-only)
-  const valueImports = [];
-  if (usedImports.has('GitHubOutputValue')) {
-    valueImports.push('GitHubOutputValue');
-  }
-  if (usedImports.has('GitHubAction')) {
-    valueImports.push('GitHubAction');
-  }
-  
-  if (valueImports.length > 0) {
-    sourceFile.addImportDeclaration({
-      moduleSpecifier: '@dotgithub/core',
-      namedImports: valueImports,
-    });
-  }
-
-  // Add type-only imports that are used
-  const typeImports = ['GitHubStep', 'GitHubStepBase', 'GitHubStepAction', 'GitHubInputValue', 'DotGithubConfig', 'PluginContext'];
-  const usedTypeImports = typeImports.filter(imp => usedImports.has(imp));
-  
-  if (usedTypeImports.length > 0) {
-    sourceFile.addImportDeclaration({
-      moduleSpecifier: '@dotgithub/core',
-      namedImports: usedTypeImports,
-      isTypeOnly: true,
-    });
-  }
-
-  if (usedImports.has('StepChainBuilder')) {
-    sourceFile.addImportDeclaration({
-      moduleSpecifier: '@dotgithub/core',
-      namedImports: ['StepChainBuilder'],
-      isTypeOnly: true,
-    });
-  }
-
-  if (usedImports.has('ActionCollection')) {
-    sourceFile.addImportDeclaration({
-      moduleSpecifier: '@dotgithub/core',
-      namedImports: ['ActionCollection'],
-      isTypeOnly: true,
-    });
-  }
-
-  return sourceFile.getFullText();
-}
-
-/**
- * Analyzes a TypeScript source file to determine which imports are actually used
- * @param sourceFile - The TypeScript source file to analyze
- * @returns Set of import names that are actually used in the code
- */
-function analyzeUsedImports(sourceFile: SourceFile): Set<string> {
-  const usedImports = new Set<string>();
-  
-  // Get all identifiers in the source file
-  const identifiers = sourceFile.getDescendantsOfKind(SyntaxKind.Identifier);
-  
-  for (const identifier of identifiers) {
-    const text = identifier.getText();
-    
-    // Check if this identifier matches any of our potential imports
-    const potentialImports = [
-      'GitHubStep',
-      'GitHubStepBase', 
-      'GitHubStepAction',
-      'GitHubInputValue',
-      'GitHubAction',
-      'GitHubOutputValue',
-      'DotGithubConfig',
-      'PluginContext',
-      'StepChainBuilder',
-      'ActionCollection'
-    ];
-    
-    if (potentialImports.includes(text)) {
-      usedImports.add(text);
-    }
-  }
-  
-  return usedImports;
-}
 
 /**
  * Creates a temporary directory for cloning repos
@@ -748,18 +644,243 @@ async function updateRepoIndexFile(repoDir: string, actions: GeneratedAction[]) 
   const fileName = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.ts`;
   const sourceFile = project.createSourceFile(fileName);
 
-  // Add export statements for each action
+  // Generate export statements manually
+  const exportStatements: string[] = [];
+  
   for (const action of actions) {
+    // Construct the correct relative path based on the actual file structure
+    // The actionName includes the .ts extension, so we need to remove it and add .js
+    const fileName = action.actionName.replace('.ts', '');
     const relativePath = action.actionPath
-      ? `./${action.actionPath}/${action.actionName}`
-      : `./${action.actionName}`;
+      ? `./${action.actionPath}/${fileName}.js`
+      : `./${fileName}.js`;
     
-    sourceFile.addExportDeclaration({
-      moduleSpecifier: relativePath,
-    });
+    // Add export statement
+    exportStatements.push(`export * from "${relativePath}";`);
   }
+  
+  // Add all export statements to the source file
+  sourceFile.insertText(0, exportStatements.join('\n') + '\n\n');
 
   const content = sourceFile.getFullText();
   const formattedContent = await formatWithPrettier(content);
   fs.writeFileSync(indexPath, formattedContent, 'utf8');
+}
+
+/**
+ * Updates the index file for a shared actions directory (e.g., actions/actions/)
+ * This handles the case where multiple actions from different repositories are placed in the same directory
+ */
+async function updateSharedActionsIndexFile(rootActionDir: string, generatedActions: GeneratedAction[]): Promise<void> {
+  // Check if any of the generated actions are in a shared actions directory
+  const sharedActionsDir = path.join(rootActionDir, 'actions');
+  if (!fs.existsSync(sharedActionsDir)) {
+    return;
+  }
+
+  // Find all actions in the shared actions directory
+  const allActionFiles = fs.readdirSync(sharedActionsDir)
+    .filter(file => file.endsWith('.ts') && file !== 'index.ts')
+    .map(file => file.replace('.ts', ''));
+
+  if (allActionFiles.length === 0) {
+    return;
+  }
+
+  // Create a new ts-morph project for code generation
+  const project = new Project({
+    useInMemoryFileSystem: true,
+    compilerOptions: {
+      target: 5, // ES2022
+      module: 1, // CommonJS
+      declaration: true,
+      strict: true,
+      esModuleInterop: true,
+      skipLibCheck: true,
+      forceConsistentCasingInFileNames: true,
+    },
+  });
+
+  const fileName = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.ts`;
+  const sourceFile = project.createSourceFile(fileName);
+
+  // Add ActionCollection import
+  sourceFile.addImportDeclaration({
+    moduleSpecifier: '@dotgithub/core',
+    namedImports: ['ActionCollection'],
+  });
+
+  // Add imports for each action function
+  for (const actionFile of allActionFiles) {
+    // Convert filename to function name (e.g., "setup-node" -> "setupNode")
+    const functionName = actionFile.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
+    
+    sourceFile.addImportDeclaration({
+      moduleSpecifier: `./${actionFile}.js`,
+      namedImports: [functionName],
+    });
+  }
+
+  // Create ActionCollection class with bind statements
+  const classDeclaration = sourceFile.addClass({
+    name: 'ActionsCollection',
+    isExported: true,
+    extends: 'ActionCollection',
+  });
+
+  // Add bind statements for each action
+  for (const actionFile of allActionFiles) {
+    const functionName = actionFile.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
+    classDeclaration.addProperty({
+      name: functionName,
+      initializer: `${functionName}.bind(this)`,
+    });
+  }
+
+  const indexPath = path.join(sharedActionsDir, 'index.ts');
+  const content = sourceFile.getFullText();
+  const formattedContent = await formatWithPrettier(content);
+  fs.writeFileSync(indexPath, formattedContent, 'utf8');
+}
+
+/**
+ * Generates an ActionsConstruct class for an organization based on generated actions
+ */
+async function generateActionsConstructForOrg(
+  context: DotGithubContext,
+  orgName: string,
+  generatedActions: GeneratedAction[],
+  rootActionDir: string
+): Promise<void> {
+  // Get all actions for this organization from the config
+  const allOrgActions = context.config.actions.filter(action => {
+    const [owner] = action.orgRepo.split('/');
+    return owner === orgName;
+  });
+
+  if (allOrgActions.length === 0) {
+    return;
+  }
+
+  // Group actions by organization and collect action metadata
+  const orgActions = allOrgActions.map(action => {
+    // Skip actions without outputPath
+    if (!action.outputPath) {
+      logger.warn(`Action ${action.orgRepo} has no outputPath, skipping`);
+      return null;
+    }
+
+    // Extract action metadata from the generated action files
+    const actionFilePath = context.resolvePath(action.outputPath);
+    if (!fs.existsSync(actionFilePath)) {
+      logger.warn(`Action file not found: ${actionFilePath}`);
+      return null;
+    }
+
+    // Read the action file to extract metadata
+    const actionContent = fs.readFileSync(actionFilePath, 'utf8');
+    
+    // Extract action name from the file content
+    const actionNameMatch = actionContent.match(/export class (\w+) extends ActionConstruct/);
+    const ActionName = actionNameMatch ? actionNameMatch[1] : action.actionName;
+    
+    // Extract inputs type name
+    const inputsTypeMatch = actionContent.match(/export type (\w+Inputs)/);
+    const inputsType = inputsTypeMatch ? inputsTypeMatch[1] : `${ActionName}Inputs`;
+    
+    // Extract outputs type name
+    const outputsTypeMatch = actionContent.match(/export type (\w+OutputsType)/);
+    const outputsType = outputsTypeMatch ? outputsTypeMatch[1] : `${ActionName}OutputsType`;
+    
+    // Extract uses and fallbackRef from the class
+    const usesMatch = actionContent.match(/protected readonly uses = "([^"]+)"/);
+    const refMatch = actionContent.match(/protected readonly fallbackRef = "([^"]+)"/);
+    
+    const uses = usesMatch ? usesMatch[1] : action.orgRepo;
+    const ref = refMatch ? refMatch[1] : action.ref || 'main';
+    
+    // Extract filename from outputPath and construct relative path
+    const filename = path.basename(action.outputPath, '.ts');
+    
+    // Use stored actionName if available, otherwise fall back to calculation
+    let actionName: string;
+    
+    if (action.actionName) {
+      // Use the stored actionName, but sanitize it for method names (handles legacy actions with spaces)
+      // Check if the actionName is already in camelCase format (no spaces, starts with lowercase)
+      if (!action.actionName.includes(' ') && /^[a-z]/.test(action.actionName)) {
+        // Already in camelCase format, convert to PascalCase for class name
+        actionName = action.actionName.charAt(0).toUpperCase() + action.actionName.slice(1);
+      } else {
+        // Legacy format with spaces, convert to PascalCase
+        actionName = action.actionName.replace(/[^a-zA-Z0-9]/g, ' ').replace(/\s+/g, ' ').trim();
+        actionName = actionName.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join('');
+      }
+    } else {
+      // Fallback to calculation for legacy actions without stored actionName
+      actionName = ActionName || 'unknown';
+      
+      // For actions with actionPath, create a unique method name
+      if (action.actionPath && ActionName) {
+        // Use a simple method name based on the actionPath
+        // e.g., "restore" -> "cacheRestore", "save" -> "cacheSave"
+        const actionPathCapitalized = action.actionPath.charAt(0).toUpperCase() + action.actionPath.slice(1);
+        // Extract the base action name from the class name (remove the actionPath suffix)
+        const baseActionName = ActionName.replace(new RegExp(`${actionPathCapitalized}$`), '');
+        actionName = `${baseActionName}${actionPathCapitalized}`;
+      } else if (ActionName && filename !== ActionName.toLowerCase()) {
+        // For actions with different filename than class name, use filename
+        actionName = filename.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase()).replace(/^./, letter => letter.toUpperCase());
+      }
+    }
+    const actionNameCamel = actionName.charAt(0).toLowerCase() + actionName.slice(1);
+    
+    // Extract description from JSDoc comment
+    const descriptionMatch = actionContent.match(/\/\*\*\s*\n\s*\*\s*([^\n]+)/);
+    const description = descriptionMatch?.[1]?.trim() || `${ActionName || actionName} action`;
+    
+    // Construct the relative import path from the org index file to the action file
+    // The org index file is at actions/orgName/index.ts
+    // The action file is at action.outputPath (e.g., actions/orgName/repo/action.ts)
+    const orgIndexDir = path.dirname(path.join(rootActionDir, orgName, 'index.ts'));
+    const actionFileDir = path.dirname(actionFilePath);
+    const relativePath = path.relative(orgIndexDir, actionFileDir);
+    
+    // Construct the full import path
+    const importPath = relativePath === '' 
+      ? filename 
+      : path.join(relativePath, filename).replace(/\\/g, '/');
+    
+    return {
+      actionName,
+      ActionName: ActionName || actionName,
+      actionNameCamel,
+      filename: importPath,
+      repo: uses || action.actionPath || '',
+      ref: ref || 'main',
+      description
+    };
+  }).filter((action): action is NonNullable<typeof action> => action !== null);
+
+  if (orgActions.length === 0) {
+    return;
+  }
+
+  // Generate the ActionsConstruct class
+  const actionsConstructCode = generateActionsConstructClass(orgName, orgActions);
+  
+  // Write the ActionsConstruct file
+  const orgDir = path.join(rootActionDir, orgName);
+  const constructFilePath = path.join(orgDir, 'index.ts');
+  
+  // Ensure the directory exists
+  if (!fs.existsSync(orgDir)) {
+    fs.mkdirSync(orgDir, { recursive: true });
+  }
+  
+  // Format and write the file
+  const formattedContent = await formatWithPrettier(actionsConstructCode);
+  fs.writeFileSync(constructFilePath, formattedContent, 'utf8');
+  
+  logger.debug(`Generated ActionsConstruct for ${orgName} organization at ${constructFilePath}`);
 }

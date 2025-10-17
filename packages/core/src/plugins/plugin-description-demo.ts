@@ -2,9 +2,9 @@
  * Demo script showing how to use the new plugin description functionality
  */
 
-import { PluginManager } from './manager';
-import { formatPluginDescription, generatePluginMarkdown } from './utils';
-import type { PluginConfig } from './schemas';
+import { PluginManager } from './manager.js';
+import { formatPluginDescription, generatePluginMarkdown } from './utils.js';
+import type { PluginConfig } from './schemas.js';
 
 // Example usage of the new plugin description system
 export async function demonstratePluginDescription() {

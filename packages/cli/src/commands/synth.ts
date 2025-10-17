@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import { StackSynthesizer, type DotGithubContext } from '@dotgithub/core';
+import { StackSynthesizer, type DotGithubContext, logger } from '@dotgithub/core';
 import * as path from 'path';
 
 export function createSynthCommand(createContext: (options?: any) => DotGithubContext): Command {
@@ -27,104 +27,105 @@ export function createSynthCommand(createContext: (options?: any) => DotGithubCo
         });
 
         if (options.dryRun) {
-          console.log('🧪 Dry run mode - no files will be written');
+          logger.info('🧪 Dry run mode - no files will be written');
           
           const results = await synthesizer.synthesizeAll();
           
           if (!results.success) {
-            console.error('❌ Synthesis failed:');
+            logger.failure('Synthesis failed');
             for (const error of results.errors) {
-              console.error(`   ${error.message}`);
+              logger.error(`   ${error.message}`);
             }
             process.exit(1);
           }
 
           if (results.results.length === 0) {
-            console.log('📝 No stacks configured for synthesis');
+            logger.info('📝 No stacks configured for synthesis');
             return;
           }
 
-          console.log(`\n📋 Would synthesize ${results.results.length} stack(s):\n`);
+          logger.info(`📋 Would synthesize ${results.results.length} stack(s):`);
 
           for (const result of results.results) {
-            console.log(`🏗️  Stack: ${result.stackConfig.name}`);
-            console.log(`   Plugins: ${result.stackConfig.plugins.join(', ')}`);
+            logger.info(`🏗️  Stack: ${result.stackConfig.name}`);
+            logger.debug(`   Plugins: ${result.stackConfig.plugins.join(', ')}`);
             
             if (options.verbose) {
-              console.log('   Plugin execution results:');
+              logger.info('   Plugin execution results:');
               for (const pluginResult of result.pluginResults) {
                 const status = pluginResult.success ? '✅' : '❌';
-                console.log(`     ${status} ${pluginResult.plugin.name} (${pluginResult.duration}ms)`);
+                logger.info(`     ${status} ${pluginResult.plugin.name} (${pluginResult.duration}ms)`);
                 if (!pluginResult.success && pluginResult.error) {
-                  console.log(`        Error: ${pluginResult.error.message}`);
+                  logger.error(`        Error: ${pluginResult.error.message}`);
                 }
               }
             }
 
-            console.log('   Files to be written:');
+            logger.debug('   Files to be written:');
             for (const filename of Object.keys(result.files)) {
               const filePath = path.join(result.outputPath, filename);
-              console.log(`     📄 ${filePath}`);
+              logger.debug(`     📄 ${filePath}`);
             }
 
             if (options.verbose) {
-              console.log('   File contents preview:');
+              logger.info('   File contents preview:');
               for (const [filename, content] of Object.entries(result.files)) {
-                console.log(`\n     --- ${filename} ---`);
-                console.log(content.split('\n').slice(0, 10).join('\n'));
+                logger.info(`\n     --- ${filename} ---`);
+                logger.info(content.split('\n').slice(0, 10).join('\n'));
                 if (content.split('\n').length > 10) {
-                  console.log('     ... (truncated)');
+                  logger.info('     ... (truncated)');
                 }
               }
             }
-            
-            console.log();
           }
 
         } else {
-          console.log('🏗️  Synthesizing GitHub workflows...');
+          logger.info('Synthesizing GitHub workflows...');
           
           const results = await synthesizer.synthesizeAndWrite();
           
           if (!results.success) {
-            console.error('❌ Synthesis failed:');
+            logger.failure('Synthesis failed');
             for (const error of results.errors) {
-              console.error(`   ${error.message}`);
+              logger.error(`   ${error.message}`);
             }
             process.exit(1);
           }
 
           if (results.results.length === 0) {
-            console.log('📝 No stacks configured for synthesis');
+            logger.info('📝 No stacks configured for synthesis');
             return;
           }
 
-          console.log(`✅ Successfully synthesized ${results.results.length} stack(s):`);
+          logger.success(`Successfully synthesized ${results.results.length} stack(s):`);
 
           for (const result of results.results) {
-            console.log(`\n🏗️  Stack: ${result.stackConfig.name}`);
-            console.log(`   Plugins: ${result.stackConfig.plugins.join(', ')}`);
+            logger.info(`🏗️  Stack: ${result.stackConfig.name}`);
+            logger.debug(`   Plugins: ${result.stackConfig.plugins.join(', ')}`);
             
             if (options.verbose) {
-              console.log('   Plugin execution results:');
+              logger.info('   Plugin execution results:');
               for (const pluginResult of result.pluginResults) {
                 const status = pluginResult.success ? '✅' : '❌';
-                console.log(`     ${status} ${pluginResult.plugin.name} (${pluginResult.duration}ms)`);
+                logger.info(`     ${status} ${pluginResult.plugin.name} (${pluginResult.duration}ms)`);
               }
             }
 
-            console.log('   Files written:');
+            logger.debug('   Files written:');
             for (const filename of Object.keys(result.files)) {
               const filePath = path.join(result.outputPath, filename);
-              console.log(`     📄 ${filePath}`);
+              logger.debug(`     📄 ${filePath}`);
             }
           }
 
-          console.log('\n🎉 Synthesis complete!');
+          logger.success('Synthesis complete!');
         }
 
       } catch (error) {
-        console.error('❌ Synthesis failed:', error instanceof Error ? error.message : error);
+        logger.failure('Synthesis failed', { 
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        });
         process.exit(1);
       }
     });

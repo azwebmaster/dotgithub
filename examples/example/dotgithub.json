@@ -1,0 +1,98 @@
+{
+  "version": "1.0.0",
+  "rootDir": "src",
+  "outputDir": "./",
+  "actions": [
+    {
+      "orgRepo": "actions/cache",
+      "ref": "0057852bfaa89a56745cba8c7296529d2fc39830",
+      "versionRef": "v4",
+      "actionName": "cache",
+      "outputPath": "actions/actions/cache/cache.ts"
+    },
+    {
+      "orgRepo": "actions/cache",
+      "ref": "0057852bfaa89a56745cba8c7296529d2fc39830",
+      "versionRef": "v4",
+      "actionName": "restoreCache",
+      "outputPath": "actions/actions/cache/restore/restore-cache.ts",
+      "actionPath": "restore"
+    },
+    {
+      "orgRepo": "actions/cache",
+      "ref": "0057852bfaa89a56745cba8c7296529d2fc39830",
+      "versionRef": "v4",
+      "actionName": "saveACache",
+      "outputPath": "actions/actions/cache/save/save-a-cache.ts",
+      "actionPath": "save"
+    },
+    {
+      "orgRepo": "actions/checkout",
+      "ref": "08c6903cd8c0fde910a37f88322edcfb5dd907a8",
+      "versionRef": "v5",
+      "actionName": "checkout",
+      "outputPath": "actions/actions/checkout.ts"
+    },
+    {
+      "orgRepo": "actions/download-artifact",
+      "ref": "634f93cb2916e3fdff6788551b99b062d0335ce0",
+      "versionRef": "v5",
+      "actionName": "downloadABuildArtifact",
+      "outputPath": "actions/actions/download-artifact.ts"
+    },
+    {
+      "orgRepo": "actions/setup-node",
+      "ref": "2028fbc5c25fe9cf00d9f06a71cc4710d4507903",
+      "versionRef": "v6",
+      "actionName": "setupNode",
+      "outputPath": "actions/actions/setup-node.ts"
+    },
+    {
+      "orgRepo": "actions/setup-python",
+      "ref": "e797f83bcb11b83ae66e0230d6156d7c80228e7c",
+      "versionRef": "v6",
+      "actionName": "setupPython",
+      "outputPath": "actions/actions/setup-python.ts"
+    },
+    {
+      "orgRepo": "actions/upload-artifact",
+      "ref": "ea165f8d65b6e75b540449e92b4886f43607fa02",
+      "versionRef": "v4",
+      "actionName": "uploadABuildArtifact",
+      "outputPath": "actions/actions/upload-artifact/upload-a-build-artifact.ts"
+    },
+    {
+      "orgRepo": "actions/upload-artifact",
+      "ref": "ea165f8d65b6e75b540449e92b4886f43607fa02",
+      "versionRef": "v4",
+      "actionName": "mergeBuildArtifacts",
+      "outputPath": "actions/actions/upload-artifact/merge/merge-build-artifacts.ts",
+      "actionPath": "merge"
+    }
+  ],
+  "plugins": [
+    {
+      "name": "local",
+      "package": "./index.ts",
+      "config": {},
+      "enabled": true
+    }
+  ],
+  "stacks": [
+    {
+      "name": "app",
+      "plugins": [
+        "local"
+      ],
+      "config": {
+        "environment": "production"
+      }
+    }
+  ],
+  "options": {
+    "tokenSource": "env",
+    "formatting": {
+      "prettier": true
+    }
+  }
+}

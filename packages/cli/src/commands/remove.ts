@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import { removeActionFiles, type DotGithubContext } from '@dotgithub/core';
+import { removeActionFiles, type DotGithubContext, logger } from '@dotgithub/core';
 
 export function createRemoveCommand(createContext: (options?: any) => DotGithubContext): Command {
   return new Command('remove')
@@ -16,16 +16,18 @@ export function createRemoveCommand(createContext: (options?: any) => DotGithubC
         });
 
         if (result.removed) {
-          console.log(`Removed ${result.actionName} from tracking`);
+          logger.success(`Removed ${result.actionName} from tracking`);
           if (!options.keepFiles) {
-            console.log(`Deleted generated files: ${result.removedFiles.join(', ')}`);
+            logger.info(`Deleted generated files: ${result.removedFiles.join(', ')}`);
           }
         } else {
-          console.log(`No matching action found for: ${orgRepoRef}`);
+          logger.warn(`No matching action found for: ${orgRepoRef}`);
           process.exit(1);
         }
       } catch (err) {
-        console.error(err instanceof Error ? err.message : err);
+        logger.failure('Failed to remove action', { 
+          error: err instanceof Error ? err.message : String(err)
+        });
         process.exit(1);
       }
     });
