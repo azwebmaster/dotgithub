@@ -31,6 +31,10 @@ export class SharedWorkflowConstruct<
   private readonly _workflowPath: string;
   private readonly _stack: GitHubStack;
 
+  get inputs(): GitHubWorkflowInputs {
+    return this._config.inputs;
+  }
+
   constructor(
     scope: GitHubStack,
     id: string,
@@ -79,6 +83,16 @@ export class SharedWorkflowConstruct<
       with: inputs,
       ...jobConfig,
     };
+  }
+
+  // Back-compat alias used by tests/callers
+  createJob(
+    inputs: { [K in keyof TInputs]?: GitHubInputValue } = {} as {
+      [K in keyof TInputs]?: GitHubInputValue;
+    },
+    jobConfig: Partial<GitHubJob> = {}
+  ): GitHubJob {
+    return this.call(inputs, jobConfig);
   }
 
   /**

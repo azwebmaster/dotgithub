@@ -49,6 +49,8 @@ const CONFIG_VERSION = '1.0.0';
 const DEFAULT_ROOT_DIR = 'src';
 const DEFAULT_OUTPUT_DIR = 'src';
 
+let configPathOverride: string | undefined;
+
 /**
  * Converts an absolute path to a relative path from the rootDir
  */
@@ -139,8 +141,7 @@ module.exports = ${JSON.stringify(config, null, 2)};
  * Sets a custom config file path to override the default discovery
  */
 export function setConfigPath(configPath: string): void {
-  // This function is kept for compatibility but doesn't need to do anything
-  // since we're using DotGithubContext now
+  configPathOverride = configPath;
 }
 
 /**
@@ -182,6 +183,10 @@ export function createConfigFile(
  * Gets the path to the dotgithub config file (supports .json, .js, .yaml, .yml)
  */
 export function getConfigPath(): string {
+  if (configPathOverride) {
+    return configPathOverride;
+  }
+
   const CONFIG_FILE_NAMES = [
     'dotgithub.json',
     'dotgithub.js',
@@ -290,7 +295,7 @@ export function writeConfig(
   customConfigPath?: string
 ): void {
   const configPath = customConfigPath || getConfigPath();
-  const configDir = getConfigDir();
+  const configDir = path.dirname(configPath);
 
   // Ensure .github directory exists
   fs.mkdirSync(configDir, { recursive: true });
@@ -310,8 +315,29 @@ export function writeConfig(
  */
 export function addActionToConfig(
   actionInfo: DotGithubAction,
-  context: DotGithubContext
+  contextOrOutputDir: DotGithubContext | string
 ): void {
+  const context: DotGithubContext =
+    typeof contextOrOutputDir === 'string'
+      ? {
+          config: readConfig(),
+          configPath: getConfigPath(),
+          rootPath: path.join(getConfigDir(), contextOrOutputDir),
+          outputPath: path.join(getConfigDir(), contextOrOutputDir),
+          resolvePath: (relativePath: string) =>
+            path.resolve(path.join(getConfigDir(), contextOrOutputDir), relativePath),
+          relativePath: (absolutePath: string) =>
+            path.relative(path.join(getConfigDir(), contextOrOutputDir), absolutePath),
+        }
+      : contextOrOutputDir;
+
+  if (!context.config) {
+    context.config = createDefaultConfig();
+  }
+  if (!Array.isArray(context.config.actions)) {
+    context.config.actions = [];
+  }
+
   // Check if action already exists (check orgRepo AND actionPath for uniqueness)
   const existingIndex = context.config.actions.findIndex(
     (action) =>
@@ -321,6 +347,10 @@ export function addActionToConfig(
 
   const actionWithRelativePath: DotGithubAction = {
     ...actionInfo,
+    outputPath:
+      actionInfo.outputPath && path.isAbsolute(actionInfo.outputPath)
+        ? context.relativePath(actionInfo.outputPath)
+        : actionInfo.outputPath,
   };
 
   if (existingIndex >= 0) {

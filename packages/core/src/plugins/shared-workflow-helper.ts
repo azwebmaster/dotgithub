@@ -15,8 +15,11 @@ import type { GitHubInputValue } from '../types/common.js';
 export class SharedWorkflowHelper {
   private readonly _stack: GitHubStack;
 
-  constructor(stack: GitHubStack) {
-    this._stack = stack;
+  constructor(stackOrContext: GitHubStack | { stack: GitHubStack }) {
+    this._stack =
+      'stack' in stackOrContext
+        ? stackOrContext.stack
+        : (stackOrContext as GitHubStack);
   }
 
   /**

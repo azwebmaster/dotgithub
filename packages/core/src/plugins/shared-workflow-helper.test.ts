@@ -56,7 +56,7 @@ describe('SharedWorkflowHelper', () => {
 
       expect(sharedWorkflow).toBeDefined();
       expect(sharedWorkflow.workflow.name).toBe('Test Workflow');
-      expect(sharedWorkflow.workflow.on).toBe('workflow_call');
+      expect(sharedWorkflow.workflow.on).toHaveProperty('workflow_call');
       expect(sharedWorkflow.inputs).toEqual(inputs);
     });
 

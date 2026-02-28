@@ -28,7 +28,7 @@ describe('workflow-generator', () => {
       const yaml = generateWorkflowYaml(workflow);
 
       expect(yaml).toContain('name: CI');
-      expect(yaml).toContain('"on": push');
+      expect(yaml).toContain('on: push');
       expect(yaml).toContain('runs-on: ubuntu-latest');
       expect(yaml).toContain('uses: actions/checkout@v4');
     });

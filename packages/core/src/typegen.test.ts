@@ -24,14 +24,14 @@ describe('generateTypesFromYml', () => {
     },
   };
 
-  it('generates correct types and function', () => {
+  it('generates correct types and class', () => {
     const code = generateTypesFromYml(sampleYml, 'actions/create-user', 'sha1');
     expect(code).toContain('export type CreateUserInputs');
     expect(code).toContain('name: GitHubInputValue;');
     expect(code).toContain('address?: GitHubInputValue;');
     expect(code).toContain('export const CreateUserOutputs');
     expect(code).toContain('id: new GitHubOutputValue("id")');
-    expect(code).toContain('export function createUser(');
+    expect(code).toContain('export class CreateUser');
     expect(code).toContain('default: "John Doe"');
     expect(code).toMatchSnapshot();
   });
@@ -65,7 +65,7 @@ describe('generateTypesFromYml', () => {
     };
     const code = generateTypesFromYml(ymlOptionalInputs);
     expect(code).toContain(
-      'export function optionalTest(this: ActionCollection, inputs?: OptionalTestInputs,'
+      'export class OptionalTest'
     );
   });
 
@@ -80,7 +80,7 @@ describe('generateTypesFromYml', () => {
     };
     const code = generateTypesFromYml(ymlRequiredInputs);
     expect(code).toContain(
-      'export function requiredTest(this: ActionCollection, inputs?: RequiredTestInputs,'
+      'export class RequiredTest'
     );
   });
 
@@ -98,7 +98,7 @@ describe('generateTypesFromYml', () => {
       'abc123sha',
       'v4'
     );
-    expect(code).toContain('fallbackRef: "abc123sha"');
+    expect(code).toContain('fallbackRef = "abc123sha"');
   });
 
   it('clones using versionRef when provided, createStep uses ref', () => {
@@ -124,7 +124,7 @@ describe('generateTypesFromYml', () => {
       'sha123abc',
       'v4'
     );
-    expect(code).toContain('fallbackRef: "sha123abc"');
+    expect(code).toContain('fallbackRef = "sha123abc"');
   });
 
   it('escapes */ sequences in action descriptions', () => {
@@ -168,17 +168,8 @@ describe('generateTypesFromYml', () => {
       '* This is a test action that does something useful'
     );
 
-    // Check that JSDoc includes proper parameter documentation
-    expect(code).toContain(
-      '* @param inputs - Input parameters for the test-action action'
-    );
-    expect(code).toContain(
-      '* @param stepOptions - Additional step configuration options'
-    );
-    expect(code).toContain('* @param ref - Optional git reference override');
-    expect(code).toContain(
-      '* @returns ActionInvocationResult with step and outputs'
-    );
+    // Class-based output no longer emits function param docs
+    expect(code).toContain('export class TestAction');
   });
 
   it('generates JSDoc for actions without description', () => {
@@ -253,14 +244,8 @@ describe('generateTypesFromYml', () => {
     expect(code).toContain(
       'import { GitHubOutputValue } from "@dotgithub/core";'
     );
-    expect(code).toContain(
-      'import type { GitHubStepAction, GitHubInputValue, ActionInvocationResult, ActionCollection } from "@dotgithub/core";'
-    );
-
-    // Should not have any missing imports that would cause TypeScript errors
-    expect(code).toContain('): ActionInvocationResult<');
-    expect(code).toContain('this: ActionCollection');
+    expect(code).toContain('import type { ActionConstructProps } from "@dotgithub/core";');
+    expect(code).toContain('import type { Construct } from "@dotgithub/core";');
     expect(code).toContain('GitHubInputValue');
-    expect(code).toContain('GitHubStepAction');
   });
 });

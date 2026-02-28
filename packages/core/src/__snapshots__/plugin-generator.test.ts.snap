@@ -3,8 +3,8 @@
 exports[`Plugin Generator > Index File Structure Validation (Snapshot Tests) > should generate correct index file for resource-only plugin > resource-only-index-file 1`] = `
 "import type { DotGitHubPlugin, PluginContext } from '@dotgithub/core';
 
-import { readmeHandler } from './resources/README';
-import { dependabotHandler } from './resources/dependabot';
+import { readmeHandler } from './resources/README.js';
+import { dependabotHandler } from './resources/dependabot.js';
 
 /**
  * Resource-only plugin for index file snapshot testing
@@ -26,7 +26,7 @@ export class ResourceOnlyIndexTestPlugin implements DotGitHubPlugin {
     await dependabotHandler(context);
   }
 
-  async apply(context: PluginContext): Promise<void> {
+  async synthesize(context: PluginContext): Promise<void> {
     await this.applyWorkflows(context);
     await this.applyResources(context);
   }
@@ -41,8 +41,8 @@ exports[`Plugin Generator > Index File Structure Validation (Snapshot Tests) > s
 "import type { DotGitHubPlugin, PluginContext } from '@dotgithub/core';
 import type { GitHubWorkflows, GitHubWorkflow } from '@dotgithub/core';
 
-import { ciHandler } from './workflows/ci';
-import { releaseHandler } from './workflows/release';
+import { ciHandler } from './workflows/ci.js';
+import { releaseHandler } from './workflows/release.js';
 
 /**
  * Workflow-only plugin for index file snapshot testing
@@ -64,7 +64,7 @@ export class WorkflowOnlyIndexTestPlugin implements DotGitHubPlugin {
     // This plugin doesn't define any resources
   }
 
-  async apply(context: PluginContext): Promise<void> {
+  async synthesize(context: PluginContext): Promise<void> {
     await this.applyWorkflows(context);
     await this.applyResources(context);
   }
@@ -79,10 +79,10 @@ exports[`Plugin Generator > Index File Structure Validation (Snapshot Tests) > s
 "import type { DotGitHubPlugin, PluginContext } from '@dotgithub/core';
 import type { GitHubWorkflows, GitHubWorkflow } from '@dotgithub/core';
 
-import { ciHandler } from './workflows/ci';
-import { releaseHandler } from './workflows/release';
-import { codeownersHandler } from './resources/CODEOWNERS';
-import { dependabotHandler } from './resources/dependabot';
+import { ciHandler } from './workflows/ci.js';
+import { releaseHandler } from './workflows/release.js';
+import { codeownersHandler } from './resources/CODEOWNERS.js';
+import { dependabotHandler } from './resources/dependabot.js';
 
 /**
  * Complete plugin for index file snapshot testing
@@ -105,7 +105,7 @@ export class CompletePluginIndexTestPlugin implements DotGitHubPlugin {
     await dependabotHandler(context);
   }
 
-  async apply(context: PluginContext): Promise<void> {
+  async synthesize(context: PluginContext): Promise<void> {
     await this.applyWorkflows(context);
     await this.applyResources(context);
   }
@@ -120,10 +120,10 @@ exports[`Plugin Generator > Index File Structure Validation (Snapshot Tests) > s
 "import type { DotGitHubPlugin, PluginContext } from '@dotgithub/core';
 import type { GitHubWorkflows, GitHubWorkflow } from '@dotgithub/core';
 
-import { ciHandler } from './workflows/ci';
-import { codeownersHandler } from './resources/CODEOWNERS';
-import { fundingHandler } from './resources/FUNDING';
-import { issueTemplateHandler } from './resources/ISSUE_TEMPLATE';
+import { ciHandler } from './workflows/ci.js';
+import { codeownersHandler } from './resources/CODEOWNERS.js';
+import { fundingHandler } from './resources/FUNDING.js';
+import { issueTemplateHandler } from './resources/ISSUE_TEMPLATE.js';
 
 /**
  * Plugin with mixed file types for index file snapshot testing
@@ -147,7 +147,7 @@ export class MixedFilesIndexTestPlugin implements DotGitHubPlugin {
     await issueTemplateHandler(context);
   }
 
-  async apply(context: PluginContext): Promise<void> {
+  async synthesize(context: PluginContext): Promise<void> {
     await this.applyWorkflows(context);
     await this.applyResources(context);
   }
@@ -162,9 +162,9 @@ exports[`Plugin Generator > Index File Structure Validation (Snapshot Tests) > s
 "import type { DotGitHubPlugin, PluginContext } from '@dotgithub/core';
 import type { GitHubWorkflows, GitHubWorkflow } from '@dotgithub/core';
 
-import { anotherComplexWorkflowHandler } from './workflows/another-complex_workflow';
-import { testWorkflowSpecialHandler } from './workflows/test-workflow_special';
-import { specialConfigHandler } from './resources/special-config';
+import { anotherComplexWorkflowHandler } from './workflows/another-complex_workflow.js';
+import { testWorkflowSpecialHandler } from './workflows/test-workflow_special.js';
+import { specialConfigHandler } from './resources/special-config.js';
 
 /**
  * Plugin with special characters for index file snapshot testing
@@ -187,7 +187,7 @@ export class SpecialCharsIndexTestPlugin implements DotGitHubPlugin {
     await specialConfigHandler(context);
   }
 
-  async apply(context: PluginContext): Promise<void> {
+  async synthesize(context: PluginContext): Promise<void> {
     await this.applyWorkflows(context);
     await this.applyResources(context);
   }
@@ -221,7 +221,7 @@ export async function issueTemplateHandler(
 exports[`Plugin Generator > Snapshot Tests > should generate consistent plugin structure with only resources > resource-only-plugin-content 1`] = `
 "import type { DotGitHubPlugin, PluginContext } from '@dotgithub/core';
 
-import { issueTemplateHandler } from './resources/ISSUE_TEMPLATE';
+import { issueTemplateHandler } from './resources/ISSUE_TEMPLATE.js';
 
 /**
  * Plugin with only resource files
@@ -242,7 +242,7 @@ export class ResourceOnlyPluginPlugin implements DotGitHubPlugin {
     await issueTemplateHandler(context);
   }
 
-  async apply(context: PluginContext): Promise<void> {
+  async synthesize(context: PluginContext): Promise<void> {
     await this.applyWorkflows(context);
     await this.applyResources(context);
   }
@@ -290,25 +290,21 @@ export async function releaseHandler(context: PluginContext): Promise<void> {
               'registry-url': 'https://registry.npmjs.org',
             },
           },
-          {
+          run('Run', 'npm ci', {
             name: 'Install dependencies',
-            run: 'npm ci',
-          },
-          {
+          }),
+          run('Run', 'npm run build', {
             name: 'Build',
-            run: 'npm run build',
-          },
-          {
+          }),
+          run('Run', 'npm test', {
             name: 'Run tests',
-            run: 'npm test',
-          },
-          {
+          }),
+          run('Run', 'npm publish', {
             name: 'Publish to npm',
-            run: 'npm publish',
             env: {
               NODE_AUTH_TOKEN: '\${{ secrets.NPM_TOKEN }}',
             },
-          },
+          }),
         ],
       },
     },
@@ -319,9 +315,10 @@ export async function releaseHandler(context: PluginContext): Promise<void> {
 
 exports[`Plugin Generator > Snapshot Tests > should generate consistent plugin structure with only workflows > workflow-only-plugin-content 1`] = `
 "import type { DotGitHubPlugin, PluginContext } from '@dotgithub/core';
+import { run } from '@dotgithub/core';
 import type { GitHubWorkflows, GitHubWorkflow } from '@dotgithub/core';
 
-import { releaseHandler } from './workflows/release';
+import { releaseHandler } from './workflows/release.js';
 
 /**
  * Plugin with only workflow files
@@ -342,7 +339,7 @@ export class WorkflowOnlyPluginPlugin implements DotGitHubPlugin {
     // This plugin doesn't define any resources
   }
 
-  async apply(context: PluginContext): Promise<void> {
+  async synthesize(context: PluginContext): Promise<void> {
     await this.applyWorkflows(context);
     await this.applyResources(context);
   }
@@ -401,11 +398,12 @@ export async function dependabotHandler(context: PluginContext): Promise<void> {
 
 exports[`Plugin Generator > Snapshot Tests > should generate consistent plugin structure with workflows and resources > main-plugin-content 1`] = `
 "import type { DotGitHubPlugin, PluginContext } from '@dotgithub/core';
+import { run } from '@dotgithub/core';
 import type { GitHubWorkflows, GitHubWorkflow } from '@dotgithub/core';
 
-import { ciHandler } from './workflows/ci';
-import { codeownersHandler } from './resources/CODEOWNERS';
-import { dependabotHandler } from './resources/dependabot';
+import { ciHandler } from './workflows/ci.js';
+import { codeownersHandler } from './resources/CODEOWNERS.js';
+import { dependabotHandler } from './resources/dependabot.js';
 
 /**
  * A comprehensive test plugin for snapshot testing
@@ -427,7 +425,7 @@ export class SnapshotTestPluginPlugin implements DotGitHubPlugin {
     await dependabotHandler(context);
   }
 
-  async apply(context: PluginContext): Promise<void> {
+  async synthesize(context: PluginContext): Promise<void> {
     await this.applyWorkflows(context);
     await this.applyResources(context);
   }
@@ -480,18 +478,15 @@ export async function ciHandler(context: PluginContext): Promise<void> {
               cache: 'npm',
             },
           },
-          {
+          run('Run', 'npm ci', {
             name: 'Install dependencies',
-            run: 'npm ci',
-          },
-          {
+          }),
+          run('Run', 'npm test', {
             name: 'Run tests',
-            run: 'npm test',
-          },
-          {
+          }),
+          run('Run', 'npm run build', {
             name: 'Build',
-            run: 'npm run build',
-          },
+          }),
         ],
       },
     },
@@ -503,7 +498,7 @@ export async function ciHandler(context: PluginContext): Promise<void> {
 exports[`Plugin Generator > Snapshot Tests > should generate consistent plugin with complex YAML resources > funding-plugin-content 1`] = `
 "import type { DotGitHubPlugin, PluginContext } from '@dotgithub/core';
 
-import { fundingHandler } from './resources/FUNDING';
+import { fundingHandler } from './resources/FUNDING.js';
 
 /**
  * Plugin with funding configuration
@@ -524,7 +519,7 @@ export class FundingPluginPlugin implements DotGitHubPlugin {
     await fundingHandler(context);
   }
 
-  async apply(context: PluginContext): Promise<void> {
+  async synthesize(context: PluginContext): Promise<void> {
     await this.applyWorkflows(context);
     await this.applyResources(context);
   }
@@ -567,7 +562,7 @@ exports[`Plugin Generator > Snapshot Tests > should generate consistent plugin w
 "import type { DotGitHubPlugin, PluginContext } from '@dotgithub/core';
 import type { GitHubWorkflows, GitHubWorkflow } from '@dotgithub/core';
 
-import { testWorkflowSpecialHandler } from './workflows/test-workflow_special';
+import { testWorkflowSpecialHandler } from './workflows/test-workflow_special.js';
 
 /**
  * Plugin with special characters in workflow names
@@ -588,7 +583,7 @@ export class SpecialCharsPluginPlugin implements DotGitHubPlugin {
     // This plugin doesn't define any resources
   }
 
-  async apply(context: PluginContext): Promise<void> {
+  async synthesize(context: PluginContext): Promise<void> {
     await this.applyWorkflows(context);
     await this.applyResources(context);
   }

@@ -1,8 +1,15 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`generateTypesFromYml > generates correct types and function 1`] = `
+exports[`generateTypesFromYml > generates correct types and class 1`] = `
 "import { GitHubOutputValue } from "@dotgithub/core";
-import type { GitHubStepAction, GitHubInputValue, ActionInvocationResult, ActionCollection } from "@dotgithub/core";
+import type {
+  GitHubStepAction,
+  GitHubInputValue,
+  ActionInvocationResult,
+} from "@dotgithub/core";
+import type { ActionCollection } from "@dotgithub/core";
+import type { ActionConstructProps } from "@dotgithub/core";
+import type { Construct } from "@dotgithub/core";
 
 /** Input parameters for the create-user action */
 export type CreateUserInputs = {
@@ -23,64 +30,19 @@ export type CreateUserOutputsType = typeof CreateUserOutputs;
  * Creates a user
  * 
  * @see {@link https://github.com/actions/create-user/tree/sha1} - GitHub repository and documentation
- * 
- * @param this - The ActionCollection instance
- * @param inputs - Input parameters for the create-user action
- * @param stepOptions - Additional step configuration options
- * @param ref - Optional git reference override
- * @returns ActionInvocationResult with step and outputs
  */
-export function createUser(this: ActionCollection, inputs?: CreateUserInputs, stepOptions?: Partial<Omit<GitHubStepAction, "uses" | "with">>, ref?: string): ActionInvocationResult<CreateUserOutputsType> {
-  return this.invokeAction({
-    uses: "actions/create-user",
-    inputs, 
-    stepOptions,
-    ref,
-    fallbackRef: "sha1",
-    outputs: CreateUserOutputs
-  });
-}
-"
+export class CreateUser extends ActionConstruct<CreateUserInputs, CreateUserOutputsType> {
+  protected readonly uses = "actions/create-user";
+  protected readonly fallbackRef = "sha1";
+  protected readonly outputs = CreateUserOutputs;
+
+  constructor(scope: Construct | undefined, id: string, props: ActionConstructProps<CreateUserInputs>) {
+    super(scope, id, props);
+  }
+}"
 `;
 
 exports[`generateTypesFromYml > handles missing outputs 1`] = `
-"import { GitHubOutputValue } from "@dotgithub/core";
-import type { GitHubStepAction, GitHubInputValue, ActionInvocationResult, ActionCollection } from "@dotgithub/core";
-
-/** Input parameters for the simple action */
-export type SimpleInputs = {
-        foo: GitHubInputValue;
-      };
-
-export const SimpleOutputs = {};
-
-export type SimpleOutputsType = typeof SimpleOutputs;
-
-/**
- * A simple action
- * 
- * @see {@link https://github.com/actions/my-action/tree/main} - GitHub repository and documentation
- * 
- * @param this - The ActionCollection instance
- * @param inputs - Input parameters for the simple action
- * @param stepOptions - Additional step configuration options
- * @param ref - Optional git reference override
- * @returns ActionInvocationResult with step and outputs
- */
-export function simple(this: ActionCollection, inputs?: SimpleInputs, stepOptions?: Partial<Omit<GitHubStepAction, "uses" | "with">>, ref?: string): ActionInvocationResult<SimpleOutputsType> {
-  return this.invokeAction({
-    uses: "actions/my-action",
-    inputs, 
-    stepOptions,
-    ref,
-    fallbackRef: "main",
-    outputs: SimpleOutputs
-  });
-}
-"
-`;
-
-exports[`generateTypesFromYml handles missing outputs 1`] = `
 "import { GitHubOutputValue } from "@dotgithub/core";
 import type {
   GitHubStepAction,

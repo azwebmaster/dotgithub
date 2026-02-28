@@ -13,6 +13,7 @@ import {
   PropertyDeclaration,
 } from 'ts-morph';
 import { generateActionFiles } from './actions-manager.js';
+import { generateFunctionName } from './utils.js';
 
 // Enhanced TypeScript interfaces for better type safety
 interface WorkflowSchema {
@@ -226,10 +227,9 @@ export async function createPluginFromFiles(
   // Generate plugin content (now with updated config that includes auto-added actions)
   // Filter actions to only include those with functionName for code generation
   const configForPlugin: Config = {
-    actions: configToUse.actions
+    actions: (configToUse?.actions || [])
       .filter((action) => action.generateCode !== false && action.outputPath)
       .map((action) => {
-        const { generateFunctionName } = require('./utils');
         const functionName = action.actionName
           ? generateFunctionName(action.actionName)
           : action.orgRepo;
@@ -243,7 +243,7 @@ export async function createPluginFromFiles(
           generateCode: action.generateCode,
         };
       }),
-    outputDir: configToUse.outputDir,
+    outputDir: configToUse?.outputDir,
   };
 
   let pluginResult: {
@@ -299,10 +299,9 @@ export async function generatePluginFromGitHubFiles(
     const { content, filename } = await downloadGitHubFile(source);
     // Filter actions to only include those with outputPath for code generation
     const configForPlugin: Config = {
-      actions: context.config.actions
+      actions: (context.config?.actions || [])
         .filter((action) => action.generateCode !== false && action.outputPath)
         .map((action) => {
-          const { generateFunctionName } = require('./utils');
           const functionName = action.actionName
             ? generateFunctionName(action.actionName)
             : action.orgRepo;
@@ -316,7 +315,7 @@ export async function generatePluginFromGitHubFiles(
             generateCode: action.generateCode,
           };
         }),
-      outputDir: context.config.outputDir,
+      outputDir: context.config?.outputDir,
     };
     result = await createPluginFromSingleFile(
       pluginName,

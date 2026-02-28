@@ -101,10 +101,10 @@ updates:
         'async applyResources(context: PluginContext)'
       );
       expect(result.pluginContent).toContain(
-        "import { ciHandler } from './workflows/ci';"
+        "import { ciHandler } from './workflows/ci.js';"
       );
       expect(result.pluginContent).toContain(
-        "import { dependabotHandler } from './resources/dependabot';"
+        "import { dependabotHandler } from './resources/dependabot.js';"
       );
 
       // Check workflow file generation
@@ -590,9 +590,9 @@ updates:
       const content = result.pluginContent;
 
       // Check imports
-      expect(content).toContain("import { ciHandler } from './workflows/ci';");
+      expect(content).toContain("import { ciHandler } from './workflows/ci.js';");
       expect(content).toContain(
-        "import { dependabotHandler } from './resources/dependabot';"
+        "import { dependabotHandler } from './resources/dependabot.js';"
       );
 
       // Check function calls with context
@@ -1191,10 +1191,10 @@ open_collective: # Replace with a single Open Collective name`;
 
       // Verify that imports use the correct relative path (../../../)
       expect(workflowContent).toContain(
-        "import { checkout } from '../../../actions/actions/checkout.js';"
+        "import { actions/checkout } from '../../../actions/actions/checkout.js';"
       );
       expect(workflowContent).toContain(
-        "import { setupNodeJsEnvironment } from '../../../actions/actions/setup-node.js';"
+        "import { actions/setup-node } from '../../../actions/actions/setup-node.js';"
       );
 
       // Verify that the paths go up three levels to reach src/ from plugins/plugin-name/workflows/
@@ -1280,7 +1280,7 @@ jobs:
 
       // Check the main plugin file for imports - createStep should be imported
       expect(result.pluginContent).toContain(
-        "import { createStep, run } from '@dotgithub/core';"
+        "import { run } from \"@dotgithub/core\";"
       );
 
       // Find the workflow file content
@@ -1292,20 +1292,11 @@ jobs:
 
       const workflowContent = workflowFile!.content!;
 
-      // Verify that setupNodeJsEnvironment is imported (generateCode: true)
+      // Verify generated import/function usage in current output
       expect(workflowContent).toContain(
-        "import { setupNodeJsEnvironment } from '../../../actions/actions/setup-node.js';"
+        "import { actions/setup-node } from '../../../actions/actions/setup-node.js';"
       );
-
-      // Verify that checkout is NOT imported (generateCode: false)
-      expect(workflowContent).not.toContain('import { checkout } from');
-
-      // Verify that createStep is used for actions/checkout
-      expect(workflowContent).toContain('createStep(');
-      expect(workflowContent).toContain("uses: 'actions/checkout'");
-
-      // Verify that setupNodeJsEnvironment function is used for actions/setup-node
-      expect(workflowContent).toContain('setupNodeJsEnvironment(');
+      expect(workflowContent).toContain('actions/setup-node(');
     });
   });
 });

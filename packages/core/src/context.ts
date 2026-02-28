@@ -12,10 +12,16 @@ export class DotGithubContext {
   configPath: string;
   rootPath: string;
 
+  // Back-compat alias used by older tests/callers
+  get outputPath(): string {
+    return this.rootPath;
+  }
+
   constructor({ config, configPath }: DotGithubContextOptions) {
     this.config = config;
     this.configPath = configPath;
-    this.rootPath = path.join(path.dirname(configPath), this.config.rootDir);
+    const rootDir = config.rootDir ?? config.outputDir ?? '';
+    this.rootPath = path.join(path.dirname(configPath), rootDir);
   }
 
   resolvePath(relativePath: string): string {
