@@ -1,0 +1,58 @@
+---
+description: Guidelines for developing GitHub constructs and extending DotGitHub functionality
+---
+
+# Construct Development Guidelines
+
+## Construct Architecture
+
+Constructs in DotGitHub follow a specific pattern for extending functionality:
+
+- Constructs (loadable modules) are located in `packages/core/src/plugins/`
+- Each construct should export a main class and any helper classes
+- Constructs receive configuration through the stack context
+- Use dependency injection for better testability
+
+## Construct Interface
+
+```typescript
+export abstract class GitHubConstruct {
+  readonly name: string;
+  readonly version?: string;
+
+  validate?(stack: GitHubStack): void;
+  synthesize(stack: GitHubStack): Promise<void> | void;
+  describe?(): ConstructDescription | Promise<ConstructDescription>;
+}
+```
+
+## Action Collection Constructs
+
+For constructs that provide actions, extend [ActionCollection](mdc:packages/core/src/plugins/action-collection.ts):
+
+- Use `invokeAction()` for type-safe action invocation
+- Use `createOutputs()` for output management
+- Access the stack via `this.stack`
+- Implement proper error handling
+
+## Construct Configuration
+
+- Constructs receive configuration through `stack.config`
+- Use Zod schemas for configuration validation
+- Provide sensible defaults for optional configuration
+- Document all configuration options
+
+## Construct Registration
+
+- Constructs are registered in the configuration file under `constructs`
+- Use the construct manager for loading and initialization
+- Support construct dependencies and ordering
+- Handle construct loading errors gracefully
+
+## Testing Constructs
+
+- Create comprehensive unit tests for construct logic
+- Test configuration validation
+- Test construct integration with the stack
+- Use mocks for external dependencies
+- Test error conditions and edge cases

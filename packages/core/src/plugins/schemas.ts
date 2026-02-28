@@ -2,20 +2,20 @@ import { z } from 'zod';
 import { GitHubStack } from '../constructs/base.js';
 import { ActionsHelper } from './actions-helper.js';
 import { SharedWorkflowHelper } from './shared-workflow-helper.js';
-import { DotGitHubPlugin } from './types.js';
+import { GitHubConstruct } from './types.js';
 
 /**
- * Base schema for plugin configuration
+ * Base schema for construct configuration
  */
-export const PluginConfigSchema = z.object({
+export const ConstructConfigSchema = z.object({
   name: z
     .string()
-    .min(1, 'Plugin name is required')
+    .min(1, 'Construct name is required')
     .regex(/^[a-zA-Z0-9-_]+$/, {
       message:
-        'Plugin name must contain only alphanumeric characters, hyphens, and underscores',
+        'Construct name must contain only alphanumeric characters, hyphens, and underscores',
     }),
-  package: z.string().min(1, 'Plugin package is required'),
+  package: z.string().min(1, 'Construct package is required'),
   config: z.record(z.string(), z.any()).optional(),
   actions: z.record(z.string(), z.string()).optional(),
   enabled: z.boolean().optional().default(true),
@@ -32,11 +32,11 @@ export const StackConfigSchema = z.object({
       message:
         'Stack name must contain only alphanumeric characters, hyphens, and underscores',
     }),
-  plugins: z
+  constructs: z
     .array(z.string())
-    .min(1, 'Stack must have at least one plugin')
-    .refine((plugins) => new Set(plugins).size === plugins.length, {
-      message: 'Stack plugins must be unique',
+    .min(1, 'Stack must have at least one construct')
+    .refine((constructs) => new Set(constructs).size === constructs.length, {
+      message: 'Stack constructs must be unique',
     }),
   config: z.record(z.string(), z.any()).optional(),
   actions: z.record(z.string(), z.string()).optional(),
@@ -71,14 +71,14 @@ export const DotGithubConfigSchema = z.object({
   rootDir: z.string().min(1, 'Root directory is required').default('src'),
   outputDir: z.string().min(1, 'Output directory is required').default('./'),
   actions: z.array(ActionConfigSchema).default([]),
-  plugins: z
-    .array(PluginConfigSchema)
+  constructs: z
+    .array(ConstructConfigSchema)
     .refine(
-      (plugins) => {
-        const names = plugins.map((p) => p.name);
+      (constructs) => {
+        const names = constructs.map((c) => c.name);
         return new Set(names).size === names.length;
       },
-      { message: 'Plugin names must be unique' }
+      { message: 'Construct names must be unique' }
     )
     .default([]),
   stacks: z
@@ -104,9 +104,9 @@ export const DotGithubConfigSchema = z.object({
 });
 
 /**
- * Plugin metadata type (used by plugin classes)
+ * Construct metadata type (used by construct classes)
  */
-export interface PluginMetadata {
+export interface ConstructMetadata {
   name: string;
   version?: string;
   description?: string;
@@ -115,28 +115,28 @@ export interface PluginMetadata {
 }
 
 /**
- * Plugin execution result type
+ * Construct execution result type
  */
-export interface PluginExecutionResult {
-  plugin: DotGitHubPlugin;
+export interface ConstructExecutionResult {
+  construct: GitHubConstruct;
   success: boolean;
   error?: Error;
   duration: number;
 }
 
 /**
- * Plugin load result type
+ * Construct load result type
  */
-export interface PluginLoadResult {
-  plugin: DotGitHubPlugin;
-  config: PluginConfig;
+export interface ConstructLoadResult {
+  construct: GitHubConstruct;
+  config: ConstructConfig;
   resolved: boolean;
 }
 
 /**
- * Plugin description type
+ * Construct description type
  */
-export interface PluginDescription {
+export interface ConstructDescription {
   name: string;
   version?: string;
   description?: string;
@@ -155,12 +155,12 @@ export interface PluginDescription {
 }
 
 /**
- * Utility function to validate plugin configuration
+ * Utility function to validate construct configuration
  */
-export function validatePluginConfig(
+export function validateConstructConfig(
   config: unknown
-): z.infer<typeof PluginConfigSchema> {
-  return PluginConfigSchema.parse(config);
+): z.infer<typeof ConstructConfigSchema> {
+  return ConstructConfigSchema.parse(config);
 }
 
 /**
@@ -212,7 +212,7 @@ export function safeValidate<T>(
 /**
  * Type exports for use in other files
  */
-export type PluginConfig = z.infer<typeof PluginConfigSchema>;
+export type ConstructConfig = z.infer<typeof ConstructConfigSchema>;
 export type StackConfig = z.infer<typeof StackConfigSchema>;
 export type ActionConfig = z.infer<typeof ActionConfigSchema>;
 export type DotGithubConfig = z.infer<typeof DotGithubConfigSchema>;

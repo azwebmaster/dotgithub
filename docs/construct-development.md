@@ -1,42 +1,42 @@
-# Plugin Development Guide
+# Construct Development Guide
 
-This guide covers creating custom plugins for DotGitHub, from basic plugins to advanced features.
+This guide covers creating custom constructs for DotGitHub, from basic constructs to advanced features.
 
 ## Table of Contents
 
-- [Plugin Basics](#plugin-basics)
-- [Plugin Interface](#plugin-interface)
+- [Construct Basics](#construct-basics)
+- [Construct Interface](#construct-interface)
 - [Configuration Management](#configuration-management)
 - [Workflow Generation](#workflow-generation)
 - [Advanced Features](#advanced-features)
-- [Testing Plugins](#testing-plugins)
-- [Publishing Plugins](#publishing-plugins)
+- [Testing Constructs](#testing-constructs)
+- [Publishing Constructs](#publishing-constructs)
 - [Best Practices](#best-practices)
 
-## Plugin Basics
+## Construct Basics
 
-### What is a Plugin?
+### What is a Construct?
 
-A plugin is a TypeScript class that implements the `DotGitHubPlugin` interface. Plugins generate GitHub Actions workflows based on configuration and can be reused across different projects.
+A construct is a TypeScript class that implements the `GitHubConstruct` interface. Constructs generate GitHub Actions workflows or other .github resources based on configuration and can be reused across different projects.
 
-### Plugin Structure
+### Construct Structure
 
-Every plugin must implement three methods:
+Every construct must implement three methods:
 
 ```typescript
-import { DotGitHubPlugin, GitHubStack } from '@dotgithub/core';
+import { GitHubConstruct, GitHubStack } from '@dotgithub/core';
 
-export class MyPlugin implements DotGitHubPlugin {
-  readonly name = 'my-plugin';
+export class MyConstruct implements GitHubConstruct {
+  readonly name = 'my-construct';
   readonly version = '1.0.0';
-  readonly description = 'My custom plugin';
+  readonly description = 'My custom construct';
 
   validate(stack: GitHubStack): void {
     // Validate configuration
   }
 
   describe() {
-    // Return plugin metadata
+    // Return construct metadata
   }
 
   async synthesize(stack: GitHubStack): Promise<void> {
@@ -44,24 +44,24 @@ export class MyPlugin implements DotGitHubPlugin {
   }
 }
 
-export default new MyPlugin();
+export default new MyConstruct();
 ```
 
-## Plugin Interface
+## Construct Interface
 
 ### Required Properties
 
 #### name
 
-Unique identifier for your plugin. Use kebab-case naming.
+Unique identifier for your construct. Use kebab-case naming.
 
 ```typescript
-readonly name = 'my-awesome-plugin';
+readonly name = 'my-awesome-construct';
 ```
 
 #### version
 
-Plugin version following semantic versioning.
+Construct version following semantic versioning.
 
 ```typescript
 readonly version = '1.2.3';
@@ -69,7 +69,7 @@ readonly version = '1.2.3';
 
 #### description
 
-Human-readable description of what the plugin does.
+Human-readable description of what the construct does.
 
 ```typescript
 readonly description = 'Generates CI workflows for Node.js projects';
@@ -97,12 +97,12 @@ validate(stack: GitHubStack): void {
 }
 ```
 
-#### describe(): PluginDescription
+#### describe(): ConstructDescription
 
-Returns metadata about the plugin.
+Returns metadata about the construct.
 
 ```typescript
-describe(): PluginDescription {
+describe(): ConstructDescription {
   return {
     name: this.name,
     version: this.version,
@@ -144,7 +144,7 @@ Zod provides type-safe schema validation:
 ```typescript
 import { z } from 'zod';
 
-export class ConfigurablePlugin implements DotGitHubPlugin {
+export class ConfigurableConstruct implements GitHubConstruct {
   private readonly configSchema = z.object({
     // Required fields
     environment: z.enum(['development', 'staging', 'production']),
@@ -188,10 +188,10 @@ export class ConfigurablePlugin implements DotGitHubPlugin {
 
 ```json
 {
-  "plugins": [
+  "constructs": [
     {
-      "name": "my-plugin",
-      "package": "./plugins/my-plugin.ts",
+      "name": "my-construct",
+      "package": "./constructs/my-construct.ts",
       "config": {
         "environment": "production",
         "nodeVersion": "18",
@@ -207,10 +207,10 @@ export class ConfigurablePlugin implements DotGitHubPlugin {
 
 ```json
 {
-  "plugins": [
+  "constructs": [
     {
-      "name": "advanced-plugin",
-      "package": "./plugins/advanced-plugin.ts",
+      "name": "advanced-construct",
+      "package": "./constructs/advanced-construct.ts",
       "config": {
         "environment": "production",
         "nodeVersion": "18",
@@ -521,18 +521,18 @@ const steps = [
 ];
 ```
 
-## Testing Plugins
+## Testing Constructs
 
 ### Unit Testing
 
-Test your plugin logic:
+Test your construct logic:
 
 ```typescript
 import { describe, it, expect } from 'vitest';
-import { MyPlugin } from './my-plugin';
+import { MyConstruct } from './my-construct';
 
-describe('MyPlugin', () => {
-  const plugin = new MyPlugin();
+describe('MyConstruct', () => {
+  const construct = new MyConstruct();
 
   it('should validate correct configuration', () => {
     const stack = {
@@ -541,10 +541,10 @@ describe('MyPlugin', () => {
         environment: 'production',
         nodeVersion: '18',
       },
-      plugins: [],
+      constructs: [],
     };
 
-    expect(() => plugin.validate(stack)).not.toThrow();
+    expect(() => construct.validate(stack)).not.toThrow();
   });
 
   it('should reject invalid configuration', () => {
@@ -553,18 +553,18 @@ describe('MyPlugin', () => {
       config: {
         environment: 'invalid',
       },
-      plugins: [],
+      constructs: [],
     };
 
-    expect(() => plugin.validate(stack)).toThrow();
+    expect(() => construct.validate(stack)).toThrow();
   });
 
   it('should return correct metadata', () => {
-    const description = plugin.describe();
+    const description = construct.describe();
 
-    expect(description.name).toBe('my-plugin');
+    expect(description.name).toBe('my-construct');
     expect(description.version).toBe('1.0.0');
-    expect(description.description).toBe('My custom plugin');
+    expect(description.description).toBe('My custom construct');
   });
 });
 ```
@@ -575,21 +575,21 @@ Test workflow generation:
 
 ```typescript
 import { describe, it, expect } from 'vitest';
-import { MyPlugin } from './my-plugin';
+import { MyConstruct } from './my-construct';
 
-describe('MyPlugin Integration', () => {
+describe('MyConstruct Integration', () => {
   it('should generate correct workflow', async () => {
-    const plugin = new MyPlugin();
+    const construct = new MyConstruct();
     const stack = {
       name: 'test',
       config: {
         environment: 'production',
         nodeVersion: '18',
       },
-      plugins: [],
+      constructs: [],
     };
 
-    await plugin.synthesize(stack);
+    await construct.synthesize(stack);
 
     // Verify workflow was generated correctly
     // This would require access to the generated workflow content
@@ -597,23 +597,23 @@ describe('MyPlugin Integration', () => {
 });
 ```
 
-## Publishing Plugins
+## Publishing Constructs
 
 ### NPM Package
 
-Create an NPM package for your plugin:
+Create an NPM package for your construct:
 
 #### package.json
 
 ```json
 {
-  "name": "@yourorg/dotgithub-plugin-nodejs",
+  "name": "@yourorg/dotgithub-construct-nodejs",
   "version": "1.0.0",
-  "description": "DotGitHub plugin for Node.js projects",
+  "description": "DotGitHub construct for Node.js projects",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": ["dist"],
-  "keywords": ["dotgithub", "plugin", "nodejs", "ci"],
+  "keywords": ["dotgithub", "construct", "nodejs", "ci"],
   "author": "Your Name",
   "license": "MIT",
   "dependencies": {
@@ -639,16 +639,16 @@ Create an NPM package for your plugin:
 }
 ```
 
-### Local Plugin
+### Local Construct
 
-For local development, reference the plugin directly:
+For local development, reference the construct directly:
 
 ```json
 {
-  "plugins": [
+  "constructs": [
     {
-      "name": "local-plugin",
-      "package": "./plugins/my-plugin.ts",
+      "name": "local-construct",
+      "package": "./constructs/my-construct.ts",
       "config": {
         "environment": "development"
       },
@@ -660,9 +660,9 @@ For local development, reference the plugin directly:
 
 ## Best Practices
 
-### Plugin Design
+### Construct Design
 
-1. **Single Responsibility** - Each plugin should have one clear purpose
+1. **Single Responsibility** - Each construct should have one clear purpose
 2. **Configuration Validation** - Always validate configuration with Zod
 3. **Error Handling** - Provide clear error messages
 4. **Documentation** - Document all configuration options
@@ -698,22 +698,22 @@ For local development, reference the plugin directly:
 
 ## Examples
 
-### Complete Plugin Example
+### Complete Construct Example
 
 ```typescript
 import { z } from 'zod';
 import {
-  DotGitHubPlugin,
+  GitHubConstruct,
   GitHubStack,
   WorkflowConstruct,
   JobConstruct,
   Actions,
 } from '@dotgithub/core';
 
-export class NodeJSPlugin implements DotGitHubPlugin {
-  readonly name = 'nodejs-plugin';
+export class NodeJSConstruct implements GitHubConstruct {
+  readonly name = 'nodejs-construct';
   readonly version = '1.0.0';
-  readonly description = 'Comprehensive Node.js CI/CD plugin';
+  readonly description = 'Comprehensive Node.js CI/CD construct';
 
   private readonly configSchema = z.object({
     environment: z.enum(['development', 'staging', 'production']),
@@ -747,7 +747,7 @@ export class NodeJSPlugin implements DotGitHubPlugin {
       version: this.version,
       description: this.description,
       author: 'Your Name',
-      repository: 'https://github.com/yourusername/nodejs-plugin',
+      repository: 'https://github.com/yourusername/nodejs-construct',
       license: 'MIT',
       keywords: ['nodejs', 'ci', 'cd', 'github-actions'],
       category: 'ci',
@@ -869,10 +869,10 @@ export class NodeJSPlugin implements DotGitHubPlugin {
   }
 }
 
-export default new NodeJSPlugin();
+export default new NodeJSConstruct();
 ```
 
-This comprehensive plugin demonstrates:
+This comprehensive construct demonstrates:
 
 - Configuration validation with Zod
 - Matrix builds for multiple Node.js versions

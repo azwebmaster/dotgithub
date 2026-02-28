@@ -7,7 +7,7 @@ This comprehensive guide covers all aspects of using DotGitHub to manage your Gi
 - [Project Structure](#project-structure)
 - [Configuration](#configuration)
 - [Actions Management](#actions-management)
-- [Plugin System](#plugin-system)
+- [Construct System](#construct-system)
 - [Stack Management](#stack-management)
 - [Workflow Generation](#workflow-generation)
 - [Advanced Features](#advanced-features)
@@ -34,8 +34,8 @@ my-project/
 │   └── workflows/
 │       ├── ci.yml               # CI workflow
 │       └── deploy.yml           # Deployment workflow
-└── plugins/                     # Custom plugins (optional)
-    └── my-plugin.ts
+└── constructs/                 # Custom constructs (optional)
+    └── my-construct.ts
 ```
 
 ## Configuration
@@ -48,7 +48,7 @@ The main configuration file controls all aspects of your DotGitHub project:
 {
   "version": "1.0.0",
   "rootDir": "src",
-  "outputDir": ".github/workflows",
+  "outputDir": ".",
   "actions": [
     {
       "orgRepo": "actions/checkout",
@@ -58,7 +58,7 @@ The main configuration file controls all aspects of your DotGitHub project:
       "outputPath": "actions/actions/checkout.ts"
     }
   ],
-  "plugins": [
+  "constructs": [
     {
       "name": "local",
       "package": "./index.ts",
@@ -71,7 +71,7 @@ The main configuration file controls all aspects of your DotGitHub project:
   "stacks": [
     {
       "name": "ci",
-      "plugins": ["local"],
+      "constructs": ["local"],
       "config": {
         "nodeVersion": "18"
       }
@@ -105,17 +105,17 @@ Each action entry contains:
 - **outputPath** - Relative path to generated TypeScript file
 - **actionPath** - Sub-path for composite actions
 
-#### Plugin Configuration
+#### Construct Configuration
 
-- **name** - Unique plugin identifier
-- **package** - Plugin package path or npm package name
-- **config** - Plugin-specific configuration
-- **enabled** - Whether the plugin is active
+- **name** - Unique construct identifier
+- **package** - Construct package path or npm package name
+- **config** - Construct-specific configuration
+- **enabled** - Whether the construct is active
 
 #### Stack Configuration
 
 - **name** - Stack identifier
-- **plugins** - Array of plugin names to include
+- **constructs** - Array of construct names to include
 - **config** - Stack-specific configuration
 
 ## Actions Management
@@ -185,24 +185,24 @@ dotgithub regenerate "actions/*"
 dotgithub regenerate --prune
 ```
 
-## Plugin System
+## Construct System
 
-### Creating Plugins
+### Creating Constructs
 
-Plugins are TypeScript classes that implement the `DotGitHubPlugin` interface:
+Constructs are TypeScript classes that implement the `GitHubConstruct` interface:
 
 ```typescript
 import {
-  DotGitHubPlugin,
+  GitHubConstruct,
   GitHubStack,
   WorkflowConstruct,
   JobConstruct,
 } from '@dotgithub/core';
 
-export class MyPlugin implements DotGitHubPlugin {
-  readonly name = 'my-plugin';
+export class MyConstruct implements GitHubConstruct {
+  readonly name = 'my-construct';
   readonly version = '1.0.0';
-  readonly description = 'My custom plugin';
+  readonly description = 'My custom construct';
 
   validate(stack: GitHubStack): void {
     // Validate stack configuration
@@ -222,19 +222,19 @@ export class MyPlugin implements DotGitHubPlugin {
   }
 }
 
-export default new MyPlugin();
+export default new MyConstruct();
 ```
 
-### Plugin Configuration
+### Construct Configuration
 
-Plugins can accept configuration through the `config` property:
+Constructs can accept configuration through the `config` property:
 
 ```json
 {
-  "plugins": [
+  "constructs": [
     {
-      "name": "my-plugin",
-      "package": "./plugins/my-plugin.ts",
+      "name": "my-construct",
+      "package": "./constructs/my-construct.ts",
       "config": {
         "environment": "production",
         "timeout": 30,
@@ -246,7 +246,7 @@ Plugins can accept configuration through the `config` property:
 }
 ```
 
-### Plugin Validation
+### Construct Validation
 
 Use Zod schemas for configuration validation:
 
@@ -264,36 +264,36 @@ validate(stack: GitHubStack): void {
 }
 ```
 
-### Plugin Management
+### Construct Management
 
-Manage plugins using the CLI:
+Manage constructs using the CLI:
 
 ```bash
-# List plugins
-dotgithub plugin list
+# List constructs
+dotgithub construct list
 
-# Add plugin
-dotgithub plugin add --name "my-plugin" --package "./plugins/my-plugin.ts"
+# Add construct
+dotgithub construct add --name "my-construct" --package "./constructs/my-construct.ts"
 
-# Remove plugin
-dotgithub plugin remove --name "my-plugin"
+# Remove construct
+dotgithub construct remove --name "my-construct"
 
-# Describe plugin
-dotgithub plugin describe --name "my-plugin"
+# Describe construct
+dotgithub construct describe --name "my-construct"
 ```
 
 ## Stack Management
 
 ### Creating Stacks
 
-Stacks group plugins together for organized workflow generation:
+Stacks group constructs together for organized workflow generation:
 
 ```json
 {
   "stacks": [
     {
       "name": "ci",
-      "plugins": ["checkout", "setup-node", "test"],
+      "constructs": ["checkout", "setup-node", "test"],
       "config": {
         "nodeVersion": "18",
         "testCommand": "npm test"
@@ -301,7 +301,7 @@ Stacks group plugins together for organized workflow generation:
     },
     {
       "name": "deploy",
-      "plugins": ["build", "deploy"],
+      "constructs": ["build", "deploy"],
       "config": {
         "environment": "production",
         "region": "us-east-1"
@@ -317,13 +317,13 @@ Manage stacks using the CLI:
 
 ```bash
 # List stacks
-dotgithub plugin stack list
+dotgithub construct stack list
 
 # Add stack
-dotgithub plugin stack add --name "ci" --plugins "checkout,setup-node,test"
+dotgithub construct stack add --name "ci" --constructs "checkout,setup-node,test"
 
 # Remove stack
-dotgithub plugin stack remove --name "ci"
+dotgithub construct stack remove --name "ci"
 ```
 
 ## Workflow Generation
@@ -449,11 +449,11 @@ new JobConstruct(wf, 'deploy', {
 
 ### Action Pinning
 
-Pin specific action versions for plugins or stacks:
+Pin specific action versions for constructs or stacks:
 
 ```bash
-# Pin for plugin
-dotgithub pin actions/checkout v4 --plugin my-plugin
+# Pin for construct
+dotgithub pin actions/checkout v4 --construct my-construct
 
 # Pin for stack
 dotgithub pin actions/setup-node v4.1.0 --stack ci
@@ -462,7 +462,7 @@ dotgithub pin actions/setup-node v4.1.0 --stack ci
 dotgithub list-pins
 
 # Remove pins
-dotgithub unpin actions/checkout --plugin my-plugin
+dotgithub unpin actions/checkout --construct my-construct
 ```
 
 ### Custom Action Names
@@ -501,17 +501,17 @@ dotgithub synth --verbose
 
 ### Project Organization
 
-1. **Use meaningful names** - Choose descriptive names for plugins and stacks
-2. **Organize by purpose** - Group related functionality into plugins
+1. **Use meaningful names** - Choose descriptive names for constructs and stacks
+2. **Organize by purpose** - Group related functionality into constructs
 3. **Version control** - Commit generated workflows to your repository
 4. **Document configuration** - Add comments to explain complex configurations
 
-### Plugin Development
+### Construct Development
 
-1. **Validate configuration** - Always validate plugin configuration
+1. **Validate configuration** - Always validate construct configuration
 2. **Handle errors gracefully** - Provide clear error messages
 3. **Use TypeScript** - Leverage type safety for better development experience
-4. **Test thoroughly** - Test plugins with different configurations
+4. **Test thoroughly** - Test constructs with different configurations
 
 ### Workflow Design
 
@@ -540,7 +540,7 @@ dotgithub synth --verbose
 
 1. **TypeScript errors** - Check your `tsconfig.json` configuration
 2. **Missing actions** - Ensure all used actions are added with `dotgithub add`
-3. **Synthesis failures** - Validate plugin configuration and check error messages
+3. **Synthesis failures** - Validate construct configuration and check error messages
 4. **Permission issues** - Verify GitHub token permissions and repository access
 
 ### Debugging
@@ -548,19 +548,19 @@ dotgithub synth --verbose
 1. **Use dry run** - Preview changes with `dotgithub synth --dry-run`
 2. **Check logs** - Review synthesis output for error details
 3. **Validate configuration** - Use `dotgithub config show` to verify settings
-4. **Test incrementally** - Build and test plugins one at a time
+4. **Test incrementally** - Build and test constructs one at a time
 
 ### Getting Help
 
 - [Command Documentation](command-init.md) - Detailed CLI command reference
 - [API Reference](api-reference.md) - Complete API documentation
-- [Plugin Development](plugin-development.md) - Advanced plugin creation
+- [Construct Development](construct-development.md) - Advanced construct creation
 - [GitHub Issues](https://github.com/azwebmaster/dotgithub/issues) - Report bugs and request features
 - [Discord Community](https://discord.gg/dotgithub) - Get help from the community
 
 ## What's Next?
 
-- [Plugin Development Guide](plugin-development.md) - Create advanced plugins
+- [Construct Development Guide](construct-development.md) - Create advanced constructs
 - [API Reference](api-reference.md) - Complete API documentation
 - [Configuration Guide](configuration.md) - Deep dive into configuration options
 - [Examples](examples.md) - Real-world usage examples

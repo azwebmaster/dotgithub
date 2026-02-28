@@ -1,0 +1,55 @@
+---
+globs: *.test.ts,*.test.tsx,packages/*/vitest.config.ts
+---
+
+# Testing Patterns for DotGitHub
+
+## Test Structure
+
+- Use Vitest as the test runner
+- Place tests alongside source files with `.test.ts` extension
+- Use descriptive test names that explain the behavior
+- Group related tests using `describe` blocks
+
+## Test Configuration
+
+Each package has its own [vitest.config.ts](mdc:packages/core/vitest.config.ts) with:
+- TypeScript support enabled
+- Proper path resolution for monorepo
+- Coverage reporting configured
+- Snapshot testing for complex outputs
+
+## Mocking Patterns
+
+- Mock external dependencies (GitHub API, file system)
+- Use `vi.mock()` for module mocking
+- Create test fixtures for complex data structures
+- Mock async operations with proper promise handling
+
+## Testing Constructs
+
+- Test construct synthesis output
+- Verify proper resource generation
+- Test error conditions and edge cases
+- Use snapshots for complex YAML output
+
+## Testing CLI Commands
+
+- Test command argument parsing
+- Test error handling and user feedback
+- Mock file system operations
+- Test configuration loading and validation
+
+## Example Test Structure
+
+```typescript
+import { describe, it, expect, vi } from 'vitest';
+import { MyClass } from './my-class';
+
+describe('MyClass', () => {
+  it('should create instance with valid config', () => {
+    const instance = new MyClass({ name: 'test' });
+    expect(instance.name).toBe('test');
+  });
+});
+```

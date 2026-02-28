@@ -1,0 +1,46 @@
+---
+globs: *.ts,*.tsx
+---
+
+# TypeScript Standards for DotGitHub
+
+## Code Style
+
+- Use semicolons consistently
+- Prefer explicit return types for public methods
+- Use `interface` over `type` for object shapes when possible
+- Use `const` assertions for immutable data structures
+
+## Type Safety
+
+- Always use strict TypeScript settings
+- Prefer `unknown` over `any` when type is truly unknown
+- Use branded types for IDs and paths to prevent mixing them up
+- Use generic constraints to ensure type safety
+
+## Imports and Exports
+
+- Use ES modules with `.js` extensions in imports (TypeScript requirement)
+- Prefer named exports over default exports for better tree-shaking
+- Group imports: external packages first, then internal modules
+- Use `export type` for type-only exports
+
+## Error Handling
+
+- Use Result types or throw specific error classes
+- Include context in error messages
+- Use JSDoc for complex error conditions
+
+## Examples
+
+```typescript
+// Good: Explicit types and proper error handling
+export interface ActionConfig {
+  readonly name: string;
+  readonly version: string;
+}
+
+export function createAction(config: ActionConfig): Result<Action, Error> {
+  // Implementation
+}
+```

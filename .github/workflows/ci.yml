@@ -1,0 +1,17 @@
+name: CI Workflow
+on:
+  push:
+    branches:
+      - main
+  pull_request: {}
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - name: Hello World
+        run: echo "Hello from my construct!"
+      - name: Show Environment
+        run: 'echo "Environment: production"'

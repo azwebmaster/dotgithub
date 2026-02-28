@@ -9,7 +9,7 @@ import type {
 import type { GitHubInputValue } from '../types/common.js';
 
 /**
- * Helper class for creating shared workflows in plugins.
+ * Helper class for creating shared workflows in constructs.
  * Provides a convenient API for defining reusable workflows with typed inputs.
  */
 export class SharedWorkflowHelper {

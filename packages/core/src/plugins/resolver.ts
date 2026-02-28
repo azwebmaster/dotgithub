@@ -1,41 +1,41 @@
 import * as path from 'path';
 import * as fs from 'fs';
 import type {
-  PluginConfig,
-  PluginModule,
-  DotGitHubPlugin,
-  PluginLoadResult,
+  ConstructConfig,
+  ConstructModule,
+  GitHubConstruct,
+  ConstructLoadResult,
 } from './types.js';
 // Removed import - using direct path resolution
 import type { DotGithubContext } from '../context.js';
 
-export class PluginResolver {
+export class ConstructResolver {
   constructor(
     private readonly projectRoot: string,
     private readonly context?: DotGithubContext
   ) {}
 
-  async resolvePlugin(config: PluginConfig): Promise<PluginLoadResult> {
-    let plugin: DotGitHubPlugin;
+  async resolveConstruct(config: ConstructConfig): Promise<ConstructLoadResult> {
+    let construct: GitHubConstruct;
     let resolved = false;
 
     try {
       if (this.isLocalPath(config.package)) {
-        plugin = await this.loadLocalPlugin(config.package);
+        construct = await this.loadLocalConstruct(config.package);
         resolved = true;
       } else {
-        plugin = await this.loadNpmPlugin(config.package);
+        construct = await this.loadNpmConstruct(config.package);
         resolved = true;
       }
 
       return {
-        plugin,
+        construct,
         config,
         resolved,
       };
     } catch (error) {
       throw new Error(
-        `Failed to load plugin "${config.name}" from "${config.package}": ${error instanceof Error ? error.message : error}`
+        `Failed to load construct "${config.name}" from "${config.package}": ${error instanceof Error ? error.message : error}`
       );
     }
   }
@@ -63,21 +63,23 @@ export class PluginResolver {
     );
   }
 
-  private async loadLocalPlugin(pluginPath: string): Promise<DotGitHubPlugin> {
-    // Resolve plugin path using formula: {configDir}/{rootDir}/{pluginPackage}
+  private async loadLocalConstruct(
+    constructPath: string
+  ): Promise<GitHubConstruct> {
+    // Resolve construct path using formula: {configDir}/{rootDir}/{constructPackage}
     let resolvedPath: string;
     if (this.context) {
-      // Use the formula: configDir + rootDir + pluginPackage
+      // Use the formula: configDir + rootDir + constructPackage
       const configDir = path.dirname(this.context.configPath);
       const rootDir = this.context.config.rootDir;
-      resolvedPath = path.resolve(configDir, rootDir, pluginPath);
+      resolvedPath = path.resolve(configDir, rootDir, constructPath);
     } else {
       // Fallback to old behavior - resolve relative to project root
-      resolvedPath = path.resolve(this.projectRoot, pluginPath);
+      resolvedPath = path.resolve(this.projectRoot, constructPath);
     }
 
     if (!fs.existsSync(resolvedPath)) {
-      throw new Error(`Local plugin not found at: ${resolvedPath}`);
+      throw new Error(`Local construct not found at: ${resolvedPath}`);
     }
 
     let modulePath: string;
@@ -98,17 +100,19 @@ export class PluginResolver {
     }
 
     if (!fs.existsSync(modulePath)) {
-      throw new Error(`Plugin entry point not found: ${modulePath}`);
+      throw new Error(`Construct entry point not found: ${modulePath}`);
     }
 
-    const module: PluginModule = await import(modulePath);
-    return this.extractPluginFromModule(module);
+    const module: ConstructModule = await import(modulePath);
+    return this.extractConstructFromModule(module);
   }
 
-  private async loadNpmPlugin(packageName: string): Promise<DotGitHubPlugin> {
+  private async loadNpmConstruct(
+    packageName: string
+  ): Promise<GitHubConstruct> {
     try {
-      const module: PluginModule = await import(packageName);
-      return this.extractPluginFromModule(module);
+      const module: ConstructModule = await import(packageName);
+      return this.extractConstructFromModule(module);
     } catch (error) {
       throw new Error(
         `Cannot resolve npm package "${packageName}". Make sure it's installed: npm install ${packageName}`
@@ -116,32 +120,36 @@ export class PluginResolver {
     }
   }
 
-  private extractPluginFromModule(module: PluginModule): DotGitHubPlugin {
-    const plugin = module.default || module.plugin;
+  private extractConstructFromModule(
+    module: ConstructModule
+  ): GitHubConstruct {
+    const construct = module.default || module.construct;
 
-    if (!plugin) {
+    if (!construct) {
       throw new Error(
-        'Plugin module must export either a default export or named "plugin" export'
+        'Construct module must export either a default export or named "construct" export'
       );
     }
 
-    if (typeof plugin.synthesize !== 'function') {
-      throw new Error('Plugin must implement the "synthesize" method');
+    if (typeof construct.synthesize !== 'function') {
+      throw new Error('Construct must implement the "synthesize" method');
     }
 
-    if (!plugin.name || typeof plugin.name !== 'string') {
-      throw new Error('Plugin must have a valid "name" property');
+    if (!construct.name || typeof construct.name !== 'string') {
+      throw new Error('Construct must have a valid "name" property');
     }
 
-    return plugin;
+    return construct;
   }
 
-  async resolvePlugins(configs: PluginConfig[]): Promise<PluginLoadResult[]> {
-    const results: PluginLoadResult[] = [];
+  async resolveConstructs(
+    configs: ConstructConfig[]
+  ): Promise<ConstructLoadResult[]> {
+    const results: ConstructLoadResult[] = [];
 
     for (const config of configs) {
       if (config.enabled !== false) {
-        results.push(await this.resolvePlugin(config));
+        results.push(await this.resolveConstruct(config));
       }
     }
 

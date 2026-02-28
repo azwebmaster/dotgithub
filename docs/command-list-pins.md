@@ -10,12 +10,12 @@ dotgithub list-pins [options]
 
 ## Description
 
-The `list-pins` command displays all version pins for GitHub Actions across your plugins and stacks. This helps you understand which actions have version overrides and what versions are being used.
+The `list-pins` command displays all version pins for GitHub Actions across your constructs and stacks. This helps you understand which actions have version overrides and what versions are being used.
 
 ## Options
 
 - `--stack <name>` - List pins for specific stack
-- `--plugin <name>` - List pins for specific plugin
+- `--construct <name>` - List pins for specific construct
 - `--all` - Show all pinned actions across all scopes
 
 ## Examples
@@ -26,15 +26,15 @@ The `list-pins` command displays all version pins for GitHub Actions across your
 dotgithub list-pins
 ```
 
-Shows all pinned actions across all plugins and stacks.
+Shows all pinned actions across all constructs and stacks.
 
-### List pins for specific plugin
+### List pins for specific construct
 
 ```bash
-dotgithub list-pins --plugin my-plugin
+dotgithub list-pins --construct my-construct
 ```
 
-Shows only pins for the "my-plugin" plugin.
+Shows only pins for the "my-construct" construct.
 
 ### List pins for specific stack
 
@@ -57,8 +57,8 @@ Explicitly shows all pinned actions (same as no options).
 ### All pins (default)
 
 ```
-Plugin Overrides:
-  my-plugin:
+Construct Overrides:
+  my-construct:
     actions/checkout: v4
     actions/setup-node: v4.1.0
 
@@ -69,10 +69,10 @@ Stack Overrides:
     actions/setup-node: v4.1.0
 ```
 
-### Plugin-specific pins
+### Construct-specific pins
 
 ```
-Plugin Overrides (my-plugin):
+Construct Overrides (my-construct):
   actions/checkout: v4
   actions/setup-node: v4.1.0
 ```
@@ -92,17 +92,17 @@ No pinned actions found.
 
 ## Understanding the output
 
-### Plugin Overrides
+### Construct Overrides
 
-- Shows actions pinned for specific plugins
-- Each plugin can have its own version overrides
-- Affects only that plugin's workflow generation
+- Shows actions pinned for specific constructs
+- Each construct can have its own version overrides
+- Affects only that construct's workflow generation
 
 ### Stack Overrides
 
 - Shows actions pinned for specific stacks
-- Affects all plugins within that stack
-- Overrides plugin-level pins for that stack
+- Affects all constructs within that stack
+- Overrides construct-level pins for that stack
 
 ### Version references
 
@@ -120,10 +120,10 @@ dotgithub list-pins
 
 Review all version overrides in your project.
 
-### Debug plugin issues
+### Debug construct issues
 
 ```bash
-dotgithub list-pins --plugin problematic-plugin
+dotgithub list-pins --construct problematic-construct
 ```
 
 Check if version pins are causing issues.
@@ -148,8 +148,8 @@ Plan migration from pinned to default versions.
 
 The command will fail if:
 
-- Multiple options are specified (e.g., both `--stack` and `--plugin`)
-- Specified plugin doesn't exist
+- Multiple options are specified (e.g., both `--stack` and `--construct`)
+- Specified construct doesn't exist
 - Specified stack doesn't exist
 
 ## Best practices
@@ -164,12 +164,12 @@ The command will fail if:
 
 - [dotgithub pin](command-pin.md) - Pin action versions
 - [dotgithub unpin](command-unpin.md) - Remove version pins
-- [dotgithub plugin](command-plugin.md) - Manage plugins and stacks
+- [dotgithub construct](command-construct.md) - Manage constructs and stacks
 - [dotgithub update](command-update.md) - Update action versions
 
 ## See also
 
 - [dotgithub pin](command-pin.md) - Pin action versions
 - [dotgithub unpin](command-unpin.md) - Remove version pins
-- [dotgithub plugin](command-plugin.md) - Manage plugins and stacks
+- [dotgithub construct](command-construct.md) - Manage constructs and stacks
 - [Configuration Guide](configuration.md) - Understanding dotgithub.json

@@ -60,7 +60,7 @@ This will overwrite any existing files in the target directory.
 The main configuration file that tracks:
 
 - Actions to generate
-- Plugin configurations
+- Construct configurations
 - Stack definitions
 - Output settings
 

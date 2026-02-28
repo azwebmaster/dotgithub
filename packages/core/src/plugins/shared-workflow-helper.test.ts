@@ -1,11 +1,11 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { GitHubStack } from '../constructs/base';
 import { SharedWorkflowHelper } from './shared-workflow-helper.js';
-import type { PluginContext } from './types.js';
+import type { ConstructContext } from './types.js';
 
 describe('SharedWorkflowHelper', () => {
   let stack: GitHubStack;
-  let context: PluginContext;
+  let context: ConstructContext;
   let helper: SharedWorkflowHelper;
 
   beforeEach(() => {
@@ -13,7 +13,7 @@ describe('SharedWorkflowHelper', () => {
     context = {
       stack,
       config: {},
-      stackConfig: { name: 'test', plugins: [] },
+      stackConfig: { name: 'test', constructs: [] },
       projectRoot: '/test',
       actions: {} as any,
       sharedWorkflows: {} as any,

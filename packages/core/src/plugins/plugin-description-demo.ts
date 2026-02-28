@@ -1,23 +1,24 @@
 /**
- * Demo script showing how to use the new plugin description functionality
+ * Demo script showing how to use the construct description functionality
  */
 
-import { PluginManager } from './manager.js';
-import { formatPluginDescription, generatePluginMarkdown } from './utils.js';
-import type { PluginConfig } from './schemas.js';
+import { ConstructManager } from './manager.js';
+import {
+  formatConstructDescription,
+  generateConstructMarkdown,
+} from './utils.js';
+import type { ConstructConfig } from './schemas.js';
 
-// Example usage of the new plugin description system
-export async function demonstratePluginDescription() {
-  // Create a plugin manager
-  const manager = new PluginManager({
+// Example usage of the construct description system
+export async function demonstrateConstructDescription() {
+  const manager = new ConstructManager({
     projectRoot: process.cwd(),
   });
 
-  // Example plugin configurations
-  const pluginConfigs: PluginConfig[] = [
+  const constructConfigs: ConstructConfig[] = [
     {
       name: 'example',
-      package: './example-plugin',
+      package: './example-construct',
       config: {
         environment: 'production',
         timeout: 15,
@@ -28,51 +29,44 @@ export async function demonstratePluginDescription() {
   ];
 
   try {
-    // Load plugins
-    const loadResults = await manager.loadPlugins(pluginConfigs);
+    const loadResults = await manager.loadConstructs(constructConfigs);
     console.log(
-      'Loaded plugins:',
-      loadResults.map((r) => r.config.name)
+      'Loaded constructs:',
+      loadResults.map((r: { config: ConstructConfig }) => r.config.name)
     );
 
-    // List all plugins with their descriptions
-    const pluginList = await manager.listPlugins();
-    console.log('\n=== Plugin List ===');
-    for (const { name, description } of pluginList) {
-      console.log(`\nPlugin: ${name}`);
+    const constructList = await manager.listConstructs();
+    console.log('\n=== Construct List ===');
+    for (const { name, description } of constructList) {
+      console.log(`\nConstruct: ${name}`);
       if (description) {
-        console.log(formatPluginDescription(description));
+        console.log(formatConstructDescription(description));
       } else {
         console.log('No description available');
       }
     }
 
-    // Get specific plugin description
-    const exampleDescription = await manager.describePlugin('example');
+    const exampleDescription = await manager.describeConstruct('example');
     if (exampleDescription) {
-      console.log('\n=== Example Plugin Description ===');
-      console.log(formatPluginDescription(exampleDescription));
+      console.log('\n=== Example Construct Description ===');
+      console.log(formatConstructDescription(exampleDescription));
 
       console.log('\n=== Markdown Documentation ===');
-      console.log(generatePluginMarkdown(exampleDescription));
+      console.log(generateConstructMarkdown(exampleDescription));
     }
 
-    // Get configuration schema for a plugin
-    const configSchema = await manager.getPluginConfigSchema('example');
+    const configSchema = await manager.getConstructConfigSchema('example');
     if (configSchema) {
       console.log('\n=== Configuration Schema ===');
       console.log('Schema available for validation');
     }
 
-    // Validate plugin configuration against its schema
-    const validationResult = await manager.validatePluginConfigAgainstSchema(
-      'example',
-      {
+    const validationResult =
+      await manager.validateConstructConfigAgainstSchema('example', {
         environment: 'staging',
         timeout: 30,
         nodeVersion: '20.5',
-      }
-    );
+      });
 
     if (validationResult.success) {
       console.log('\n=== Configuration Validation ===');
@@ -82,15 +76,15 @@ export async function demonstratePluginDescription() {
       console.log('Error:', validationResult.error);
     }
   } catch (error) {
-    console.error('Error demonstrating plugin description:', error);
+    console.error('Error demonstrating construct description:', error);
   }
 }
 
-// Example of how to create a plugin with the describe method
-export class DemoPlugin {
+// Example of how to create a construct with the describe method
+export class DemoConstruct {
   readonly name = 'demo';
   readonly version = '1.0.0';
-  readonly description = 'A demo plugin showing the describe functionality';
+  readonly description = 'A demo construct showing the describe functionality';
 
   private readonly configSchema = {
     parse: (config: any) => {
@@ -110,7 +104,7 @@ export class DemoPlugin {
       license: 'MIT',
       category: 'demo',
       configSchema: this.configSchema,
-      configDescription: 'Configuration for the demo plugin',
+      configDescription: 'Configuration for the demo construct',
       examples: [
         {
           name: 'Basic Demo',
@@ -129,7 +123,7 @@ export class DemoPlugin {
     this.configSchema.parse(context.config);
   }
 
-  synthesize(context: any): void {
-    console.log('Demo plugin synthesized with config:', context.config);
+  synthesize(stack: any): void {
+    console.log('Demo construct synthesized with config:', stack.config);
   }
 }

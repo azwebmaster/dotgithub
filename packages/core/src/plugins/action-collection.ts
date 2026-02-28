@@ -61,69 +61,6 @@ export class ActionInvocationResult<TOutputs> {
 
 export type GitHubOutputValues<T> = Record<keyof T, GitHubOutputValue>;
 
-// export class GitHubAction<TInputs extends GitHubStepWith = GitHubStepWith, TOutputs = Record<string, GitHubOutputValue>> {
-//   private collection: ActionCollection;
-
-//   // These properties should be overridden by subclasses
-//   protected uses: string = '';
-//   protected fallbackRef: string = '';
-//   protected outputs: Record<string, GitHubOutputValue> = {};
-
-//   constructor(collection: ActionCollection) {
-//     this.collection = collection;
-//   }
-
-//   protected getContext(): PluginContext {
-//     return this.collection.getContext();
-//   }
-
-//   /**
-//    * Generates a deterministic step ID based on step properties
-//    * @param name - The step name
-//    * @param uses - The action being used
-//    * @param inputs - The step inputs
-//    * @param ref - The git reference
-//    * @returns A deterministic step ID
-//    */
-//   private generateIdempotentId(name: string, uses: string, inputs?: TInputs, ref?: string): string {
-//     // Create a deterministic hash based on step properties
-//     const content = JSON.stringify({ name, uses, inputs, ref });
-//     let hash = 0;
-//     for (let i = 0; i < content.length; i++) {
-//       const char = content.charCodeAt(i);
-//       hash = ((hash << 5) - hash) + char;
-//       hash = hash & hash; // Convert to 32-bit integer
-//     }
-//     // Convert to a positive hex string and take first 8 characters
-//     const hexHash = Math.abs(hash).toString(16).padStart(8, '0').substring(0, 8);
-//     return `step-${hexHash}`;
-//   }
-
-// //   /**
-// //    * Creates a step chain builder starting with the current action
-// //    * @param name - The name of the step
-// //    * @param inputs - Input parameters for the action
-// //    * @param step - Additional step configuration
-// //    * @param ref - Optional git reference
-// //    * @returns A StepChainBuilder instance for chaining additional steps
-// //    */
-// //   public chain(
-// //     name: string,
-// //     inputs?: TInputs,
-// //     step?: Partial<Omit<GitHubStepAction, "uses" | "with">>,
-// //     ref?: string): StepChainBuilder<TOutputs> {
-// //     const results = this.collection.invokeAction<TInputs, TOutputs>({
-// //       uses: this.uses,
-// //       inputs,
-// //       stepDefaults: { name, ...step },
-// //       ref,
-// //       fallbackRef: this.fallbackRef,
-// //       outputs: this.outputs as Record<keyof TOutputs, GitHubOutputValue>
-// //     });
-// //     return new StepChainBuilder<TOutputs>(results.steps[0]!, results.outputs as TOutputs);
-// //   }
-// }
-
 /**
  * Abstract base class for action collections that provides access to generated actions
  * Each generated action will have its `this` context bound to an ActionCollection instance

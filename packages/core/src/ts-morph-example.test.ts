@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import {
   TypeScriptGenerator,
   createExampleActionModule,
-  createExamplePlugin,
+  createExampleConstruct,
 } from './ts-morph-example.js';
 
 describe('TypeScriptGenerator', () => {
@@ -80,8 +80,8 @@ describe('TypeScriptGenerator', () => {
     });
   });
 
-  describe('generatePluginClass', () => {
-    it('should generate a plugin class', () => {
+  describe('generateConstructClass', () => {
+    it('should generate a construct class', () => {
       const workflows = {
         ci: {
           name: 'CI',
@@ -89,16 +89,16 @@ describe('TypeScriptGenerator', () => {
         },
       };
 
-      const result = generator.generatePluginClass('example', workflows);
+      const result = generator.generateConstructClass('example', workflows);
 
       expect(result).toContain(
-        'import { DotGitHubPlugin, PluginContext } from "@dotgithub/core"'
+        'import { GitHubConstruct, ConstructContext } from "@dotgithub/core"'
       );
-      expect(result).toContain('export class ExamplePlugin');
-      expect(result).toContain('implements DotGitHubPlugin');
+      expect(result).toContain('export class ExampleConstruct');
+      expect(result).toContain('implements GitHubConstruct');
       expect(result).toContain("name: string = 'example'");
       expect(result).toContain("version: string = '1.0.0'");
-      expect(result).toContain('async apply(context: PluginContext)');
+      expect(result).toContain('async apply(context: ConstructContext)');
     });
   });
 
@@ -159,15 +159,15 @@ describe('Example functions', () => {
     expect(result).toContain('fetchDepth?: string');
   });
 
-  it('should create example plugin', () => {
-    const result = createExamplePlugin();
+  it('should create example construct', () => {
+    const result = createExampleConstruct();
 
     expect(result).toContain(
-      'import { DotGitHubPlugin, PluginContext } from "@dotgithub/core"'
+      'import { GitHubConstruct, ConstructContext } from "@dotgithub/core"'
     );
-    expect(result).toContain('export class ExamplePlugin');
-    expect(result).toContain('implements DotGitHubPlugin');
+    expect(result).toContain('export class ExampleConstruct');
+    expect(result).toContain('implements GitHubConstruct');
     expect(result).toContain("name: string = 'example'");
-    expect(result).toContain('async apply(context: PluginContext)');
+    expect(result).toContain('async apply(context: ConstructContext)');
   });
 });

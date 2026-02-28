@@ -1,15 +1,15 @@
-import type { PluginDescription } from './schemas.js';
-import type { DotGitHubPlugin } from './types.js';
+import type { ConstructDescription } from './schemas.js';
+import type { GitHubConstruct } from './types.js';
 
 /**
- * Utility functions for working with plugins
+ * Utility functions for working with constructs
  */
 
 /**
- * Format plugin description for display
+ * Format construct description for display
  */
-export function formatPluginDescription(
-  description: PluginDescription
+export function formatConstructDescription(
+  description: ConstructDescription
 ): string {
   const lines: string[] = [];
 
@@ -68,10 +68,10 @@ export function formatPluginDescription(
  * Get configuration schema as JSON schema
  */
 export function getConfigSchemaAsJsonSchema(
-  plugin: DotGitHubPlugin
+  construct: GitHubConstruct
 ): any | null {
-  if (plugin.describe) {
-    const description = plugin.describe();
+  if (construct.describe) {
+    const description = construct.describe();
     if (
       description &&
       typeof description === 'object' &&
@@ -86,14 +86,14 @@ export function getConfigSchemaAsJsonSchema(
 }
 
 /**
- * Validate plugin configuration against plugin's schema
+ * Validate construct configuration against construct's schema
  */
-export function validatePluginConfigWithSchema(
-  plugin: DotGitHubPlugin,
+export function validateConstructConfigWithSchema(
+  construct: GitHubConstruct,
   config: unknown
 ): { success: true; data: any } | { success: false; error: string } {
-  if (plugin.describe) {
-    const description = plugin.describe();
+  if (construct.describe) {
+    const description = construct.describe();
     if (
       description &&
       typeof description === 'object' &&
@@ -114,15 +114,15 @@ export function validatePluginConfigWithSchema(
 
   return {
     success: false,
-    error: `Plugin "${plugin.name}" does not provide a configuration schema`,
+    error: `Construct "${construct.name}" does not provide a configuration schema`,
   };
 }
 
 /**
- * Get plugin categories from a list of plugin descriptions
+ * Get construct categories from a list of construct descriptions
  */
-export function getPluginCategories(
-  descriptions: PluginDescription[]
+export function getConstructCategories(
+  descriptions: ConstructDescription[]
 ): string[] {
   const categories = new Set<string>();
 
@@ -136,22 +136,22 @@ export function getPluginCategories(
 }
 
 /**
- * Filter plugins by category
+ * Filter constructs by category
  */
-export function filterPluginsByCategory(
-  descriptions: PluginDescription[],
+export function filterConstructsByCategory(
+  descriptions: ConstructDescription[],
   category: string
-): PluginDescription[] {
+): ConstructDescription[] {
   return descriptions.filter((desc) => desc.category === category);
 }
 
 /**
- * Search plugins by keyword
+ * Search constructs by keyword
  */
-export function searchPluginsByKeyword(
-  descriptions: PluginDescription[],
+export function searchConstructsByKeyword(
+  descriptions: ConstructDescription[],
   keyword: string
-): PluginDescription[] {
+): ConstructDescription[] {
   const lowerKeyword = keyword.toLowerCase();
 
   return descriptions.filter((desc) => {
@@ -191,12 +191,12 @@ export function searchPluginsByKeyword(
 }
 
 /**
- * Sort plugins by various criteria
+ * Sort constructs by various criteria
  */
-export function sortPlugins(
-  descriptions: PluginDescription[],
+export function sortConstructs(
+  descriptions: ConstructDescription[],
   sortBy: 'name' | 'version' | 'category' = 'name'
-): PluginDescription[] {
+): ConstructDescription[] {
   return [...descriptions].sort((a, b) => {
     switch (sortBy) {
       case 'name':
@@ -571,9 +571,11 @@ export function formatConfigSchemaInfo(schemaInfo: {
 }
 
 /**
- * Generate plugin documentation in markdown format
+ * Generate construct documentation in markdown format
  */
-export function generatePluginMarkdown(description: PluginDescription): string {
+export function generateConstructMarkdown(
+  description: ConstructDescription
+): string {
   const lines: string[] = [];
 
   lines.push(`# ${description.name}`);

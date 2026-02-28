@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as prettier from 'prettier';
 import { Project, SourceFile, SyntaxKind } from 'ts-morph';
+import type { DotGithubContext } from './context.js';
 
 /**
  * Converts a string to PascalCase
@@ -227,7 +228,8 @@ export async function updateRootIndexFile(
  */
 export async function updateIndexFilesAfterRemoval(
   outputDir: string,
-  orgName: string
+  orgName: string,
+  context?: DotGithubContext
 ): Promise<void> {
   const orgDir = path.join(outputDir, orgName);
 
@@ -268,30 +270,71 @@ export async function updateIndexFilesAfterRemoval(
         fs.writeFileSync(rootIndexPath, formattedContent, 'utf8');
       }
     } else {
-      // Still has repo directories or files, rebuild the org index.ts
-      const orgIndexPath = path.join(orgDir, 'index.ts');
-      const exportStatements: string[] = [];
+      // Still has repo directories or files; rebuild org index or remove org if no actions left
+      if (context) {
+        // Get all remaining actions for this organization from the config
+        const allOrgActions = context.config.actions.filter((action) => {
+          const [owner] = action.orgRepo.split('/');
+          return owner === orgName;
+        });
 
-      // Add exports for directories
-      for (const repoDir of repoDirs) {
-        exportStatements.push(
-          `export * as ${sanitizeVarName(repoDir)} from './${repoDir}/index.js';`
-        );
+        if (allOrgActions.length > 0) {
+          // Regenerate the org index with only remaining actions
+          const { generateActionsConstructForOrg } = await import('./actions-manager.js');
+          await generateActionsConstructForOrg(
+            context,
+            orgName,
+            [],
+            outputDir
+          );
+        } else {
+          // No actions left for this org: remove org directory and index (e.g. leftover dirs from remove)
+          const indexPath = path.join(orgDir, 'index.ts');
+          if (fs.existsSync(indexPath)) {
+            fs.unlinkSync(indexPath);
+          }
+          if (fs.existsSync(orgDir)) {
+            fs.rmSync(orgDir, { recursive: true, force: true });
+          }
+        }
+
+        // Regenerate the root index to export from all remaining organizations
+        await regenerateRootIndex(outputDir, context);
+      } else {
+        // Fallback to the old approach if no context is provided
+        await updateOrgIndexFile(orgDir, orgName);
       }
-
-      // Add exports for single action files
-      for (const repoFile of repoFiles) {
-        const repoName = repoFile.replace('.ts', '');
-        exportStatements.push(
-          `export * as ${sanitizeVarName(repoName)} from './${repoName}.js';`
-        );
-      }
-
-      const content = exportStatements.join('\n') + '\n';
-      const formattedContent = await formatWithPrettier(content);
-      fs.writeFileSync(orgIndexPath, formattedContent, 'utf8');
     }
   }
+}
+
+/**
+ * Regenerates the root index file to export from all remaining organizations.
+ * outputDir is the actions root (e.g. src/actions), so root index is outputDir/index.ts.
+ */
+async function regenerateRootIndex(
+  outputDir: string,
+  context: DotGithubContext
+): Promise<void> {
+  const indexPath = path.join(outputDir, 'index.ts');
+  
+  // Get all unique organizations from the config
+  const organizations = new Set<string>();
+  for (const action of context.config.actions) {
+    const [owner] = action.orgRepo.split('/');
+    if (owner) {
+      organizations.add(owner);
+    }
+  }
+
+  // Generate export statements for all organizations
+  const exportStatements = Array.from(organizations)
+    .sort()
+    .map(org => `export * from './${org}/index.js';`);
+
+  const content = exportStatements.join('\n') + '\n';
+  const formattedContent = await formatWithPrettier(content);
+  fs.writeFileSync(indexPath, formattedContent, 'utf8');
 }
 
 /**
@@ -389,7 +432,7 @@ export function addImportsToGeneratedTypes(generatedTypes: string): string {
     'GitHubInputValue',
     'ActionInvocationResult',
     'DotGithubConfig',
-    'PluginContext',
+    'ConstructContext',
     'ActionConstructProps',
     'Construct',
   ];
@@ -446,7 +489,7 @@ function analyzeUsedImports(sourceFile: SourceFile): Set<string> {
       'GitHubOutputValue',
       'ActionInvocationResult',
       'DotGithubConfig',
-      'PluginContext',
+      'ConstructContext',
       'StepChainBuilder',
       'ActionCollection',
       'ActionConstruct',

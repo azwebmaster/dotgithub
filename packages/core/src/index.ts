@@ -36,10 +36,10 @@ export {
   setConfigPath,
   createDefaultConfig,
   createConfigFile,
-  getPluginsFromConfig,
+  getConstructsFromConfig,
   getStacksFromConfig,
-  addPluginToConfig,
-  removePluginFromConfig,
+  addConstructToConfig,
+  removeConstructFromConfig,
   addStackToConfig,
   removeStackFromConfig,
   // Path resolution utilities
@@ -57,7 +57,7 @@ export type { DotGithubConfig, DotGithubAction } from './config.js';
 // Export context functionality
 export * from './context.js';
 
-// Export plugin system
+// Export construct system
 export * from './plugins/index.js';
 export { ActionCollection } from './plugins/action-collection.js';
 export { StepChainBuilder } from './plugins/actions-helper.js';
@@ -69,16 +69,16 @@ export type {
   SynthesisResults,
 } from './stack-synthesizer.js';
 
-// Export plugin generator
+// Export construct generator
 export {
-  generatePluginFromGitHubFiles,
-  createPluginFromFiles,
+  generateConstructFromGitHubFiles,
+  createConstructFromFiles,
 } from './plugin-generator.js';
 export type {
-  GeneratePluginFromGitHubFilesOptions,
-  GeneratePluginFromGitHubFilesResult,
-  CreatePluginFromFilesOptions,
-  CreatePluginFromFilesResult,
+  GenerateConstructFromGitHubFilesOptions,
+  GenerateConstructFromGitHubFilesResult,
+  CreateConstructFromFilesOptions,
+  CreateConstructFromFilesResult,
 } from './plugin-generator.js';
 
 // Export action management functionality
@@ -86,6 +86,7 @@ export {
   generateActionFiles,
   removeActionFiles,
   updateActionFiles,
+  generateActionsConstructForOrg,
 } from './actions-manager.js';
 export type {
   GenerateActionFilesOptions,

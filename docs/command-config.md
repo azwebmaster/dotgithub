@@ -48,7 +48,7 @@ Shows the complete `dotgithub.json` configuration in JSON format.
       "outputPath": "actions/actions/checkout.ts"
     }
   ],
-  "plugins": [],
+  "constructs": [],
   "stacks": []
 }
 ```
@@ -205,7 +205,7 @@ The `dotgithub.json` file contains:
 - **rootDir** - Root directory for generated TypeScript files
 - **outputDir** - Output directory for generated workflow files
 - **actions** - Array of tracked GitHub Actions
-- **plugins** - Array of plugin configurations
+- **constructs** - Array of construct configurations
 - **stacks** - Array of stack configurations
 - **options** - Global options and settings
 
@@ -231,14 +231,14 @@ Each action in the configuration includes:
 - **outputPath** - Relative path to generated TypeScript file
 - **actionPath** - Sub-path for composite actions
 
-## Plugin Configuration
+## Construct Configuration
 
-Plugin configuration structure:
+Construct configuration structure:
 
 ```json
 {
-  "name": "my-plugin",
-  "package": "./plugins/my-plugin",
+  "name": "my-construct",
+  "package": "./constructs/my-construct",
   "config": {
     "environment": "production"
   },
@@ -253,7 +253,7 @@ Stack configuration structure:
 ```json
 {
   "name": "ci",
-  "plugins": ["checkout", "setup-node", "test"],
+  "constructs": ["checkout", "setup-node", "test"],
   "config": {
     "node-version": "18"
   }

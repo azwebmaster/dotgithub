@@ -1,0 +1,60 @@
+---
+globs: package.json,tsconfig.json,vitest.config.ts,packages/*/package.json
+---
+
+# Build and Deployment Patterns
+
+## Build System
+
+- Use Bun as the primary runtime and package manager
+- TypeScript compilation with strict settings
+- Monorepo workspace management
+- Changesets for version management
+
+## Package Configuration
+
+Each package should have:
+- Proper `main` and `types` fields pointing to `dist/` directory
+- Correct `engines` field for Bun version requirements
+- Proper `publishConfig` for GitHub Packages registry
+- Workspace dependencies using `workspace:*`
+
+## Development Workflow
+
+- Use `bun run build` to build all packages
+- Use `bun run test` for running tests
+- Use `bun run test:watch` for development
+- Use `bun run test:coverage` for coverage reports
+
+## Publishing
+
+- Use Changesets for version management
+- Publish to GitHub Packages registry
+- Follow semantic versioning
+- Update CHANGELOG.md files automatically
+
+## TypeScript Configuration
+
+- Use strict TypeScript settings
+- Enable all recommended compiler options
+- Use path mapping for monorepo imports
+- Configure proper module resolution
+
+## Example Package.json Structure
+
+```json
+{
+  "name": "@dotgithub/package-name",
+  "version": "0.1.1",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "engines": {
+    "bun": ">=1.2.19"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com",
+    "access": "public"
+  }
+}
+```

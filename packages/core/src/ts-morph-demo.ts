@@ -6,13 +6,13 @@
  * This script demonstrates:
  * 1. Generating TypeScript interfaces for GitHub Actions
  * 2. Creating factory functions for workflow steps
- * 3. Building complete plugin classes
+ * 3. Building complete construct classes
  * 4. Formatting and saving generated code
  */
 
 import { TypeScriptGenerator } from './ts-morph-example.js';
-// Note: MonorepoPlugin would be imported from the actual plugin location
-// import { MonorepoPlugin } from '../../.github/src/plugins/monorepo-plugin';
+// Note: MonorepoConstruct would be imported from the actual construct location
+// import { MonorepoConstruct } from '../../.github/src/constructs/monorepo-construct';
 
 async function demonstrateTsMorph() {
   console.log('🚀 TypeScript Code Generation with ts-morph\n');
@@ -63,11 +63,11 @@ async function demonstrateTsMorph() {
   console.log(completeModule);
   console.log('\n');
 
-  // Example 4: Generate plugin class
-  console.log('🔌 Example 4: Plugin class generation');
+  // Example 4: Generate construct class
+  console.log('🔌 Example 4: Construct class generation');
   console.log('='.repeat(60));
 
-  const pluginWorkflows = {
+  const constructWorkflows = {
     ci: {
       name: 'CI',
       on: { push: { branches: ['main'] } },
@@ -89,8 +89,8 @@ async function demonstrateTsMorph() {
     },
   };
 
-  const pluginClass = generator.generatePluginClass('ci', pluginWorkflows);
-  console.log(pluginClass);
+  const constructClass = generator.generateConstructClass('ci', constructWorkflows);
+  console.log(constructClass);
   console.log('\n');
 
   // Example 5: Workflow type generation (simulated)

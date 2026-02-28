@@ -1,11 +1,11 @@
 # DotGitHub
 
-A powerful TypeScript framework for managing GitHub Actions workflows and configurations. DotGitHub provides a type-safe, plugin-based approach to generating and managing GitHub Actions, making it easier to maintain complex CI/CD pipelines.
+A powerful TypeScript framework for managing GitHub Actions workflows and configurations. DotGitHub provides a type-safe, construct-based approach to generating and managing GitHub Actions, making it easier to maintain complex CI/CD pipelines.
 
 ## Features
 
 - 🚀 **Type-Safe Actions**: Generate TypeScript wrappers for GitHub Actions with full type safety
-- 🔌 **Plugin System**: Extensible plugin architecture for custom workflow generation
+- 🔌 **Construct System**: Extensible construct architecture for custom workflow generation
 - 📦 **Action Management**: Automatically download and manage GitHub Actions with version pinning
 - 🏗️ **Workflow Synthesis**: Generate complete GitHub workflows from TypeScript code
 - 🎯 **Configuration-Driven**: Declarative configuration for actions, plugins, and stacks
@@ -63,7 +63,7 @@ dotgithub synth
 - 🚀 [Getting Started](docs/getting-started.md)
 - 📚 [User Guide](docs/user-guide.md)
 - 🔧 [API Reference](docs/api-reference.md)
-- 🔌 [Plugin Development](docs/plugin-development.md)
+- 🔌 [Construct Development](docs/construct-development.md)
 
 ## Contributing
 

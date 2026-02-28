@@ -3,7 +3,7 @@ import { DotGithubContext, removePinnedAction, logger } from '@dotgithub/core';
 
 interface UnpinCommandOptions {
   stack?: string;
-  plugin?: string;
+  construct?: string;
 }
 
 export function createUnpinCommand(
@@ -12,10 +12,10 @@ export function createUnpinCommand(
   const command = new Command('unpin');
 
   command
-    .description('Remove a pinned action from a plugin or stack')
+    .description('Remove a pinned action from a construct or stack')
     .argument('<action>', 'Action to unpin (e.g., actions/checkout)')
     .option('--stack <name>', 'Unpin from specific stack')
-    .option('--plugin <name>', 'Unpin from specific plugin')
+    .option('--construct <name>', 'Unpin from specific construct')
     .action(async (action: string, options: UnpinCommandOptions) => {
       try {
         // Validate action format
@@ -26,23 +26,23 @@ export function createUnpinCommand(
         }
 
         // Validate that exactly one scope is specified
-        if (!options.stack && !options.plugin) {
-          throw new Error('Must specify either --stack or --plugin');
+        if (!options.stack && !options.construct) {
+          throw new Error('Must specify either --stack or --construct');
         }
 
-        if (options.stack && options.plugin) {
-          throw new Error('Cannot specify both --stack and --plugin');
+        if (options.stack && options.construct) {
+          throw new Error('Cannot specify both --stack and --construct');
         }
 
         const context = createContext();
 
-        // Validate that the specified plugin/stack exists
-        if (options.plugin) {
-          const plugin = context.config.plugins?.find(
-            (p) => p.name === options.plugin
+        // Validate that the specified construct/stack exists
+        if (options.construct) {
+          const construct = context.config.constructs?.find(
+            (c) => c.name === options.construct
           );
-          if (!plugin) {
-            throw new Error(`Plugin "${options.plugin}" not found`);
+          if (!construct) {
+            throw new Error(`Construct "${options.construct}" not found`);
           }
         }
 
@@ -59,13 +59,13 @@ export function createUnpinCommand(
         const removed = removePinnedAction(action, options, context);
 
         if (removed) {
-          const scope = options.plugin
-            ? `plugin "${options.plugin}"`
+          const scope = options.construct
+            ? `construct "${options.construct}"`
             : `stack "${options.stack}"`;
           logger.info(`✅ Unpinned ${action} from ${scope}`);
         } else {
-          const scope = options.plugin
-            ? `plugin "${options.plugin}"`
+          const scope = options.construct
+            ? `construct "${options.construct}"`
             : `stack "${options.stack}"`;
           logger.warn(`⚠️  ${action} was not pinned for ${scope}`);
         }

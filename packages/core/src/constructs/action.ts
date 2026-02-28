@@ -110,6 +110,29 @@ export abstract class ActionConstruct<
     return this;
   }
 
+  private findStack(): GitHubStack | undefined {
+    let current: IConstruct | undefined = this;
+    while (current) {
+      if (current instanceof GitHubStack) {
+        return current;
+      }
+      current = current.node.scope;
+    }
+    return undefined;
+  }
+
+  /**
+   * Gets the GitHubStack from the scope
+   */
+  get stack(): GitHubStack {
+    const stack = this.findStack();
+    if (!stack) {
+      throw new Error('ActionsConstruct must be created within a GitHubStack');
+    }
+
+    return stack;
+  }
+
   /**
    * Generates a GitHub step from this action construct
    */
@@ -171,49 +194,4 @@ export abstract class ActionConstruct<
     return result;
   }
 
-  /**
-   * Creates a copy of this action construct with new inputs
-   */
-  withInputs(inputs: TInputs): this {
-    const newInstance = Object.create(Object.getPrototypeOf(this));
-    Object.assign(newInstance, this);
-    newInstance._inputs = inputs;
-    return newInstance;
-  }
-
-  /**
-   * Creates a copy of this action construct with new step options
-   */
-  withStepOptions(
-    stepOptions: Partial<Omit<GitHubStepAction, 'uses' | 'with'>>
-  ): this {
-    const newInstance = Object.create(Object.getPrototypeOf(this));
-    Object.assign(newInstance, this);
-    newInstance._stepOptions = stepOptions;
-    return newInstance;
-  }
-
-  /**
-   * Creates a copy of this action construct with a new git reference
-   */
-  withRef(ref: string): this {
-    const newInstance = Object.create(Object.getPrototypeOf(this));
-    Object.assign(newInstance, this);
-    newInstance._ref = ref;
-    return newInstance;
-  }
-
-  /**
-   * Creates a copy of this action construct with a new ID
-   */
-  withId(id: string): this {
-    const newInstance = Object.create(Object.getPrototypeOf(this));
-    Object.assign(newInstance, this);
-    newInstance.node = new (this.node.constructor as any)(
-      newInstance,
-      this.node.scope,
-      id
-    );
-    return newInstance;
-  }
 }

@@ -40,14 +40,14 @@ dotgithub add actions/setup-node@v4
 
 This downloads the action metadata and generates TypeScript wrappers.
 
-## Step 3: Create Your First Plugin
+## Step 3: Create Your First Construct
 
-Edit `src/index.ts` to create a simple CI plugin:
+Edit `src/index.ts` to create a simple CI construct:
 
 ```typescript
 import {
   createStep,
-  DotGitHubPlugin,
+  GitHubConstruct,
   GitHubStack,
   JobConstruct,
   run,
@@ -55,13 +55,13 @@ import {
 } from '@dotgithub/core';
 import { Actions } from './actions/index.js';
 
-export class MyFirstPlugin implements DotGitHubPlugin {
-  readonly name = 'my-first-plugin';
+export class MyFirstConstruct extends GitHubConstruct {
+  readonly name = 'my-first-construct';
   readonly version = '1.0.0';
-  readonly description = 'My first DotGitHub plugin';
+  readonly description = 'My first DotGitHub construct';
 
   validate(stack: GitHubStack): void {
-    // No validation needed for this simple plugin
+    // No validation needed for this simple construct
   }
 
   describe() {
@@ -107,12 +107,12 @@ export class MyFirstPlugin implements DotGitHubPlugin {
   }
 }
 
-export default new MyFirstPlugin();
+export default new MyFirstConstruct();
 ```
 
-## Step 4: Configure Your Plugin
+## Step 4: Configure Your Construct
 
-Update `src/dotgithub.json` to include your plugin:
+Update `src/dotgithub.json` to include your construct:
 
 ```json
 {
@@ -135,7 +135,7 @@ Update `src/dotgithub.json` to include your plugin:
       "outputPath": "actions/actions/setup-node.ts"
     }
   ],
-  "plugins": [
+  "constructs": [
     {
       "name": "local",
       "package": "./index.ts",
@@ -146,7 +146,7 @@ Update `src/dotgithub.json` to include your plugin:
   "stacks": [
     {
       "name": "app",
-      "plugins": ["local"],
+      "constructs": ["local"],
       "config": {}
     }
   ],
@@ -224,15 +224,15 @@ setupNode('Setup Node.js', {
 - **JobConstruct** - Represents a workflow job
 - **Actions** - Provides type-safe action wrappers
 
-### Plugin Structure
+### Construct Structure
 
-Every plugin implements the `DotGitHubPlugin` interface:
+Every construct extends the `GitHubConstruct` base class:
 
-- **name** - Unique plugin identifier
-- **version** - Plugin version
+- **name** - Unique construct identifier
+- **version** - Construct version
 - **description** - Human-readable description
 - **validate()** - Validates stack configuration
-- **describe()** - Returns plugin metadata
+- **describe()** - Returns construct metadata
 - **synthesize()** - Generates workflow content
 
 ## Next Steps
@@ -248,18 +248,18 @@ dotgithub add actions/upload-artifact@v4
 
 ### 2. Create Multiple Workflows
 
-Add more plugins for different workflows:
+Add more constructs for different workflows:
 
 ```typescript
-// Add a deployment plugin
-export class DeployPlugin implements DotGitHubPlugin {
+// Add a deployment construct
+export class DeployConstruct extends GitHubConstruct {
   // ... implementation
 }
 ```
 
 ### 3. Use Configuration
 
-Make your plugin configurable:
+Make your construct configurable:
 
 ```typescript
 private readonly configSchema = z.object({
@@ -338,7 +338,7 @@ new JobConstruct(wf, 'deploy', {
 
 1. **TypeScript errors** - Ensure your `tsconfig.json` is configured correctly
 2. **Missing actions** - Run `dotgithub add` for any actions you're using
-3. **Synthesis errors** - Check your plugin's `synthesize` method
+3. **Synthesis errors** - Check your construct's `synthesize` method
 4. **Configuration errors** - Validate your `dotgithub.json` syntax
 
 ### Getting Help
@@ -350,6 +350,6 @@ new JobConstruct(wf, 'deploy', {
 ## What's Next?
 
 - [User Guide](user-guide.md) - Comprehensive usage guide
-- [Plugin Development](plugin-development.md) - Creating advanced plugins
+- [Construct Development](construct-development.md) - Creating advanced constructs
 - [API Reference](api-reference.md) - Complete API documentation
 - [Configuration Guide](configuration.md) - Understanding configuration options

@@ -1,112 +1,114 @@
 import * as path from 'path';
 import { GitHubStack } from '../constructs/base.js';
-import { PluginResolver } from './resolver.js';
+import { ConstructResolver } from './resolver.js';
 import { ActionsHelper } from './actions-helper.js';
 import { SharedWorkflowHelper } from './shared-workflow-helper.js';
 import type {
-  PluginConfig,
+  ConstructConfig,
   StackConfig,
-  DotGitHubPlugin,
-  PluginLoadResult,
-  PluginExecutionResult,
+  GitHubConstruct,
+  ConstructLoadResult,
+  ConstructExecutionResult,
 } from './types.js';
-import type { PluginDescription } from './schemas.js';
+import type { ConstructDescription } from './schemas.js';
 import type { DotGithubContext } from '../context.js';
 import {
-  validatePluginConfig,
+  validateConstructConfig,
   validateStackConfig,
   safeValidate,
-  PluginConfigSchema,
+  ConstructConfigSchema,
   StackConfigSchema,
 } from './schemas.js';
 
-export interface PluginManagerOptions {
+export interface ConstructManagerOptions {
   projectRoot: string;
   context?: DotGithubContext;
 }
 
-export class PluginManager {
-  private readonly resolver: PluginResolver;
-  private readonly loadedPlugins = new Map<string, DotGitHubPlugin>();
+export class ConstructManager {
+  private readonly resolver: ConstructResolver;
+  private readonly loadedConstructs = new Map<string, GitHubConstruct>();
 
-  constructor(private readonly options: PluginManagerOptions) {
-    this.resolver = new PluginResolver(options.projectRoot, options.context);
+  constructor(private readonly options: ConstructManagerOptions) {
+    this.resolver = new ConstructResolver(options.projectRoot, options.context);
   }
 
-  async loadPlugins(
-    pluginConfigs: PluginConfig[]
-  ): Promise<PluginLoadResult[]> {
-    // Validate all plugin configurations first
-    this.validatePluginConfigs(pluginConfigs);
+  async loadConstructs(
+    constructConfigs: ConstructConfig[]
+  ): Promise<ConstructLoadResult[]> {
+    // Validate all construct configurations first
+    this.validateConstructConfigs(constructConfigs);
 
-    const results = await this.resolver.resolvePlugins(pluginConfigs);
+    const results = await this.resolver.resolveConstructs(constructConfigs);
 
     for (const result of results) {
       if (result.resolved) {
-        this.loadedPlugins.set(result.config.name, result.plugin);
+        this.loadedConstructs.set(result.config.name, result.construct);
       }
     }
 
     return results;
   }
 
-  async executePluginsForStack(
+  async executeConstructsForStack(
     stack: GitHubStack,
     stackConfig: StackConfig,
-    pluginConfigs: PluginConfig[]
-  ): Promise<PluginExecutionResult[]> {
-    const results: PluginExecutionResult[] = [];
+    constructConfigs: ConstructConfig[]
+  ): Promise<ConstructExecutionResult[]> {
+    const results: ConstructExecutionResult[] = [];
 
     // Validate stack configuration
     this.validateStackConfig(stackConfig);
 
-    // Create a map of plugin names to configs for quick lookup
-    const pluginConfigMap = new Map<string, PluginConfig>();
-    for (const config of pluginConfigs) {
-      pluginConfigMap.set(config.name, config);
+    // Create a map of construct names to configs for quick lookup
+    const constructConfigMap = new Map<string, ConstructConfig>();
+    for (const config of constructConfigs) {
+      constructConfigMap.set(config.name, config);
     }
 
-    // Validate that all required plugins are loaded
-    for (const pluginName of stackConfig.plugins) {
-      if (!this.loadedPlugins.has(pluginName)) {
+    // Validate that all required constructs are loaded
+    for (const constructName of stackConfig.constructs) {
+      if (!this.loadedConstructs.has(constructName)) {
         throw new Error(
-          `Plugin "${pluginName}" required by stack "${stackConfig.name}" is not loaded`
+          `Construct "${constructName}" required by stack "${stackConfig.name}" is not loaded`
         );
       }
 
-      if (!pluginConfigMap.has(pluginName)) {
-        throw new Error(`Plugin configuration for "${pluginName}" not found`);
+      if (!constructConfigMap.has(constructName)) {
+        throw new Error(
+          `Construct configuration for "${constructName}" not found`
+        );
       }
     }
 
-    // Check plugin dependencies and conflicts
-    const pluginsToExecute = stackConfig.plugins.map((name: string) => ({
+    // Check construct dependencies and conflicts
+    const constructsToExecute = stackConfig.constructs.map((name: string) => ({
       name,
-      plugin: this.loadedPlugins.get(name)!,
-      config: pluginConfigMap.get(name)!,
+      construct: this.loadedConstructs.get(name)!,
+      config: constructConfigMap.get(name)!,
     }));
 
-    this.validatePluginDependencies(pluginsToExecute);
+    this.validateConstructDependencies(constructsToExecute);
 
-    // Execute plugins in order
-    for (const { name, plugin, config } of pluginsToExecute) {
+    // Execute constructs in order
+    for (const { name, construct, config } of constructsToExecute) {
       const startTime = Date.now();
 
       try {
-        // Merge plugin config and stack config
+        // Merge construct config and stack config
         const mergedConfig = {
           ...(stackConfig.config || {}),
           ...(config.config || {}),
-          // Merge actions with stack config taking priority over plugin config
+          // Merge actions with stack config taking priority over construct config
           actions: {
             ...(config.actions || {}),
             ...(config.config?.actions || {}),
-            // Stack config takes priority (overrides plugin config)
+            // Stack config takes priority (overrides construct config)
             ...(stackConfig.actions || {}),
           },
         };
 
-        // Set plugin context properties directly on the stack
+        // Set construct context properties directly on the stack
         stack.config = mergedConfig;
         stack.stackConfig = stackConfig;
         stack.projectRoot = this.options.projectRoot;
@@ -119,31 +121,31 @@ export class PluginManager {
         const sharedWorkflowHelper = new SharedWorkflowHelper(stack);
         stack.sharedWorkflows = sharedWorkflowHelper;
 
-        // Run validation if the plugin implements it
-        if (plugin.validate) {
-          await plugin.validate(stack);
+        // Run validation if the construct implements it
+        if (construct.validate) {
+          await construct.validate(stack);
         }
 
-        // Synthesize the plugin
-        await plugin.synthesize(stack);
+        // Synthesize the construct
+        await construct.synthesize(stack);
 
         const duration = Date.now() - startTime;
         results.push({
-          plugin,
+          construct,
           success: true,
           duration,
         });
       } catch (error) {
         const duration = Date.now() - startTime;
         results.push({
-          plugin,
+          construct,
           success: false,
           error: error instanceof Error ? error : new Error(String(error)),
           duration,
         });
 
         throw new Error(
-          `Plugin "${name}" failed to execute: ${error instanceof Error ? error.message : error}`
+          `Construct "${name}" failed to execute: ${error instanceof Error ? error.message : error}`
         );
       }
     }
@@ -151,33 +153,33 @@ export class PluginManager {
     return results;
   }
 
-  private validatePluginDependencies(
-    plugins: Array<{
+  private validateConstructDependencies(
+    constructs: Array<{
       name: string;
-      plugin: DotGitHubPlugin;
-      config: PluginConfig;
+      construct: GitHubConstruct;
+      config: ConstructConfig;
     }>
   ): void {
-    const pluginNames = new Set(plugins.map((p) => p.name));
+    const constructNames = new Set(constructs.map((c) => c.name));
 
-    for (const { name, plugin } of plugins) {
+    for (const { name, construct } of constructs) {
       // Check dependencies
-      if (plugin.dependencies) {
-        for (const dep of plugin.dependencies) {
-          if (!pluginNames.has(dep)) {
+      if (construct.dependencies) {
+        for (const dep of construct.dependencies) {
+          if (!constructNames.has(dep)) {
             throw new Error(
-              `Plugin "${name}" depends on "${dep}" which is not included in the stack`
+              `Construct "${name}" depends on "${dep}" which is not included in the stack`
             );
           }
         }
       }
 
       // Check conflicts
-      if (plugin.conflicts) {
-        for (const conflict of plugin.conflicts) {
-          if (pluginNames.has(conflict)) {
+      if (construct.conflicts) {
+        for (const conflict of construct.conflicts) {
+          if (constructNames.has(conflict)) {
             throw new Error(
-              `Plugin "${name}" conflicts with "${conflict}" which is included in the stack`
+              `Construct "${name}" conflicts with "${conflict}" which is included in the stack`
             );
           }
         }
@@ -185,31 +187,33 @@ export class PluginManager {
     }
   }
 
-  getLoadedPlugin(name: string): DotGitHubPlugin | undefined {
-    return this.loadedPlugins.get(name);
+  getLoadedConstruct(name: string): GitHubConstruct | undefined {
+    return this.loadedConstructs.get(name);
   }
 
-  getLoadedPlugins(): DotGitHubPlugin[] {
-    return Array.from(this.loadedPlugins.values());
+  getLoadedConstructs(): GitHubConstruct[] {
+    return Array.from(this.loadedConstructs.values());
   }
 
-  isPluginLoaded(name: string): boolean {
-    return this.loadedPlugins.has(name);
+  isConstructLoaded(name: string): boolean {
+    return this.loadedConstructs.has(name);
   }
 
-  clearLoadedPlugins(): void {
-    this.loadedPlugins.clear();
+  clearLoadedConstructs(): void {
+    this.loadedConstructs.clear();
   }
 
   /**
-   * Validate plugin configurations using Zod schemas
+   * Validate construct configurations using Zod schemas
    */
-  private validatePluginConfigs(pluginConfigs: PluginConfig[]): void {
-    for (const config of pluginConfigs) {
+  private validateConstructConfigs(
+    constructConfigs: ConstructConfig[]
+  ): void {
+    for (const config of constructConfigs) {
       const validation = safeValidate(
-        PluginConfigSchema,
+        ConstructConfigSchema,
         config,
-        `Invalid plugin configuration for "${config.name}"`
+        `Invalid construct configuration for "${config.name}"`
       );
       if (!validation.success) {
         throw new Error(validation.error);
@@ -232,16 +236,18 @@ export class PluginManager {
   }
 
   /**
-   * Public method to validate plugin configurations
+   * Public method to validate construct configurations
    */
-  validatePluginConfigurations(pluginConfigs: unknown[]): PluginConfig[] {
-    const validatedConfigs: PluginConfig[] = [];
+  validateConstructConfigurations(
+    constructConfigs: unknown[]
+  ): ConstructConfig[] {
+    const validatedConfigs: ConstructConfig[] = [];
 
-    for (const config of pluginConfigs) {
+    for (const config of constructConfigs) {
       const validation = safeValidate(
-        PluginConfigSchema,
+        ConstructConfigSchema,
         config,
-        'Invalid plugin configuration'
+        'Invalid construct configuration'
       );
       if (!validation.success) {
         throw new Error(validation.error);
@@ -274,57 +280,59 @@ export class PluginManager {
   }
 
   /**
-   * Get description of a specific plugin
+   * Get description of a specific construct
    */
-  async describePlugin(pluginName: string): Promise<PluginDescription | null> {
-    const plugin = this.loadedPlugins.get(pluginName);
-    if (!plugin) {
+  async describeConstruct(
+    constructName: string
+  ): Promise<ConstructDescription | null> {
+    const construct = this.loadedConstructs.get(constructName);
+    if (!construct) {
       return null;
     }
 
-    if (plugin.describe) {
-      const description = await plugin.describe();
-      // Basic type checking for PluginDescription
+    if (construct.describe) {
+      const description = await construct.describe();
+      // Basic type checking for ConstructDescription
       if (!description || typeof description !== 'object') {
         throw new Error(
-          `Invalid plugin description for "${pluginName}": must be an object`
+          `Invalid construct description for "${constructName}": must be an object`
         );
       }
       if (!description.name || typeof description.name !== 'string') {
         throw new Error(
-          `Invalid plugin description for "${pluginName}": name must be a string`
+          `Invalid construct description for "${constructName}": name must be a string`
         );
       }
-      return description as PluginDescription;
+      return description as ConstructDescription;
     }
 
-    // Return basic description if plugin doesn't implement describe method
+    // Return basic description if construct doesn't implement describe method
     return {
-      name: plugin.name,
-      version: plugin.version,
-      description: plugin.description,
-      dependencies: plugin.dependencies,
-      conflicts: plugin.conflicts,
+      name: construct.name,
+      version: construct.version,
+      description: construct.description,
+      dependencies: construct.dependencies,
+      conflicts: construct.conflicts,
     };
   }
 
   /**
-   * List all loaded plugins with their descriptions
+   * List all loaded constructs with their descriptions
    */
-  async listPlugins(): Promise<
-    Array<{ name: string; description: PluginDescription | null }>
+  async listConstructs(): Promise<
+    Array<{ name: string; description: ConstructDescription | null }>
   > {
     const results: Array<{
       name: string;
-      description: PluginDescription | null;
+      description: ConstructDescription | null;
     }> = [];
 
-    for (const [name, plugin] of this.loadedPlugins) {
+    for (const [name, construct] of this.loadedConstructs) {
       try {
-        const description = await this.describePlugin(name);
+        const description = await this.describeConstruct(name);
         results.push({ name, description });
       } catch (error) {
-        // If description fails, still include the plugin but with null description
+        // If description fails, still include the construct but with null description
         results.push({
           name,
           description: null,
@@ -336,25 +344,25 @@ export class PluginManager {
   }
 
   /**
-   * Get configuration schema for a specific plugin
+   * Get configuration schema for a specific construct
    */
-  async getPluginConfigSchema(pluginName: string): Promise<any | null> {
-    const description = await this.describePlugin(pluginName);
+  async getConstructConfigSchema(constructName: string): Promise<any | null> {
+    const description = await this.describeConstruct(constructName);
     return description?.configSchema || null;
   }
 
   /**
-   * Validate plugin configuration against its schema
+   * Validate construct configuration against its schema
    */
-  async validatePluginConfigAgainstSchema(
-    pluginName: string,
+  async validateConstructConfigAgainstSchema(
+    constructName: string,
     config: unknown
   ): Promise<{ success: true; data: any } | { success: false; error: string }> {
-    const schema = await this.getPluginConfigSchema(pluginName);
+    const schema = await this.getConstructConfigSchema(constructName);
     if (!schema) {
       return {
         success: false,
-        error: `Plugin "${pluginName}" does not provide a configuration schema`,
+        error: `Construct "${constructName}" does not provide a configuration schema`,
       };
     }
 

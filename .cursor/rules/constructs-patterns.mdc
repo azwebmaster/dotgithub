@@ -1,0 +1,46 @@
+---
+globs: packages/core/src/constructs/*.ts,packages/core/src/plugins/*.ts
+---
+
+# Constructs and GitHub Construct Patterns
+
+## Construct Base Classes
+
+All constructs should extend from [Construct](mdc:packages/core/src/constructs/base.ts) and follow CDK patterns:
+
+- Use `super(scope, id)` in constructor
+- Implement proper resource management
+- Use `this.node` for construct tree operations
+- Follow naming conventions: `GitHub*` for GitHub-specific constructs
+
+## Action Collection Pattern
+
+Action collections should extend [ActionCollection](mdc:packages/core/src/plugins/action-collection.ts):
+
+```typescript
+export class MyActionCollection extends ActionCollection {
+  // Use invokeAction() for type-safe action invocation
+  // Use createOutputs() for output management
+  // Access stack via this.stack
+}
+```
+
+## GitHub Construct Development
+
+- Constructs (loadable modules) live in `packages/core/src/plugins/`
+- Export main construct class and any helper classes
+- Use dependency injection for configuration
+- Follow the GitHubConstruct interface patterns
+
+## Resource Management
+
+- Use `addWorkflow()` for GitHub workflows
+- Use `addResource()` for file resources
+- Use `addFileResource()` for simple file content
+- Use `addDirectoryResource()` for directory structures
+
+## Stack Synthesis
+
+- Implement `synth()` method for file generation
+- Use YAML formatting for workflow files
+- Maintain proper file structure in output

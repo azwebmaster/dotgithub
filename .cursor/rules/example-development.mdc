@@ -1,0 +1,53 @@
+---
+globs: examples/**/*.ts,examples/**/*.json
+---
+
+# Example Development Guidelines
+
+## Example Structure
+
+Examples should be located in the `examples/` directory and demonstrate real-world usage patterns:
+
+- Each example should be a complete, runnable project
+- Include a `dotgithub.json` configuration file
+- Provide TypeScript source code in `src/` directory
+- Include generated workflows in `workflows/` directory
+
+## Example Configuration
+
+Use the example in [examples/example/](mdc:examples/example/) as a template:
+
+- [examples/example/dotgithub.json](mdc:examples/example/dotgithub.json) - Main configuration
+- [examples/example/src/index.ts](mdc:examples/example/src/index.ts) - Main entry point
+- [examples/example/src/actions/](mdc:examples/example/src/actions/) - Generated action wrappers
+- [examples/example/workflows/](mdc:examples/example/workflows/) - Generated workflow files
+
+## Example Development
+
+- Start with a simple configuration
+- Build up complexity gradually
+- Show different patterns and use cases
+- Include comments explaining the approach
+- Test that examples can be synthesized successfully
+
+## Example Documentation
+
+- Include a README.md explaining the example
+- Document the configuration options used
+- Show the expected output
+- Provide step-by-step instructions
+
+## Example Testing
+
+- Ensure examples can be built and run
+- Test synthesis produces valid workflows
+- Verify examples work with the CLI
+- Update examples when APIs change
+
+## Best Practices
+
+- Use realistic but simple scenarios
+- Show both basic and advanced features
+- Include error handling examples
+- Demonstrate construct usage
+- Show integration with external services

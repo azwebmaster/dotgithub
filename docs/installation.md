@@ -175,7 +175,7 @@ The main configuration file contains:
   "rootDir": "src",
   "outputDir": ".github/workflows",
   "actions": [],
-  "plugins": [],
+  "constructs": [],
   "stacks": [],
   "options": {
     "tokenSource": "env",
@@ -191,7 +191,7 @@ The main configuration file contains:
 - **rootDir** - Directory for generated TypeScript files
 - **outputDir** - Directory for generated workflow files
 - **actions** - Array of tracked GitHub Actions
-- **plugins** - Array of plugin configurations
+- **constructs** - Array of construct configurations
 - **stacks** - Array of stack configurations
 
 ## IDE Setup
@@ -270,7 +270,7 @@ After installation, you can:
 
 1. [Get started with your first workflow](getting-started.md)
 2. [Learn about the CLI commands](command-init.md)
-3. [Explore plugin development](plugin-development.md)
+3. [Explore construct development](construct-development.md)
 4. [Read the API reference](api-reference.md)
 
 ## Uninstallation

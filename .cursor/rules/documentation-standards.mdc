@@ -1,0 +1,59 @@
+---
+globs: docs/*.md,*.md
+---
+
+# Documentation Standards
+
+## Documentation Structure
+
+The project uses comprehensive documentation in the `docs/` directory:
+
+- [README.md](mdc:README.md) - Main project overview and quick start
+- [docs/getting-started.md](mdc:docs/getting-started.md) - Detailed getting started guide
+- [docs/user-guide.md](mdc:docs/user-guide.md) - Comprehensive user guide
+- [docs/api-reference.md](mdc:docs/api-reference.md) - API documentation
+- [docs/construct-development.md](mdc:docs/construct-development.md) - Construct development guide
+
+## Code Documentation
+
+- Use JSDoc comments for all public APIs
+- Include parameter descriptions and return types
+- Document complex algorithms and business logic
+- Provide usage examples in comments
+
+## Markdown Standards
+
+- Use proper heading hierarchy
+- Include table of contents for long documents
+- Use code blocks with language specification
+- Include links to related documentation
+
+## API Documentation
+
+- Document all public methods and properties
+- Include parameter types and descriptions
+- Provide usage examples
+- Document error conditions and exceptions
+
+## Example Documentation
+
+```typescript
+/**
+ * Creates a new GitHub workflow with the specified configuration.
+ * 
+ * @param config - The workflow configuration
+ * @returns A new GitHubWorkflow instance
+ * @throws {ValidationError} When the configuration is invalid
+ * 
+ * @example
+ * ```typescript
+ * const workflow = createWorkflow({
+ *   name: 'CI',
+ *   on: { push: { branches: ['main'] } }
+ * });
+ * ```
+ */
+export function createWorkflow(config: WorkflowConfig): GitHubWorkflow {
+  // Implementation
+}
+```

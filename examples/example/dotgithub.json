@@ -70,7 +70,7 @@
       "actionPath": "merge"
     }
   ],
-  "plugins": [
+  "constructs": [
     {
       "name": "local",
       "package": "./index.ts",
@@ -81,7 +81,7 @@
   "stacks": [
     {
       "name": "app",
-      "plugins": ["local"],
+      "constructs": ["local"],
       "config": {
         "environment": "production"
       }

@@ -105,9 +105,9 @@ export function createStep<T extends GitHubStepWith>(
 ): GitHubStep<T> {
   let version: string | undefined;
 
-  // Priority order: 1. Stack config (highest), 2. Plugin config, 3. Action function ref, 4. Hardcoded ref
+  // Priority order: 1. Stack config (highest), 2. Construct config, 3. Action function ref, 4. Hardcoded ref
   if (stack) {
-    // Check for action overrides in the merged config (stack config takes priority over plugin config)
+    // Check for action overrides in the merged config (stack config takes priority over construct config)
     const actionOverride = stack.config?.actions?.[uses];
     if (actionOverride) {
       version = actionOverride;

@@ -1,50 +1,50 @@
 import { Command } from 'commander';
 import {
-  getPluginsFromConfig,
+  getConstructsFromConfig,
   getStacksFromConfig,
-  addPluginToConfig,
-  removePluginFromConfig,
+  addConstructToConfig,
+  removeConstructFromConfig,
   addStackToConfig,
   removeStackFromConfig,
-  generatePluginFromGitHubFiles,
-  PluginManager,
-  formatPluginDescription,
-  generatePluginMarkdown,
-  searchPluginsByKeyword,
-  filterPluginsByCategory,
+  generateConstructFromGitHubFiles,
+  ConstructManager,
+  formatConstructDescription,
+  generateConstructMarkdown,
+  searchConstructsByKeyword,
+  filterConstructsByCategory,
   type DotGithubContext,
   logger,
 } from '@dotgithub/core';
-import type { PluginConfig, StackConfig } from '@dotgithub/core';
+import type { ConstructConfig, StackConfig } from '@dotgithub/core';
 import * as path from 'path';
 
-export function createPluginCommand(
+export function createConstructCommand(
   createContext: (options?: any) => DotGithubContext
 ): Command {
-  const pluginCommand = new Command('plugin');
-  pluginCommand.description('Manage plugins and stacks');
+  const constructCommand = new Command('construct');
+  constructCommand.description('Manage constructs and stacks');
 
-  // Plugin management subcommands
-  const pluginSubCommand = new Command('list')
-    .description('List configured plugins')
+  // Construct management subcommands
+  const constructSubCommand = new Command('list')
+    .description('List configured constructs')
     .action((options) => {
       const context = createContext(options);
-      const plugins = context.config.plugins || [];
+      const constructs = context.config.constructs || [];
 
-      if (plugins.length === 0) {
-        logger.info('📝 No plugins configured');
+      if (constructs.length === 0) {
+        logger.info('📝 No constructs configured');
         return;
       }
 
-      logger.info(`🔌 Configured plugins (${plugins.length}):`);
+      logger.info(`🔌 Configured constructs (${constructs.length}):`);
 
-      for (const plugin of plugins) {
-        const status = plugin.enabled !== false ? '✅' : '❌';
-        logger.info(`${status} ${plugin.name}`);
-        logger.debug(`   Package: ${plugin.package}`);
-        if (plugin.config && Object.keys(plugin.config).length > 0) {
+      for (const construct of constructs) {
+        const status = construct.enabled !== false ? '✅' : '❌';
+        logger.info(`${status} ${construct.name}`);
+        logger.debug(`   Package: ${construct.package}`);
+        if (construct.config && Object.keys(construct.config).length > 0) {
           logger.debug(
-            `   Config: ${JSON.stringify(plugin.config, null, 2)
+            `   Config: ${JSON.stringify(construct.config, null, 2)
               .split('\n')
               .map((line, i) => (i === 0 ? line : '           ' + line))
               .join('\n')}`
@@ -53,14 +53,14 @@ export function createPluginCommand(
       }
     });
 
-  const pluginAddCommand = new Command('add')
-    .description('Add a plugin configuration')
-    .requiredOption('--name <name>', 'plugin name')
+  const constructAddCommand = new Command('add')
+    .description('Add a construct configuration')
+    .requiredOption('--name <name>', 'construct name')
     .requiredOption(
       '--package <package>',
-      'plugin package (npm package or local path)'
+      'construct package (npm package or local path)'
     )
-    .option('--enabled', 'enable the plugin (default: true)', true)
+    .option('--enabled', 'enable the construct (default: true)', true)
     .action((options) => {
       try {
         const context = createContext(options);
@@ -78,59 +78,59 @@ export function createPluginCommand(
           }
         }
 
-        const pluginConfig: PluginConfig = {
+        const constructConfig: ConstructConfig = {
           name: options.name,
           package: options.package,
           config,
           enabled: options.enabled,
         };
 
-        addPluginToConfig(pluginConfig, context.configPath);
-        logger.info(`✅ Added plugin "${options.name}"`);
+        addConstructToConfig(constructConfig, context.configPath);
+        logger.info(`✅ Added construct "${options.name}"`);
       } catch (error) {
         logger.error(
-          '❌ Failed to add plugin:',
+          '❌ Failed to add construct:',
           error instanceof Error ? error.message : error
         );
         process.exit(1);
       }
     });
 
-  const pluginRemoveCommand = new Command('remove')
-    .description('Remove a plugin configuration')
-    .requiredOption('--name <name>', 'plugin name')
+  const constructRemoveCommand = new Command('remove')
+    .description('Remove a construct configuration')
+    .requiredOption('--name <name>', 'construct name')
     .action((options) => {
       try {
         const context = createContext(options);
-        const removed = removePluginFromConfig(
+        const removed = removeConstructFromConfig(
           options.name,
           context.configPath
         );
 
         if (removed) {
-          logger.info(`✅ Removed plugin "${options.name}"`);
+          logger.info(`✅ Removed construct "${options.name}"`);
         } else {
-          logger.info(`❌ Plugin "${options.name}" not found`);
+          logger.info(`❌ Construct "${options.name}" not found`);
           process.exit(1);
         }
       } catch (error) {
         logger.error(
-          '❌ Failed to remove plugin:',
+          '❌ Failed to remove construct:',
           error instanceof Error ? error.message : error
         );
         process.exit(1);
       }
     });
 
-  const pluginCreateCommand = new Command('create')
-    .description('Create a plugin from .github files')
-    .requiredOption('--name <name>', 'plugin name')
+  const constructCreateCommand = new Command('create')
+    .description('Create a construct from .github files')
+    .requiredOption('--name <name>', 'construct name')
     .requiredOption(
       '--source <path|repo|url>',
       'local path to .github directory, GitHub repo (org/repo@ref), or GitHub file URL'
     )
-    .option('--description <desc>', 'plugin description')
-    .option('--overwrite', 'overwrite existing plugin file')
+    .option('--description <desc>', 'construct description')
+    .option('--overwrite', 'overwrite existing construct file')
     .option(
       '--auto-add-actions',
       'automatically add TypeScript actions found in workflows'
@@ -142,12 +142,12 @@ export function createPluginCommand(
     .action(async (options) => {
       try {
         logger.info(
-          `🔌 Creating plugin "${options.name}" from ${options.source}...`
+          `🔌 Creating construct "${options.name}" from ${options.source}...`
         );
 
         const context = createContext(options);
-        const result = await generatePluginFromGitHubFiles({
-          pluginName: options.name,
+        const result = await generateConstructFromGitHubFiles({
+          constructName: options.name,
           source: options.source,
           description: options.description,
           overwrite: options.overwrite,
@@ -156,8 +156,8 @@ export function createPluginCommand(
           token: options.token,
         });
 
-        logger.info(`✅ Plugin created successfully!`);
-        logger.info(`   Plugin file: ${result.pluginPath}`);
+        logger.info(`✅ Construct created successfully!`);
+        logger.info(`   Construct file: ${result.constructPath}`);
         logger.info(`   Files included: ${result.filesFound.length}`);
 
         if (result.filesFound.length > 0) {
@@ -168,152 +168,155 @@ export function createPluginCommand(
         }
 
         logger.info('');
-        logger.info(`🔧 To use this plugin, add it to your configuration:`);
-        const relativePluginPath = path.relative(
-          process.cwd(),
-          result.pluginPath
+        logger.info(`🔧 To use this construct, add it to your configuration:`);
+        const configDir = path.dirname(context.configPath);
+        const relativeConstructPath = path.relative(
+          configDir,
+          result.constructPath
         );
+        const normalizedPath = relativeConstructPath.replace(/\\/g, '/');
+        const packagePath = normalizedPath.startsWith('.')
+          ? normalizedPath
+          : `./${normalizedPath}`;
         logger.info(
-          `   dotgithub plugin add --name "${options.name}" --package "./${relativePluginPath}"`
+          `   dotgithub construct add --name "${options.name}" --package "${packagePath}"`
         );
       } catch (error) {
         logger.error(
-          '❌ Failed to create plugin:',
+          '❌ Failed to create construct:',
           error instanceof Error ? error.message : error
         );
         process.exit(1);
       }
     });
 
-  const pluginDescribeCommand = new Command('describe')
-    .description('Describe plugin information and configuration schema')
-    .option('--name <name>', 'specific plugin name to describe')
+  const constructDescribeCommand = new Command('describe')
+    .description('Describe construct information and configuration schema')
+    .option('--name <name>', 'specific construct name to describe')
     .option('--format <format>', 'output format (text|markdown|json)', 'text')
-    .option('--search <keyword>', 'search plugins by keyword')
-    .option('--category <category>', 'filter plugins by category')
-    .option('--all', 'describe all loaded plugins')
+    .option('--search <keyword>', 'search constructs by keyword')
+    .option('--category <category>', 'filter constructs by category')
+    .option('--all', 'describe all loaded constructs')
     .action(async (options) => {
       try {
         const context = createContext(options);
-        const manager = new PluginManager({
+        const manager = new ConstructManager({
           projectRoot: context.rootPath,
           context,
         });
 
-        // Load plugins from config using the context
-        const pluginConfigs = context.config.plugins || [];
-        if (pluginConfigs.length === 0) {
-          logger.info('📝 No plugins configured');
+        const constructConfigs = context.config.constructs || [];
+        if (constructConfigs.length === 0) {
+          logger.info('📝 No constructs configured');
           return;
         }
 
-        await manager.loadPlugins(pluginConfigs);
+        await manager.loadConstructs(constructConfigs);
 
         if (options.name) {
-          // Describe specific plugin
-          const description = await manager.describePlugin(options.name);
+          const description = await manager.describeConstruct(options.name);
           if (!description) {
-            logger.info(`❌ Plugin "${options.name}" not found or not loaded`);
+            logger.info(
+              `❌ Construct "${options.name}" not found or not loaded`
+            );
             process.exit(1);
           }
 
           switch (options.format) {
             case 'markdown':
-              logger.info(generatePluginMarkdown(description));
+              logger.info(generateConstructMarkdown(description));
               break;
             case 'json':
               logger.info(JSON.stringify(description, null, 2));
               break;
             default:
-              logger.info(`\n🔌 Plugin: ${description.name}\n`);
-              logger.info(formatPluginDescription(description));
+              logger.info(`\n🔌 Construct: ${description.name}\n`);
+              logger.info(formatConstructDescription(description));
           }
         } else if (options.search) {
-          // Search plugins by keyword
-          const pluginList = await manager.listPlugins();
-          const descriptions = pluginList
-            .map((p) => p.description)
+          const constructList = await manager.listConstructs();
+          const descriptions = constructList
+            .map((c) => c.description)
             .filter((desc): desc is NonNullable<typeof desc> => desc !== null);
 
-          const searchResults = searchPluginsByKeyword(
+          const searchResults = searchConstructsByKeyword(
             descriptions,
             options.search
           );
 
           if (searchResults.length === 0) {
-            logger.info(`🔍 No plugins found matching "${options.search}"`);
+            logger.info(
+              `🔍 No constructs found matching "${options.search}"`
+            );
             return;
           }
 
           logger.info(
-            `🔍 Found ${searchResults.length} plugin(s) matching "${options.search}":\n`
+            `🔍 Found ${searchResults.length} construct(s) matching "${options.search}":\n`
           );
 
           for (const description of searchResults) {
-            logger.info(`\n🔌 Plugin: ${description.name}\n`);
-            logger.info(formatPluginDescription(description));
+            logger.info(`\n🔌 Construct: ${description.name}\n`);
+            logger.info(formatConstructDescription(description));
             logger.info('\n' + '─'.repeat(50) + '\n');
           }
         } else if (options.category) {
-          // Filter plugins by category
-          const pluginList = await manager.listPlugins();
-          const descriptions = pluginList
-            .map((p) => p.description)
+          const constructList = await manager.listConstructs();
+          const descriptions = constructList
+            .map((c) => c.description)
             .filter((desc): desc is NonNullable<typeof desc> => desc !== null);
 
-          const categoryResults = filterPluginsByCategory(
+          const categoryResults = filterConstructsByCategory(
             descriptions,
             options.category
           );
 
           if (categoryResults.length === 0) {
             logger.info(
-              `📂 No plugins found in category "${options.category}"`
+              `📂 No constructs found in category "${options.category}"`
             );
             return;
           }
 
           logger.info(
-            `📂 Found ${categoryResults.length} plugin(s) in category "${options.category}":\n`
+            `📂 Found ${categoryResults.length} construct(s) in category "${options.category}":\n`
           );
 
           for (const description of categoryResults) {
-            logger.info(`\n🔌 Plugin: ${description.name}\n`);
-            logger.info(formatPluginDescription(description));
+            logger.info(`\n🔌 Construct: ${description.name}\n`);
+            logger.info(formatConstructDescription(description));
             logger.info('\n' + '─'.repeat(50) + '\n');
           }
         } else if (options.all) {
-          // Describe all plugins
-          const pluginList = await manager.listPlugins();
+          const constructList = await manager.listConstructs();
 
-          if (pluginList.length === 0) {
-            logger.info('📝 No plugins loaded');
+          if (constructList.length === 0) {
+            logger.info('📝 No constructs loaded');
             return;
           }
 
-          logger.info(`🔌 Loaded plugins (${pluginList.length}):\n`);
+          logger.info(`🔌 Loaded constructs (${constructList.length}):\n`);
 
-          for (const { name, description } of pluginList) {
-            logger.info(`\n🔌 Plugin: ${name}\n`);
+          for (const { name, description } of constructList) {
+            logger.info(`\n🔌 Construct: ${name}\n`);
             if (description) {
-              logger.info(formatPluginDescription(description));
+              logger.info(formatConstructDescription(description));
             } else {
               logger.info('No description available');
             }
             logger.info('\n' + '─'.repeat(50) + '\n');
           }
         } else {
-          // List available plugins with basic info
-          const pluginList = await manager.listPlugins();
+          const constructList = await manager.listConstructs();
 
-          if (pluginList.length === 0) {
-            logger.info('📝 No plugins loaded');
+          if (constructList.length === 0) {
+            logger.info('📝 No constructs loaded');
             return;
           }
 
-          logger.info(`🔌 Available plugins (${pluginList.length}):\n`);
+          logger.info(`🔌 Available constructs (${constructList.length}):\n`);
 
-          for (const { name, description } of pluginList) {
+          for (const { name, description } of constructList) {
             const status = description ? '✅' : '❌';
             logger.info(`${status} ${name}`);
             if (description) {
@@ -331,15 +334,17 @@ export function createPluginCommand(
           }
 
           logger.info(
-            '💡 Use --name <plugin> to get detailed information about a specific plugin'
+            '💡 Use --name <construct> to get detailed information about a specific construct'
           );
-          logger.info('💡 Use --search <keyword> to search plugins by keyword');
+          logger.info(
+            '💡 Use --search <keyword> to search constructs by keyword'
+          );
           logger.info('💡 Use --category <category> to filter by category');
-          logger.info('💡 Use --all to describe all plugins');
+          logger.info('💡 Use --all to describe all constructs');
         }
       } catch (error) {
         logger.error(
-          '❌ Failed to describe plugins:',
+          '❌ Failed to describe constructs:',
           error instanceof Error ? error.message : error
         );
         process.exit(1);
@@ -365,7 +370,7 @@ export function createPluginCommand(
       for (const stack of stacks) {
         logger.info(`📦 ${stack.name}`);
         logger.info(
-          `   Plugins: ${stack.plugins.length > 0 ? stack.plugins.join(', ') : '(none)'}`
+          `   Constructs: ${stack.constructs.length > 0 ? stack.constructs.join(', ') : '(none)'}`
         );
         if (stack.config && Object.keys(stack.config).length > 0) {
           logger.info(
@@ -383,8 +388,8 @@ export function createPluginCommand(
     .description('Add a stack configuration')
     .requiredOption('--name <name>', 'stack name')
     .requiredOption(
-      '--plugins <plugins>',
-      'comma-separated list of plugin names'
+      '--constructs <constructs>',
+      'comma-separated list of construct names'
     )
     .action((options) => {
       try {
@@ -403,20 +408,20 @@ export function createPluginCommand(
           }
         }
 
-        const plugins = options.plugins
+        const constructs = options.constructs
           .split(',')
-          .map((plugin: string) => plugin.trim())
-          .filter((plugin: string) => plugin.length > 0);
+          .map((c: string) => c.trim())
+          .filter((c: string) => c.length > 0);
 
         const stackConfig: StackConfig = {
           name: options.name,
-          plugins,
+          constructs,
           config,
         };
 
         addStackToConfig(stackConfig, context.configPath);
         logger.info(
-          `✅ Added stack "${options.name}" with plugins: ${plugins.join(', ')}`
+          `✅ Added stack "${options.name}" with constructs: ${constructs.join(', ')}`
         );
       } catch (error) {
         logger.error(
@@ -451,17 +456,17 @@ export function createPluginCommand(
     });
 
   // Build command structure
-  pluginCommand.addCommand(pluginSubCommand);
-  pluginCommand.addCommand(pluginAddCommand);
-  pluginCommand.addCommand(pluginRemoveCommand);
-  pluginCommand.addCommand(pluginCreateCommand);
-  pluginCommand.addCommand(pluginDescribeCommand);
+  constructCommand.addCommand(constructSubCommand);
+  constructCommand.addCommand(constructAddCommand);
+  constructCommand.addCommand(constructRemoveCommand);
+  constructCommand.addCommand(constructCreateCommand);
+  constructCommand.addCommand(constructDescribeCommand);
 
   stackCommand.addCommand(stackListCommand);
   stackCommand.addCommand(stackAddCommand);
   stackCommand.addCommand(stackRemoveCommand);
 
-  pluginCommand.addCommand(stackCommand);
+  constructCommand.addCommand(stackCommand);
 
-  return pluginCommand;
+  return constructCommand;
 }

@@ -1,6 +1,6 @@
 # dotgithub pin
 
-Pin an action to a specific version for a plugin or stack.
+Pin an action to a specific version for a construct or stack.
 
 ## Synopsis
 
@@ -10,7 +10,7 @@ dotgithub pin <action> <ref> [options]
 
 ## Description
 
-The `pin` command allows you to override the version of a GitHub Action for specific plugins or stacks. This is useful when you need to use different versions of the same action in different contexts, or when you want to lock a specific version for stability.
+The `pin` command allows you to override the version of a GitHub Action for specific constructs or stacks. This is useful when you need to use different versions of the same action in different contexts, or when you want to lock a specific version for stability.
 
 ## Arguments
 
@@ -20,17 +20,17 @@ The `pin` command allows you to override the version of a GitHub Action for spec
 ## Options
 
 - `--stack <name>` - Pin for specific stack
-- `--plugin <name>` - Pin for specific plugin
+- `--construct <name>` - Pin for specific construct
 
 ## Examples
 
-### Pin action for a plugin
+### Pin action for a construct
 
 ```bash
-dotgithub pin actions/checkout v4 --plugin my-plugin
+dotgithub pin actions/checkout v4 --construct my-construct
 ```
 
-Pins the checkout action to version 4 for the "my-plugin" plugin.
+Pins the checkout action to version 4 for the "my-construct" construct.
 
 ### Pin action for a stack
 
@@ -43,16 +43,16 @@ Pins the setup-node action to version 4.1.0 for the "ci" stack.
 ### Pin to specific commit
 
 ```bash
-dotgithub pin actions/checkout abc1234 --plugin deploy
+dotgithub pin actions/checkout abc1234 --construct deploy
 ```
 
-Pins the checkout action to a specific commit SHA for the "deploy" plugin.
+Pins the checkout action to a specific commit SHA for the "deploy" construct.
 
 ## How it works
 
 1. **Validates action format** - Ensures action is in `org/repo` format
-2. **Validates scope** - Ensures either `--stack` or `--plugin` is specified
-3. **Checks existence** - Verifies the plugin/stack exists in configuration
+2. **Validates scope** - Ensures either `--stack` or `--construct` is specified
+3. **Checks existence** - Verifies the construct/stack exists in configuration
 4. **Sets pin** - Adds the version override to the configuration
 5. **Confirms action** - Shows success message with details
 
@@ -78,15 +78,15 @@ Version references can be:
 
 You must specify exactly one scope:
 
-### Plugin scope
+### Construct scope
 
 ```bash
-dotgithub pin actions/checkout v4 --plugin my-plugin
+dotgithub pin actions/checkout v4 --construct my-construct
 ```
 
-- Overrides the action version for the specified plugin
-- Only affects that plugin's workflow generation
-- Other plugins use their default versions
+- Overrides the action version for the specified construct
+- Only affects that construct's workflow generation
+- Other constructs use their default versions
 
 ### Stack scope
 
@@ -95,40 +95,25 @@ dotgithub pin actions/checkout v4 --stack ci
 ```
 
 - Overrides the action version for the specified stack
-- Affects all plugins in that stack
+- Affects all constructs in that stack
 - Other stacks use their default versions
 
 ## Configuration storage
 
 Pins are stored in your `dotgithub.json` configuration:
 
-```json
-{
-  "pins": {
-    "plugins": {
-      "my-plugin": {
-        "actions/checkout": "v4"
-      }
-    },
-    "stacks": {
-      "ci": {
-        "actions/setup-node": "v4.1.0"
-      }
-    }
-  }
-}
-```
+Pins are stored on each construct or stack in your configuration. Construct-level pins are stored in the construct's `actions` property; stack-level pins in the stack's `actions` property.
 
 ## Use cases
 
-### Plugin-specific versions
+### Construct-specific versions
 
 ```bash
-# Use older version for legacy plugin
-dotgithub pin actions/checkout v3 --plugin legacy-plugin
+# Use older version for legacy construct
+dotgithub pin actions/checkout v3 --construct legacy-construct
 
-# Use newer version for modern plugin
-dotgithub pin actions/checkout v4 --plugin modern-plugin
+# Use newer version for modern construct
+dotgithub pin actions/checkout v4 --construct modern-construct
 ```
 
 ### Stack-specific versions
@@ -153,9 +138,9 @@ dotgithub pin actions/checkout v4.1.1 --stack security-critical
 The command will fail if:
 
 - Action format is invalid (must be `org/repo`)
-- Neither `--stack` nor `--plugin` is specified
-- Both `--stack` and `--plugin` are specified
-- Specified plugin doesn't exist
+- Neither `--stack` nor `--construct` is specified
+- Both `--stack` and `--construct` are specified
+- Specified construct doesn't exist
 - Specified stack doesn't exist
 
 ## Success output
@@ -163,7 +148,7 @@ The command will fail if:
 When successful, the command shows:
 
 ```
-✅ Pinned actions/checkout to v4 for plugin "my-plugin"
+✅ Pinned actions/checkout to v4 for construct "my-construct"
 ```
 
 ## Best practices
@@ -178,12 +163,12 @@ When successful, the command shows:
 
 - [dotgithub unpin](command-unpin.md) - Remove version pins
 - [dotgithub list-pins](command-list-pins.md) - List all pins
-- [dotgithub plugin](command-plugin.md) - Manage plugins and stacks
+- [dotgithub construct](command-construct.md) - Manage constructs and stacks
 - [dotgithub update](command-update.md) - Update action versions
 
 ## See also
 
 - [dotgithub unpin](command-unpin.md) - Remove version pins
 - [dotgithub list-pins](command-list-pins.md) - List all pins
-- [dotgithub plugin](command-plugin.md) - Manage plugins and stacks
+- [dotgithub construct](command-construct.md) - Manage constructs and stacks
 - [Configuration Guide](configuration.md) - Understanding dotgithub.json

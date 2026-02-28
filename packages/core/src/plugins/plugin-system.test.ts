@@ -1,27 +1,29 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { GitHubStack } from '../constructs/base';
-import { PluginManager } from './manager.js';
-import type { PluginConfig, StackConfig, DotGitHubPlugin } from './types.js';
+import { ConstructManager } from './manager.js';
+import type { ConstructConfig, StackConfig, GitHubConstruct } from './types.js';
 
-// Mock plugins for testing
-const ciPlugin: DotGitHubPlugin = {
+// Mock constructs for testing
+const ciConstruct: GitHubConstruct = {
   name: 'ci',
-  description: 'CI/CD workflow plugin',
-  validate(context) {
+  description: 'CI/CD workflow construct',
+  validate(stack) {
+    const config = stack.config || {};
     if (
-      context.config.packageManager &&
-      !['npm', 'yarn', 'pnpm', 'bun'].includes(context.config.packageManager)
+      config.packageManager &&
+      !['npm', 'yarn', 'pnpm', 'bun'].includes(config.packageManager)
     ) {
       throw new Error('packageManager must be one of: npm, yarn, pnpm, bun');
     }
   },
-  synthesize(context) {
-    const { stack, config } = context;
-    const nodeVersions = config.nodeVersions || ['18', '20'];
-    const packageManager = config.packageManager || 'npm';
-    const testCommand = config.testCommand || `${packageManager} test`;
-    const buildCommand = config.buildCommand;
-    const lintCommand = config.lintCommand;
+  async synthesize(stack) {
+    const config = stack.config || {};
+    const nodeVersions = (config.nodeVersions as string[]) || ['18', '20'];
+    const packageManager = (config.packageManager as string) || 'npm';
+    const testCommand =
+      (config.testCommand as string) || `${packageManager} test`;
+    const buildCommand = config.buildCommand as string | undefined;
+    const lintCommand = config.lintCommand as string | undefined;
 
     const installCmd =
       packageManager === 'yarn'
@@ -72,13 +74,11 @@ const ciPlugin: DotGitHubPlugin = {
   },
 };
 
-const releasePlugin: DotGitHubPlugin = {
+const releaseConstruct: GitHubConstruct = {
   name: 'release',
-  description: 'Release automation plugin',
+  description: 'Release automation construct',
   dependencies: ['ci'],
-  synthesize(context) {
-    const { stack } = context;
-
+  async synthesize(stack) {
     stack.addWorkflow('release', {
       name: 'Release',
       on: { push: { branches: ['main'] } },
@@ -97,21 +97,21 @@ const releasePlugin: DotGitHubPlugin = {
   },
 };
 
-describe('Plugin System', () => {
-  let manager: PluginManager;
+describe('Construct System', () => {
+  let manager: ConstructManager;
   let stack: GitHubStack;
 
   beforeEach(() => {
-    manager = new PluginManager({ projectRoot: '/tmp' });
+    manager = new ConstructManager({ projectRoot: '/tmp' });
     stack = new GitHubStack(undefined, 'test-stack');
   });
 
-  describe('PluginManager', () => {
-    it('should load built-in plugins', async () => {
-      const pluginConfigs: PluginConfig[] = [
+  describe('ConstructManager', () => {
+    it('should load built-in constructs', async () => {
+      const constructConfigs: ConstructConfig[] = [
         {
           name: 'ci',
-          package: '@dotgithub/plugin-ci',
+          package: '@dotgithub/construct-ci',
           config: {
             nodeVersions: ['18', '20'],
             testCommand: 'bun test',
@@ -119,29 +119,29 @@ describe('Plugin System', () => {
         },
       ];
 
-      // Mock the resolver to return our built-in plugin
+      // Mock the resolver to return our built-in construct
       const originalResolver = (manager as any).resolver;
       (manager as any).resolver = {
-        resolvePlugins: async () => [
+        resolveConstructs: async () => [
           {
-            plugin: ciPlugin,
-            config: pluginConfigs[0],
+            construct: ciConstruct,
+            config: constructConfigs[0],
             resolved: true,
           },
         ],
       };
 
-      const results = await manager.loadPlugins(pluginConfigs);
+      const results = await manager.loadConstructs(constructConfigs);
 
       expect(results).toHaveLength(1);
       expect(results[0].resolved).toBe(true);
-      expect(results[0].plugin.name).toBe('ci');
-      expect(manager.isPluginLoaded('ci')).toBe(true);
+      expect(results[0].construct.name).toBe('ci');
+      expect(manager.isConstructLoaded('ci')).toBe(true);
     });
 
-    it('should execute plugins for stack', async () => {
-      // Load CI plugin
-      const pluginConfigs: PluginConfig[] = [
+    it('should execute constructs for stack', async () => {
+      // Load CI construct
+      const constructConfigs: ConstructConfig[] = [
         {
           name: 'ci',
           package: '@dotgithub/plugin-ci',
@@ -155,34 +155,34 @@ describe('Plugin System', () => {
 
       const stackConfig: StackConfig = {
         name: 'test-stack',
-        plugins: ['ci'],
+        constructs: ['ci'],
       };
 
-      // Mock the resolver to return our built-in plugin
+      // Mock the resolver to return our built-in construct
       const originalResolver = (manager as any).resolver;
       (manager as any).resolver = {
-        resolvePlugins: async () => [
+        resolveConstructs: async () => [
           {
-            plugin: ciPlugin,
-            config: pluginConfigs[0],
+            construct: ciConstruct,
+            config: constructConfigs[0],
             resolved: true,
           },
         ],
       };
 
-      await manager.loadPlugins(pluginConfigs);
-      const results = await manager.executePluginsForStack(
+      await manager.loadConstructs(constructConfigs);
+      const results = await manager.executeConstructsForStack(
         stack,
         stackConfig,
-        pluginConfigs
+        constructConfigs
       );
 
       expect(results).toHaveLength(1);
       expect(results[0].success).toBe(true);
-      expect(results[0].plugin.name).toBe('ci');
+      expect(results[0].construct.name).toBe('ci');
       expect(results[0].duration).toBeGreaterThanOrEqual(0);
 
-      // Check that the plugin added a workflow
+      // Check that the construct added a workflow
       const workflows = stack.workflows;
       expect(Object.keys(workflows)).toContain('ci');
 
@@ -199,8 +199,8 @@ describe('Plugin System', () => {
       expect(ciMetadata.hasBuild).toBe(true);
     });
 
-    it('should validate plugin dependencies', async () => {
-      const pluginConfigs: PluginConfig[] = [
+    it('should validate construct dependencies', async () => {
+      const constructConfigs: ConstructConfig[] = [
         {
           name: 'release',
           package: '@dotgithub/plugin-release',
@@ -210,29 +210,29 @@ describe('Plugin System', () => {
 
       const stackConfig: StackConfig = {
         name: 'test-stack',
-        plugins: ['release'], // Missing 'ci' dependency
+        constructs: ['release'], // Missing 'ci' dependency
       };
 
-      // Mock the resolver to return the release plugin
+      // Mock the resolver to return the release construct
       (manager as any).resolver = {
-        resolvePlugins: async () => [
+        resolveConstructs: async () => [
           {
-            plugin: releasePlugin,
-            config: pluginConfigs[0],
+            construct: releaseConstruct,
+            config: constructConfigs[0],
             resolved: true,
           },
         ],
       };
 
-      await manager.loadPlugins(pluginConfigs);
+      await manager.loadConstructs(constructConfigs);
 
       await expect(
-        manager.executePluginsForStack(stack, stackConfig, pluginConfigs)
+        manager.executeConstructsForStack(stack, stackConfig, constructConfigs)
       ).rejects.toThrow('depends on "ci" which is not included in the stack');
     });
 
-    it('should handle plugin validation errors', async () => {
-      const pluginConfigs: PluginConfig[] = [
+    it('should handle construct validation errors', async () => {
+      const constructConfigs: ConstructConfig[] = [
         {
           name: 'ci',
           package: '@dotgithub/plugin-ci',
@@ -244,39 +244,35 @@ describe('Plugin System', () => {
 
       const stackConfig: StackConfig = {
         name: 'test-stack',
-        plugins: ['ci'],
+        constructs: ['ci'],
       };
 
       // Mock the resolver
       (manager as any).resolver = {
-        resolvePlugins: async () => [
+        resolveConstructs: async () => [
           {
-            plugin: ciPlugin,
-            config: pluginConfigs[0],
+            construct: ciConstruct,
+            config: constructConfigs[0],
             resolved: true,
           },
         ],
       };
 
-      await manager.loadPlugins(pluginConfigs);
+      await manager.loadConstructs(constructConfigs);
 
       await expect(
-        manager.executePluginsForStack(stack, stackConfig, pluginConfigs)
+        manager.executeConstructsForStack(stack, stackConfig, constructConfigs)
       ).rejects.toThrow('packageManager must be one of: npm, yarn, pnpm, bun');
     });
   });
 
-  describe('Built-in Plugins', () => {
-    describe('CI Plugin', () => {
-      it('should create CI workflow with default settings', () => {
-        const context = {
-          stack,
-          config: {},
-          stackConfig: { name: 'test', plugins: ['ci'] },
-          projectRoot: '/tmp',
-        };
-
-        ciPlugin.synthesize(context);
+  describe('Built-in Constructs', () => {
+    describe('CI Construct', () => {
+      it('should create CI workflow with default settings', async () => {
+        stack.config = {};
+        stack.stackConfig = { name: 'test', constructs: ['ci'] };
+        stack.projectRoot = '/tmp';
+        await ciConstruct.synthesize(stack);
 
         const workflows = stack.workflows;
         expect(Object.keys(workflows)).toContain('ci');
@@ -293,21 +289,17 @@ describe('Plugin System', () => {
         expect(testJob.strategy?.matrix['node-version']).toEqual(['18', '20']);
       });
 
-      it('should create CI workflow with custom settings', () => {
-        const context = {
-          stack,
-          config: {
-            nodeVersions: ['16', '18'],
-            packageManager: 'yarn',
-            testCommand: 'yarn test:ci',
-            buildCommand: 'yarn build',
-            lintCommand: 'yarn lint',
-          },
-          stackConfig: { name: 'test', plugins: ['ci'] },
-          projectRoot: '/tmp',
+      it('should create CI workflow with custom settings', async () => {
+        stack.config = {
+          nodeVersions: ['16', '18'],
+          packageManager: 'yarn',
+          testCommand: 'yarn test:ci',
+          buildCommand: 'yarn build',
+          lintCommand: 'yarn lint',
         };
-
-        ciPlugin.synthesize(context);
+        stack.stackConfig = { name: 'test', constructs: ['ci'] };
+        stack.projectRoot = '/tmp';
+        await ciConstruct.synthesize(stack);
 
         const ciWorkflow = stack.workflows.ci;
         const testJob = ciWorkflow.jobs.test;
@@ -331,24 +323,15 @@ describe('Plugin System', () => {
       });
     });
 
-    describe('Release Plugin', () => {
-      it('should create release workflow with default settings', () => {
-        // First apply CI plugin to satisfy dependency
-        ciPlugin.synthesize({
-          stack,
-          config: {},
-          stackConfig: { name: 'test', plugins: ['ci', 'release'] },
-          projectRoot: '/tmp',
-        });
+    describe('Release Construct', () => {
+      it('should create release workflow with default settings', async () => {
+        // First apply CI construct to satisfy dependency
+        stack.config = {};
+        stack.stackConfig = { name: 'test', constructs: ['ci', 'release'] };
+        stack.projectRoot = '/tmp';
+        await ciConstruct.synthesize(stack);
 
-        const context = {
-          stack,
-          config: {},
-          stackConfig: { name: 'test', plugins: ['ci', 'release'] },
-          projectRoot: '/tmp',
-        };
-
-        releasePlugin.synthesize(context);
+        await releaseConstruct.synthesize(stack);
 
         const workflows = stack.workflows;
         expect(Object.keys(workflows)).toContain('release');

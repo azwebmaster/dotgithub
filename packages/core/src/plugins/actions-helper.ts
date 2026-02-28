@@ -1,5 +1,6 @@
 import { createStep, RunStep } from '../actions.js';
-import type { GitHubStack } from '../constructs/base.js';
+import type { Construct, GitHubStack } from '../constructs/base.js';
+import { ActionConstruct, type ActionConstructProps } from '../constructs/action.js';
 import type {
   GitHubStep,
   GitHubStepWith,
@@ -102,39 +103,24 @@ export class StepChainBuilder<TOutputs = any> {
   }
 }
 
+export class AnonymousAction extends ActionConstruct<GitHubStepWith, Record<string, GitHubOutputValue>> {
+  protected readonly uses = '';
+  protected readonly fallbackRef = '';
+  protected readonly outputs = {} as Record<string, GitHubOutputValue>;
+
+  constructor(scope: Construct | undefined, id: string, props: ActionConstructProps<GitHubStepWith>) {
+    super(scope, id, props);
+  }
+}
+
 /**
- * Actions helper for plugins that provides convenient methods for creating GitHub Action steps
+ * Actions helper for constructs that provides convenient methods for creating GitHub Action steps
  */
 export class ActionsHelper {
   private readonly stack: GitHubStack;
 
   constructor(stack: GitHubStack) {
     this.stack = stack;
-  }
-
-  /**
-   * Invokes a GitHub Action by resolving the correct ref from config and creating a step
-   * @param uses - The action to use (e.g., "actions/checkout")
-   * @param inputs - Input parameters for the action
-   * @param step - Additional step configuration
-   * @param ref - Optional ref override (takes precedence over config)
-   * @returns A GitHub action step
-   */
-  invokeAction<T extends GitHubStepWith>(
-    uses: string,
-    inputs?: T,
-    step?: Partial<Omit<GitHubStep<T>, 'uses'>>,
-    ref?: string
-  ): GitHubStep<T> {
-    return createStep(
-      uses,
-      {
-        with: inputs,
-        ...step,
-      },
-      ref,
-      this.stack
-    );
   }
 
   /**

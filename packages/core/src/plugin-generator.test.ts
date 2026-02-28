@@ -3,8 +3,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import {
-  createPluginFromFiles,
-  generatePluginFromGitHubFiles,
+  createConstructFromFiles,
+  generateConstructFromGitHubFiles,
 } from './plugin-generator.js';
 import type { DotGithubContext } from './context.js';
 
@@ -17,13 +17,13 @@ vi.mock('./github', () => ({
   getDefaultBranch: vi.fn().mockResolvedValue('main'),
 }));
 
-describe('Plugin Generator', () => {
+describe('Construct Generator', () => {
   let tempDir: string;
   let mockContext: DotGithubContext;
 
   beforeEach(() => {
     // Create a temporary directory for test files
-    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'plugin-test-'));
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'construct-test-'));
 
     // Create mock context
     mockContext = {
@@ -42,8 +42,8 @@ describe('Plugin Generator', () => {
     }
   });
 
-  describe('createPluginFromFiles', () => {
-    it('should generate a plugin with workflow and resource files', async () => {
+  describe('createConstructFromFiles', () => {
+    it('should generate a construct with workflow and resource files', async () => {
       // Create test .github directory structure
       const githubDir = path.join(tempDir, '.github');
       const workflowsDir = path.join(githubDir, 'workflows');
@@ -77,33 +77,33 @@ updates:
 
       fs.writeFileSync(path.join(resourcesDir, 'dependabot.yml'), testResource);
 
-      // Generate plugin
-      const result = await createPluginFromFiles({
-        pluginName: 'test-plugin',
+      // Generate construct
+      const result = await createConstructFromFiles({
+        constructName: 'test-construct',
         githubFilesPath: githubDir,
-        description: 'Test plugin for function-based structure',
+        description: 'Test construct for function-based structure',
         context: mockContext,
       });
 
-      // Verify plugin content
+      // Verify construct content
       expect(result.filesFound).toHaveLength(2);
       expect(result.filesFound).toContain('workflows/ci.yml');
       expect(result.filesFound).toContain('resources/dependabot.yml');
       expect(result.generatedFiles).toHaveLength(2);
 
-      // Check main plugin content
-      expect(result.pluginContent).toContain('export class TestPluginPlugin');
-      expect(result.pluginContent).toContain('implements DotGitHubPlugin');
-      expect(result.pluginContent).toContain(
-        'async applyWorkflows(context: PluginContext)'
+      // Check main construct content
+      expect(result.constructContent).toContain('export class TestConstructConstruct');
+      expect(result.constructContent).toContain('implements GitHubConstruct');
+      expect(result.constructContent).toContain(
+        'async applyWorkflows(context: ConstructContext)'
       );
-      expect(result.pluginContent).toContain(
-        'async applyResources(context: PluginContext)'
+      expect(result.constructContent).toContain(
+        'async applyResources(context: ConstructContext)'
       );
-      expect(result.pluginContent).toContain(
+      expect(result.constructContent).toContain(
         "import { ciHandler } from './workflows/ci';"
       );
-      expect(result.pluginContent).toContain(
+      expect(result.constructContent).toContain(
         "import { dependabotHandler } from './resources/dependabot';"
       );
 
@@ -114,13 +114,13 @@ updates:
       expect(workflowFile).toBeDefined();
       expect(workflowFile?.name).toBe('ci');
       expect(workflowFile?.content).toContain(
-        'export async function ciHandler(context: PluginContext): Promise<void>'
+        'export async function ciHandler(context: ConstructContext): Promise<void>'
       );
       expect(workflowFile?.content).toContain(
         "import { run } from '@dotgithub/core'"
       );
       expect(workflowFile?.content).toContain(
-        "import type { PluginContext } from '@dotgithub/core'"
+        "import type { ConstructContext } from '@dotgithub/core'"
       );
 
       // Check resource file generation
@@ -130,18 +130,18 @@ updates:
       expect(resourceFile).toBeDefined();
       expect(resourceFile?.name).toBe('dependabot');
       expect(resourceFile?.content).toContain(
-        'export async function dependabotHandler(context: PluginContext): Promise<void>'
+        'export async function dependabotHandler(context: ConstructContext): Promise<void>'
       );
       expect(resourceFile?.content).toContain(
-        "import type { PluginContext } from '@dotgithub/core'"
+        "import type { ConstructContext } from '@dotgithub/core'"
       );
 
-      // Check that plugin calls functions with context
-      expect(result.pluginContent).toContain('ciHandler(context)');
-      expect(result.pluginContent).toContain('dependabotHandler(context)');
+      // Check that construct calls functions with context
+      expect(result.constructContent).toContain('ciHandler(context)');
+      expect(result.constructContent).toContain('dependabotHandler(context)');
     });
 
-    it('should handle plugins with only workflow files', async () => {
+    it('should handle constructs with only workflow files', async () => {
       // Create test .github directory with only workflows
       const githubDir = path.join(tempDir, '.github');
       const workflowsDir = path.join(githubDir, 'workflows');
@@ -158,10 +158,10 @@ jobs:
 
       fs.writeFileSync(path.join(workflowsDir, 'ci.yml'), testWorkflow);
 
-      const result = await createPluginFromFiles({
-        pluginName: 'ci-only',
+      const result = await createConstructFromFiles({
+        constructName: 'ci-only',
         githubFilesPath: githubDir,
-        description: 'CI-only plugin',
+        description: 'CI-only construct',
         context: mockContext,
       });
 
@@ -169,18 +169,18 @@ jobs:
       expect(result.filesFound).toContain('workflows/ci.yml');
       expect(result.generatedFiles).toHaveLength(1);
 
-      expect(result.pluginContent).toContain(
-        'async applyWorkflows(context: PluginContext)'
+      expect(result.constructContent).toContain(
+        'async applyWorkflows(context: ConstructContext)'
       );
-      expect(result.pluginContent).toContain(
-        'async applyResources(_context: PluginContext)'
+      expect(result.constructContent).toContain(
+        'async applyResources(_context: ConstructContext)'
       );
-      expect(result.pluginContent).toContain(
-        "// This plugin doesn't define any resources"
+      expect(result.constructContent).toContain(
+        "// This construct doesn't define any resources"
       );
     });
 
-    it('should handle plugins with only resource files', async () => {
+    it('should handle constructs with only resource files', async () => {
       // Create test .github directory with only resources
       const githubDir = path.join(tempDir, '.github');
       const resourcesDir = path.join(githubDir, 'resources');
@@ -193,10 +193,10 @@ updates:
 
       fs.writeFileSync(path.join(resourcesDir, 'dependabot.yml'), testResource);
 
-      const result = await createPluginFromFiles({
-        pluginName: 'resources-only',
+      const result = await createConstructFromFiles({
+        constructName: 'resources-only',
         githubFilesPath: githubDir,
-        description: 'Resources-only plugin',
+        description: 'Resources-only construct',
         context: mockContext,
       });
 
@@ -204,14 +204,14 @@ updates:
       expect(result.filesFound).toContain('resources/dependabot.yml');
       expect(result.generatedFiles).toHaveLength(1);
 
-      expect(result.pluginContent).toContain(
-        'async applyWorkflows(_context: PluginContext)'
+      expect(result.constructContent).toContain(
+        'async applyWorkflows(_context: ConstructContext)'
       );
-      expect(result.pluginContent).toContain(
-        "// This plugin doesn't define any workflows"
+      expect(result.constructContent).toContain(
+        "// This construct doesn't define any workflows"
       );
-      expect(result.pluginContent).toContain(
-        'async applyResources(context: PluginContext)'
+      expect(result.constructContent).toContain(
+        'async applyResources(context: ConstructContext)'
       );
     });
 
@@ -226,10 +226,10 @@ This is a test project.`;
 
       fs.writeFileSync(path.join(githubDir, 'README.md'), readmeContent);
 
-      const result = await createPluginFromFiles({
-        pluginName: 'readme-plugin',
+      const result = await createConstructFromFiles({
+        constructName: 'readme-plugin',
         githubFilesPath: githubDir,
-        description: 'Plugin with README',
+        description: 'Construct with README',
         context: mockContext,
       });
 
@@ -242,46 +242,46 @@ This is a test project.`;
       );
       expect(resourceFile).toBeDefined();
       expect(resourceFile?.content).toContain(
-        'export async function readmeHandler(context: PluginContext): Promise<void>'
+        'export async function readmeHandler(context: ConstructContext): Promise<void>'
       );
       expect(resourceFile?.content).toContain(
         "'# Project README\\nThis is a test project.'"
       );
     });
 
-    it('should validate plugin name', async () => {
+    it('should validate construct name', async () => {
       const githubDir = path.join(tempDir, '.github');
       fs.mkdirSync(githubDir, { recursive: true });
 
       await expect(async () => {
-        await createPluginFromFiles({
-          pluginName: '',
+        await createConstructFromFiles({
+          constructName: '',
           githubFilesPath: githubDir,
           context: mockContext,
         });
-      }).rejects.toThrow('Plugin name is required and cannot be empty');
+      }).rejects.toThrow('Construct name is required and cannot be empty');
 
       await expect(async () => {
-        await createPluginFromFiles({
-          pluginName: '   ',
+        await createConstructFromFiles({
+          constructName: '   ',
           githubFilesPath: githubDir,
           context: mockContext,
         });
-      }).rejects.toThrow('Plugin name is required and cannot be empty');
+      }).rejects.toThrow('Construct name is required and cannot be empty');
     });
 
     it('should validate GitHub files path', async () => {
       await expect(async () => {
-        await createPluginFromFiles({
-          pluginName: 'test',
+        await createConstructFromFiles({
+          constructName: 'test',
           githubFilesPath: '',
           context: mockContext,
         });
       }).rejects.toThrow('GitHub files path is required and cannot be empty');
 
       await expect(async () => {
-        await createPluginFromFiles({
-          pluginName: 'test',
+        await createConstructFromFiles({
+          constructName: 'test',
           githubFilesPath: '/nonexistent/path',
           context: mockContext,
         });
@@ -293,8 +293,8 @@ This is a test project.`;
       fs.mkdirSync(githubDir, { recursive: true });
 
       await expect(async () => {
-        await createPluginFromFiles({
-          pluginName: 'test',
+        await createConstructFromFiles({
+          constructName: 'test',
           githubFilesPath: githubDir,
           context: mockContext,
         });
@@ -318,14 +318,14 @@ jobs:
 
       fs.writeFileSync(path.join(workflowsDir, 'invalid.yml'), invalidYaml);
 
-      const result = await createPluginFromFiles({
-        pluginName: 'invalid-yaml',
+      const result = await createConstructFromFiles({
+        constructName: 'invalid-yaml',
         githubFilesPath: githubDir,
-        description: 'Plugin with invalid YAML',
+        description: 'Construct with invalid YAML',
         context: mockContext,
       });
 
-      // Should still generate the plugin, but with string content
+      // Should still generate the construct, but with string content
       expect(result.filesFound).toHaveLength(1);
       expect(result.generatedFiles).toHaveLength(1);
 
@@ -334,7 +334,7 @@ jobs:
       );
       expect(workflowFile).toBeDefined();
       expect(workflowFile?.content).toContain(
-        'export async function invalidHandler(context: PluginContext): Promise<void>'
+        'export async function invalidHandler(context: ConstructContext): Promise<void>'
       );
     });
 
@@ -369,14 +369,14 @@ jobs:
       console.warn = warnSpy;
 
       try {
-        const result = await createPluginFromFiles({
-          pluginName: 'test-plugin',
+        const result = await createConstructFromFiles({
+          constructName: 'test-plugin',
           githubFilesPath: githubDir,
           context: mockContext,
           autoAddActions: true,
         });
 
-        // Should generate the plugin successfully
+        // Should generate the construct successfully
         expect(result.filesFound).toHaveLength(1);
         expect(result.generatedFiles).toHaveLength(1);
 
@@ -398,8 +398,8 @@ jobs:
     });
   });
 
-  describe('generatePluginFromGitHubFiles', () => {
-    it('should generate plugin from local path', async () => {
+  describe('generateConstructFromGitHubFiles', () => {
+    it('should generate construct from local path', async () => {
       // Create test .github directory structure
       const githubDir = path.join(tempDir, '.github');
       const workflowsDir = path.join(githubDir, 'workflows');
@@ -418,23 +418,23 @@ jobs:
 
       fs.writeFileSync(path.join(workflowsDir, 'ci.yml'), testWorkflow);
 
-      const result = await generatePluginFromGitHubFiles({
-        pluginName: 'local-test',
+      const result = await generateConstructFromGitHubFiles({
+        constructName: 'local-test',
         source: tempDir,
-        description: 'Local test plugin',
+        description: 'Local test construct',
         context: mockContext,
       });
 
-      expect(result.pluginName).toBe('local-test');
+      expect(result.constructName).toBe('local-test');
       expect(result.filesFound).toHaveLength(1);
       expect(result.filesFound).toContain('workflows/ci.yml');
       expect(result.generatedFiles).toHaveLength(1);
 
       // Check that files were actually written
-      expect(fs.existsSync(result.pluginPath)).toBe(true);
+      expect(fs.existsSync(result.constructPath)).toBe(true);
       expect(
         fs.existsSync(
-          path.join(path.dirname(result.pluginPath), 'workflows', 'ci.ts')
+          path.join(path.dirname(result.constructPath), 'workflows', 'ci.ts')
         )
       ).toBe(true);
     });
@@ -445,33 +445,33 @@ jobs:
       fs.mkdirSync(githubDir, { recursive: true });
       fs.writeFileSync(path.join(githubDir, 'test.yml'), 'test: content');
 
-      // Generate plugin first time
-      const result1 = await generatePluginFromGitHubFiles({
-        pluginName: 'overwrite-test',
+      // Generate construct first time
+      const result1 = await generateConstructFromGitHubFiles({
+        constructName: 'overwrite-test',
         source: tempDir,
         context: mockContext,
       });
 
-      expect(fs.existsSync(result1.pluginPath)).toBe(true);
+      expect(fs.existsSync(result1.constructPath)).toBe(true);
 
       // Try to generate again without overwrite (should fail)
       await expect(
-        generatePluginFromGitHubFiles({
-          pluginName: 'overwrite-test',
+        generateConstructFromGitHubFiles({
+          constructName: 'overwrite-test',
           source: tempDir,
           context: mockContext,
         })
-      ).rejects.toThrow('Plugin file already exists');
+      ).rejects.toThrow('Construct file already exists');
 
       // Generate with overwrite (should succeed)
-      const result2 = await generatePluginFromGitHubFiles({
-        pluginName: 'overwrite-test',
+      const result2 = await generateConstructFromGitHubFiles({
+        constructName: 'overwrite-test',
         source: tempDir,
         overwrite: true,
         context: mockContext,
       });
 
-      expect(fs.existsSync(result2.pluginPath)).toBe(true);
+      expect(fs.existsSync(result2.constructPath)).toBe(true);
     });
   });
 
@@ -497,8 +497,8 @@ jobs:
         testWorkflow
       );
 
-      const result = await createPluginFromFiles({
-        pluginName: 'function-test',
+      const result = await createConstructFromFiles({
+        constructName: 'function-test',
         githubFilesPath: githubDir,
         context: mockContext,
       });
@@ -521,7 +521,7 @@ jobs:
       // Check imports
       expect(content).toContain("import { run } from '@dotgithub/core'");
       expect(content).toContain(
-        "import type { PluginContext } from '@dotgithub/core'"
+        "import type { ConstructContext } from '@dotgithub/core'"
       );
     });
 
@@ -540,8 +540,8 @@ updates:
         testResource
       );
 
-      const result = await createPluginFromFiles({
-        pluginName: 'resource-test',
+      const result = await createConstructFromFiles({
+        constructName: 'resource-test',
         githubFilesPath: githubDir,
         context: mockContext,
       });
@@ -563,11 +563,11 @@ updates:
 
       // Check imports
       expect(content).toContain(
-        "import type { PluginContext } from '@dotgithub/core'"
+        "import type { ConstructContext } from '@dotgithub/core'"
       );
     });
 
-    it('should generate plugin index that calls functions with context', async () => {
+    it('should generate construct index that calls functions with context', async () => {
       const githubDir = path.join(tempDir, '.github');
       const workflowsDir = path.join(githubDir, 'workflows');
       const resourcesDir = path.join(githubDir, 'resources');
@@ -581,13 +581,13 @@ updates:
       );
       fs.writeFileSync(path.join(resourcesDir, 'dependabot.yml'), 'version: 2');
 
-      const result = await createPluginFromFiles({
-        pluginName: 'context-test',
+      const result = await createConstructFromFiles({
+        constructName: 'context-test',
         githubFilesPath: githubDir,
         context: mockContext,
       });
 
-      const content = result.pluginContent;
+      const content = result.constructContent;
 
       // Check imports
       expect(content).toContain("import { ciHandler } from './workflows/ci';");
@@ -610,7 +610,7 @@ updates:
   });
 
   describe('Snapshot Tests', () => {
-    it('should generate consistent plugin structure with workflows and resources', async () => {
+    it('should generate consistent construct structure with workflows and resources', async () => {
       // Create test .github directory structure
       const githubDir = path.join(tempDir, '.github');
       const workflowsDir = path.join(githubDir, 'workflows');
@@ -688,15 +688,15 @@ updates:
 
       fs.writeFileSync(path.join(githubDir, 'CODEOWNERS'), codeownersContent);
 
-      const result = await createPluginFromFiles({
-        pluginName: 'snapshot-test-plugin',
+      const result = await createConstructFromFiles({
+        constructName: 'snapshot-test-plugin',
         githubFilesPath: githubDir,
-        description: 'A comprehensive test plugin for snapshot testing',
+        description: 'A comprehensive test construct for snapshot testing',
         context: mockContext,
       });
 
-      // Test main plugin content snapshot
-      expect(result.pluginContent).toMatchSnapshot('main-plugin-content');
+      // Test main construct content snapshot
+      expect(result.constructContent).toMatchSnapshot('main-construct-content');
 
       // Test individual file contents
       const workflowFile = result.generatedFiles.find(
@@ -719,7 +719,7 @@ updates:
       );
     });
 
-    it('should generate consistent plugin structure with only workflows', async () => {
+    it('should generate consistent construct structure with only workflows', async () => {
       const githubDir = path.join(tempDir, '.github');
       const workflowsDir = path.join(githubDir, 'workflows');
 
@@ -756,22 +756,22 @@ jobs:
 
       fs.writeFileSync(path.join(workflowsDir, 'release.yml'), releaseWorkflow);
 
-      const result = await createPluginFromFiles({
-        pluginName: 'workflow-only-plugin',
+      const result = await createConstructFromFiles({
+        constructName: 'workflow-only-plugin',
         githubFilesPath: githubDir,
-        description: 'Plugin with only workflow files',
+        description: 'Construct with only workflow files',
         context: mockContext,
       });
 
-      expect(result.pluginContent).toMatchSnapshot(
-        'workflow-only-plugin-content'
+      expect(result.constructContent).toMatchSnapshot(
+        'workflow-only-construct-content'
       );
       expect(result.generatedFiles[0]!.content).toMatchSnapshot(
         'release-workflow-content'
       );
     });
 
-    it('should generate consistent plugin structure with only resources', async () => {
+    it('should generate consistent construct structure with only resources', async () => {
       const githubDir = path.join(tempDir, '.github');
 
       fs.mkdirSync(githubDir, { recursive: true });
@@ -813,22 +813,22 @@ Add any other context about the problem here.`;
         issueTemplate
       );
 
-      const result = await createPluginFromFiles({
-        pluginName: 'resource-only-plugin',
+      const result = await createConstructFromFiles({
+        constructName: 'resource-only-plugin',
         githubFilesPath: githubDir,
-        description: 'Plugin with only resource files',
+        description: 'Construct with only resource files',
         context: mockContext,
       });
 
-      expect(result.pluginContent).toMatchSnapshot(
-        'resource-only-plugin-content'
+      expect(result.constructContent).toMatchSnapshot(
+        'resource-only-construct-content'
       );
       expect(result.generatedFiles[0]!.content).toMatchSnapshot(
         'issue-template-content'
       );
     });
 
-    it('should generate consistent plugin with complex YAML resources', async () => {
+    it('should generate consistent construct with complex YAML resources', async () => {
       const githubDir = path.join(tempDir, '.github');
 
       fs.mkdirSync(githubDir, { recursive: true });
@@ -848,20 +848,20 @@ custom: # Replace with up to 4 custom sponsorship URLs e.g., ['link1', 'link2', 
 
       fs.writeFileSync(path.join(githubDir, 'FUNDING.yml'), fundingYaml);
 
-      const result = await createPluginFromFiles({
-        pluginName: 'funding-plugin',
+      const result = await createConstructFromFiles({
+        constructName: 'funding-plugin',
         githubFilesPath: githubDir,
-        description: 'Plugin with funding configuration',
+        description: 'Construct with funding configuration',
         context: mockContext,
       });
 
-      expect(result.pluginContent).toMatchSnapshot('funding-plugin-content');
+      expect(result.constructContent).toMatchSnapshot('funding-construct-content');
       expect(result.generatedFiles[0]!.content).toMatchSnapshot(
         'funding-resource-content'
       );
     });
 
-    it('should generate consistent plugin with special characters in names', async () => {
+    it('should generate consistent construct with special characters in names', async () => {
       const githubDir = path.join(tempDir, '.github');
       const workflowsDir = path.join(githubDir, 'workflows');
 
@@ -882,15 +882,15 @@ jobs:
         specialWorkflow
       );
 
-      const result = await createPluginFromFiles({
-        pluginName: 'special-chars-plugin',
+      const result = await createConstructFromFiles({
+        constructName: 'special-chars-plugin',
         githubFilesPath: githubDir,
-        description: 'Plugin with special characters in workflow names',
+        description: 'Construct with special characters in workflow names',
         context: mockContext,
       });
 
-      expect(result.pluginContent).toMatchSnapshot(
-        'special-chars-plugin-content'
+      expect(result.constructContent).toMatchSnapshot(
+        'special-chars-construct-content'
       );
       expect(result.generatedFiles[0]!.content).toMatchSnapshot(
         'special-workflow-content'
@@ -899,7 +899,7 @@ jobs:
   });
 
   describe('Index File Structure Validation (Snapshot Tests)', () => {
-    it('should generate correct index file structure for complete plugin', async () => {
+    it('should generate correct index file structure for complete construct', async () => {
       const githubDir = path.join(tempDir, '.github');
       const workflowsDir = path.join(githubDir, 'workflows');
       const resourcesDir = path.join(githubDir, 'resources');
@@ -942,20 +942,20 @@ updates:
       );
       fs.writeFileSync(path.join(githubDir, 'CODEOWNERS'), codeownersContent);
 
-      const result = await createPluginFromFiles({
-        pluginName: 'complete-plugin-index-test',
+      const result = await createConstructFromFiles({
+        constructName: 'complete-plugin-index-test',
         githubFilesPath: githubDir,
-        description: 'Complete plugin for index file snapshot testing',
+        description: 'Complete construct for index file snapshot testing',
         context: mockContext,
       });
 
       // Test the complete index file structure
-      expect(result.pluginContent).toMatchSnapshot(
-        'complete-plugin-index-file'
+      expect(result.constructContent).toMatchSnapshot(
+        'complete-construct-index-file'
       );
     });
 
-    it('should generate correct index file for workflow-only plugin', async () => {
+    it('should generate correct index file for workflow-only construct', async () => {
       const githubDir = path.join(tempDir, '.github');
       const workflowsDir = path.join(githubDir, 'workflows');
 
@@ -982,18 +982,18 @@ jobs:
       fs.writeFileSync(path.join(workflowsDir, 'ci.yml'), ciWorkflow);
       fs.writeFileSync(path.join(workflowsDir, 'release.yml'), releaseWorkflow);
 
-      const result = await createPluginFromFiles({
-        pluginName: 'workflow-only-index-test',
+      const result = await createConstructFromFiles({
+        constructName: 'workflow-only-index-test',
         githubFilesPath: githubDir,
-        description: 'Workflow-only plugin for index file snapshot testing',
+        description: 'Workflow-only construct for index file snapshot testing',
         context: mockContext,
       });
 
       // Test the workflow-only index file structure
-      expect(result.pluginContent).toMatchSnapshot('workflow-only-index-file');
+      expect(result.constructContent).toMatchSnapshot('workflow-only-index-file');
     });
 
-    it('should generate correct index file for resource-only plugin', async () => {
+    it('should generate correct index file for resource-only construct', async () => {
       const githubDir = path.join(tempDir, '.github');
 
       fs.mkdirSync(githubDir, { recursive: true });
@@ -1011,15 +1011,15 @@ updates:
         dependabotConfig
       );
 
-      const result = await createPluginFromFiles({
-        pluginName: 'resource-only-index-test',
+      const result = await createConstructFromFiles({
+        constructName: 'resource-only-index-test',
         githubFilesPath: githubDir,
-        description: 'Resource-only plugin for index file snapshot testing',
+        description: 'Resource-only construct for index file snapshot testing',
         context: mockContext,
       });
 
       // Test the resource-only index file structure
-      expect(result.pluginContent).toMatchSnapshot('resource-only-index-file');
+      expect(result.constructContent).toMatchSnapshot('resource-only-index-file');
     });
 
     it('should generate correct index file with special characters and complex naming', async () => {
@@ -1065,16 +1065,16 @@ jobs:
         specialResource
       );
 
-      const result = await createPluginFromFiles({
-        pluginName: 'special-chars-index-test',
+      const result = await createConstructFromFiles({
+        constructName: 'special-chars-index-test',
         githubFilesPath: githubDir,
         description:
-          'Plugin with special characters for index file snapshot testing',
+          'Construct with special characters for index file snapshot testing',
         context: mockContext,
       });
 
       // Test the index file with special characters
-      expect(result.pluginContent).toMatchSnapshot('special-chars-index-file');
+      expect(result.constructContent).toMatchSnapshot('special-chars-index-file');
     });
 
     it('should generate correct index file with mixed file types', async () => {
@@ -1124,16 +1124,16 @@ open_collective: # Replace with a single Open Collective name`;
       fs.writeFileSync(path.join(githubDir, 'FUNDING.yml'), fundingYaml);
       fs.writeFileSync(path.join(githubDir, 'CODEOWNERS'), codeownersContent);
 
-      const result = await createPluginFromFiles({
-        pluginName: 'mixed-files-index-test',
+      const result = await createConstructFromFiles({
+        constructName: 'mixed-files-index-test',
         githubFilesPath: githubDir,
         description:
-          'Plugin with mixed file types for index file snapshot testing',
+          'Construct with mixed file types for index file snapshot testing',
         context: mockContext,
       });
 
       // Test the index file with mixed file types
-      expect(result.pluginContent).toMatchSnapshot('mixed-files-index-file');
+      expect(result.constructContent).toMatchSnapshot('mixed-files-index-file');
     });
 
     it('should generate correct relative import paths for workflow files', async () => {
@@ -1173,8 +1173,8 @@ open_collective: # Replace with a single Open Collective name`;
         resolvePath: (p: string) => p,
       } as unknown as DotGithubContext;
 
-      const result = await createPluginFromFiles({
-        pluginName: 'test-plugin',
+      const result = await createConstructFromFiles({
+        constructName: 'test-plugin',
         githubFilesPath: githubDir,
         context: mockContext,
         outputDir: 'src',
@@ -1197,7 +1197,7 @@ open_collective: # Replace with a single Open Collective name`;
         "import { setupNodeJsEnvironment } from '../../../actions/actions/setup-node.js';"
       );
 
-      // Verify that the paths go up three levels to reach src/ from plugins/plugin-name/workflows/
+      // Verify that the paths go up three levels to reach src/ from constructs/construct-name/workflows/
       expect(workflowContent).toMatch(
         /import.*from '\.\.\/\.\.\/\.\.\/actions\//
       );
@@ -1271,15 +1271,15 @@ jobs:
         resolvePath: (p: string) => p,
       } as unknown as DotGithubContext;
 
-      const result = await createPluginFromFiles({
-        pluginName: 'test-plugin',
+      const result = await createConstructFromFiles({
+        constructName: 'test-plugin',
         githubFilesPath: testGithubDir,
         context: mockContext,
         outputDir: 'src',
       });
 
-      // Check the main plugin file for imports - createStep should be imported
-      expect(result.pluginContent).toContain(
+      // Check the main construct file for imports - createStep should be imported
+      expect(result.constructContent).toContain(
         "import { createStep, run } from '@dotgithub/core';"
       );
 

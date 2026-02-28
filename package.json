@@ -49,5 +49,8 @@
   "workspaces": [
     "packages/*",
     "examples/*"
-  ]
+  ],
+  "volta": {
+    "node": "22.21.0"
+  }
 }

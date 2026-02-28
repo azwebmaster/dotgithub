@@ -5,7 +5,7 @@ Complete reference for the DotGitHub TypeScript API.
 ## Table of Contents
 
 - [Core Types](#core-types)
-- [Plugin Interface](#plugin-interface)
+- [Construct Interface](#construct-interface)
 - [Workflow Constructs](#workflow-constructs)
 - [Action Constructs](#action-constructs)
 - [Utility Functions](#utility-functions)
@@ -13,43 +13,43 @@ Complete reference for the DotGitHub TypeScript API.
 
 ## Core Types
 
-### DotGitHubPlugin
+### GitHubConstruct
 
-The main interface that all plugins must implement.
+The base class that all constructs extend.
 
 ```typescript
-interface DotGitHubPlugin {
+abstract class GitHubConstruct {
   readonly name: string;
-  readonly version: string;
-  readonly description: string;
+  readonly version?: string;
+  readonly description?: string;
 
-  validate(stack: GitHubStack): void;
-  describe(): PluginDescription;
+  validate?(stack: GitHubStack): void | Promise<void>;
+  describe?(): ConstructDescription | Promise<ConstructDescription>;
   synthesize(stack: GitHubStack): Promise<void>;
 }
 ```
 
 ### GitHubStack
 
-Represents a stack configuration and provides context for plugin execution.
+Represents a stack configuration and provides context for construct execution.
 
 ```typescript
 interface GitHubStack {
   readonly name: string;
   readonly config: Record<string, any>;
-  readonly plugins: string[];
+  readonly constructs: string[];
 }
 ```
 
-### PluginDescription
+### ConstructDescription
 
-Metadata about a plugin.
+Metadata about a construct.
 
 ```typescript
-interface PluginDescription {
+interface ConstructDescription {
   name: string;
-  version: string;
-  description: string;
+  version?: string;
+  description?: string;
   author?: string;
   repository?: string;
   license?: string;
@@ -61,7 +61,7 @@ interface PluginDescription {
 }
 ```
 
-## Plugin Interface
+## Construct Interface
 
 ### validate(stack: GitHubStack): void
 
@@ -78,12 +78,12 @@ validate(stack: GitHubStack): void {
 }
 ```
 
-### describe(): PluginDescription
+### describe(): ConstructDescription
 
-Returns metadata about the plugin.
+Returns metadata about the construct.
 
 ```typescript
-describe(): PluginDescription {
+describe(): ConstructDescription {
   return {
     name: this.name,
     version: this.version,
@@ -327,7 +327,7 @@ interface DotGithubConfig {
   rootDir: string;
   outputDir: string;
   actions: DotGithubAction[];
-  plugins: PluginConfig[];
+  constructs: ConstructConfig[];
   stacks: StackConfig[];
   options?: DotGithubOptions;
   pins?: PinsConfig;
@@ -350,12 +350,12 @@ interface DotGithubAction {
 }
 ```
 
-### PluginConfig
+### ConstructConfig
 
-Plugin configuration.
+Construct configuration.
 
 ```typescript
-interface PluginConfig {
+interface ConstructConfig {
   name: string;
   package: string;
   config: Record<string, any>;
@@ -370,7 +370,7 @@ Stack configuration.
 ```typescript
 interface StackConfig {
   name: string;
-  plugins: string[];
+  constructs: string[];
   config: Record<string, any>;
 }
 ```
@@ -381,7 +381,7 @@ Action pinning configuration.
 
 ```typescript
 interface PinsConfig {
-  plugins?: Record<string, Record<string, string>>;
+  constructs?: Record<string, Record<string, string>>;
   stacks?: Record<string, Record<string, string>>;
 }
 ```
@@ -493,10 +493,10 @@ class SynthesisError extends Error {
 
 ## Type Guards
 
-### isDotGitHubPlugin
+### isGitHubConstruct
 
 ```typescript
-function isDotGitHubPlugin(obj: any): obj is DotGitHubPlugin;
+function isGitHubConstruct(obj: any): obj is GitHubConstruct;
 ```
 
 ### isWorkflowConstruct
@@ -538,20 +538,20 @@ const SUPPORTED_RUNNERS = [
 
 ## Examples
 
-### Basic Plugin
+### Basic Construct
 
 ```typescript
 import {
-  DotGitHubPlugin,
+  GitHubConstruct,
   GitHubStack,
   WorkflowConstruct,
   JobConstruct,
 } from '@dotgithub/core';
 
-export class BasicPlugin implements DotGitHubPlugin {
-  readonly name = 'basic-plugin';
+export class BasicConstruct extends GitHubConstruct {
+  readonly name = 'basic-construct';
   readonly version = '1.0.0';
-  readonly description = 'A basic plugin example';
+  readonly description = 'A basic construct example';
 
   validate(stack: GitHubStack): void {
     // No validation needed
@@ -588,25 +588,25 @@ export class BasicPlugin implements DotGitHubPlugin {
   }
 }
 
-export default new BasicPlugin();
+export default new BasicConstruct();
 ```
 
-### Advanced Plugin with Configuration
+### Advanced Construct with Configuration
 
 ```typescript
 import { z } from 'zod';
 import {
-  DotGitHubPlugin,
+  GitHubConstruct,
   GitHubStack,
   WorkflowConstruct,
   JobConstruct,
   Actions,
 } from '@dotgithub/core';
 
-export class AdvancedPlugin implements DotGitHubPlugin {
-  readonly name = 'advanced-plugin';
+export class AdvancedConstruct extends GitHubConstruct {
+  readonly name = 'advanced-construct';
   readonly version = '1.0.0';
-  readonly description = 'An advanced plugin with configuration';
+  readonly description = 'An advanced construct with configuration';
 
   private readonly configSchema = z.object({
     environment: z.enum(['development', 'staging', 'production']),
@@ -684,5 +684,5 @@ export class AdvancedPlugin implements DotGitHubPlugin {
   }
 }
 
-export default new AdvancedPlugin();
+export default new AdvancedConstruct();
 ```

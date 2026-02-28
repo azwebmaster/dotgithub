@@ -37,7 +37,7 @@ describe('StackSynthesizer', () => {
           version: '1.0.0',
           outputDir: 'src',
           actions: [],
-          plugins: [
+          constructs: [
             {
               name: 'ci',
               package: 'built-in',
@@ -50,7 +50,7 @@ describe('StackSynthesizer', () => {
           stacks: [
             {
               name: 'main',
-              plugins: ['ci'],
+              constructs: ['ci'],
             },
           ],
         };
@@ -84,7 +84,7 @@ describe('StackSynthesizer', () => {
       if (filePath === configPath) {
         const config: DotGithubConfig = {
           ...createDefaultConfig(),
-          plugins: [],
+          constructs: [],
           stacks: [],
         };
         return JSON.stringify(config, null, 2);
@@ -103,15 +103,15 @@ describe('StackSynthesizer', () => {
     expect(results.errors).toHaveLength(0);
   });
 
-  it('should synthesize stack with mocked built-in plugins', async () => {
+  it('should synthesize stack with mocked built-in constructs', async () => {
     const config = createDefaultConfig();
     config.stacks = [
       {
         name: 'test-stack',
-        plugins: ['ci'],
+        constructs: ['ci'],
       },
     ];
-    config.plugins = [
+    config.constructs = [
       {
         name: 'ci',
         package: 'built-in',
@@ -121,19 +121,19 @@ describe('StackSynthesizer', () => {
     const context = new DotGithubContext({ config, configPath });
     const synthesizer = new StackSynthesizer({ context, projectRoot: tmpDir });
 
-    // Mock the plugin manager to use built-in plugins
-    const pluginManager = synthesizer.getPluginManager();
-    const originalLoadPlugins = pluginManager.loadPlugins.bind(pluginManager);
+    // Mock the construct manager to use built-in constructs
+    const constructManager = synthesizer.getConstructManager();
+    const originalLoadConstructs = constructManager.loadConstructs.bind(
+      constructManager
+    );
 
-    vi.spyOn(pluginManager, 'loadPlugins').mockImplementation(
+    vi.spyOn(constructManager, 'loadConstructs').mockImplementation(
       async (configs) => {
-        // Mock loading CI plugin
         return configs.map((config) => ({
-          plugin: {
+          construct: {
             name: config.name,
-            apply: (context: any) => {
-              // Simple mock implementation that adds a workflow
-              context.stack.addWorkflow('ci', {
+            synthesize: async (stack: any) => {
+              stack.addWorkflow('ci', {
                 name: 'CI',
                 on: { push: { branches: ['main'] } },
                 jobs: {
@@ -154,9 +154,8 @@ describe('StackSynthesizer', () => {
       }
     );
 
-    vi.spyOn(pluginManager, 'executePluginsForStack').mockImplementation(
-      async (stack, stackConfig, pluginConfigs) => {
-        // Apply the mock plugin
+    vi.spyOn(constructManager, 'executeConstructsForStack').mockImplementation(
+      async (stack, stackConfig, constructConfigs) => {
         stack.addWorkflow('ci', {
           name: 'CI',
           on: { push: { branches: ['main'] } },
@@ -170,7 +169,7 @@ describe('StackSynthesizer', () => {
 
         return [
           {
-            plugin: { name: 'ci' } as any,
+            construct: { name: 'ci' } as any,
             success: true,
             duration: 100,
           },
@@ -186,9 +185,9 @@ describe('StackSynthesizer', () => {
 
     const result = results.results[0];
     expect(result.stackConfig.name).toBe('test-stack');
-    expect(result.stackConfig.plugins).toEqual(['ci']);
-    expect(result.pluginResults).toHaveLength(1);
-    expect(result.pluginResults[0].success).toBe(true);
+    expect(result.stackConfig.constructs).toEqual(['ci']);
+    expect(result.constructResults).toHaveLength(1);
+    expect(result.constructResults[0].success).toBe(true);
 
     // Check generated files
     expect(Object.keys(result.files)).toContain('workflows/ci.yml');
@@ -197,15 +196,15 @@ describe('StackSynthesizer', () => {
     expect(result.files['workflows/ci.yml']).toContain('- ubuntu-latest');
   });
 
-  it('should handle plugin loading errors', async () => {
+  it('should handle construct loading errors', async () => {
     const config = createDefaultConfig();
     config.stacks = [
       {
         name: 'test-stack',
-        plugins: ['ci'],
+        constructs: ['ci'],
       },
     ];
-    config.plugins = [
+    config.constructs = [
       {
         name: 'ci',
         package: 'built-in',
@@ -215,10 +214,10 @@ describe('StackSynthesizer', () => {
     const context = new DotGithubContext({ config, configPath });
     const synthesizer = new StackSynthesizer({ context, projectRoot: tmpDir });
 
-    // Mock plugin manager to throw error during loading
-    const pluginManager = synthesizer.getPluginManager();
-    vi.spyOn(pluginManager, 'loadPlugins').mockRejectedValue(
-      new Error('Failed to load plugin')
+    // Mock construct manager to throw error during loading
+    const constructManager = synthesizer.getConstructManager();
+    vi.spyOn(constructManager, 'loadConstructs').mockRejectedValue(
+      new Error('Failed to load construct')
     );
 
     const results = await synthesizer.synthesizeAll();
@@ -226,18 +225,18 @@ describe('StackSynthesizer', () => {
     expect(results.success).toBe(false);
     expect(results.results).toHaveLength(0);
     expect(results.errors).toHaveLength(1);
-    expect(results.errors[0].message).toBe('Failed to load plugin');
+    expect(results.errors[0].message).toBe('Failed to load construct');
   });
 
-  it('should handle plugin execution errors', async () => {
+  it('should handle construct execution errors', async () => {
     const config = createDefaultConfig();
     config.stacks = [
       {
         name: 'test-stack',
-        plugins: ['ci'],
+        constructs: ['ci'],
       },
     ];
-    config.plugins = [
+    config.constructs = [
       {
         name: 'ci',
         package: 'built-in',
@@ -247,18 +246,18 @@ describe('StackSynthesizer', () => {
     const context = new DotGithubContext({ config, configPath });
     const synthesizer = new StackSynthesizer({ context, projectRoot: tmpDir });
 
-    // Mock successful plugin loading but failed execution
-    const pluginManager = synthesizer.getPluginManager();
-    vi.spyOn(pluginManager, 'loadPlugins').mockResolvedValue([
+    // Mock successful construct loading but failed execution
+    const constructManager = synthesizer.getConstructManager();
+    vi.spyOn(constructManager, 'loadConstructs').mockResolvedValue([
       {
-        plugin: { name: 'ci' } as any,
+        construct: { name: 'ci' } as any,
         config: { name: 'ci', package: 'built-in' },
         resolved: true,
       },
     ]);
 
-    vi.spyOn(pluginManager, 'executePluginsForStack').mockRejectedValue(
-      new Error('Plugin execution failed')
+    vi.spyOn(constructManager, 'executeConstructsForStack').mockRejectedValue(
+      new Error('Construct execution failed')
     );
 
     const results = await synthesizer.synthesizeAll();
@@ -266,7 +265,7 @@ describe('StackSynthesizer', () => {
     expect(results.success).toBe(false);
     expect(results.results).toHaveLength(0);
     expect(results.errors).toHaveLength(1);
-    expect(results.errors[0].message).toBe('Plugin execution failed');
+    expect(results.errors[0].message).toBe('Construct execution failed');
   });
 
   it('should write synthesized files', async () => {
@@ -274,10 +273,10 @@ describe('StackSynthesizer', () => {
     config.stacks = [
       {
         name: 'test-stack',
-        plugins: ['ci'],
+        constructs: ['ci'],
       },
     ];
-    config.plugins = [
+    config.constructs = [
       {
         name: 'ci',
         package: 'built-in',
@@ -288,16 +287,16 @@ describe('StackSynthesizer', () => {
     const synthesizer = new StackSynthesizer({ context, projectRoot: tmpDir });
 
     // Mock successful synthesis
-    const pluginManager = synthesizer.getPluginManager();
-    vi.spyOn(pluginManager, 'loadPlugins').mockResolvedValue([
+    const constructManager = synthesizer.getConstructManager();
+    vi.spyOn(constructManager, 'loadConstructs').mockResolvedValue([
       {
-        plugin: { name: 'ci' } as any,
+        construct: { name: 'ci' } as any,
         config: { name: 'ci', package: 'built-in' },
         resolved: true,
       },
     ]);
 
-    vi.spyOn(pluginManager, 'executePluginsForStack').mockImplementation(
+    vi.spyOn(constructManager, 'executeConstructsForStack').mockImplementation(
       async (stack) => {
         stack.addWorkflow('ci', {
           name: 'CI',
@@ -312,7 +311,7 @@ describe('StackSynthesizer', () => {
 
         return [
           {
-            plugin: { name: 'ci' } as any,
+            construct: { name: 'ci' } as any,
             success: true,
             duration: 100,
           },

@@ -122,7 +122,7 @@ dotgithub/
 │   └── core/                   # Core package
 │       ├── src/
 │       │   ├── constructs/     # Workflow constructs
-│       │   ├── plugins/        # Plugin system
+│       │   ├── plugins/        # Construct system
 │       │   ├── types/          # Type definitions
 │       │   └── index.ts        # Core entry point
 │       └── package.json
@@ -210,15 +210,15 @@ export function createMyCommand(
 4. Write comprehensive tests
 5. Update documentation
 
-### Plugin Development
+### Construct Development
 
-When adding plugin-related features:
+When adding construct-related features:
 
-1. Follow the existing plugin interface
+1. Follow the existing construct interface
 2. Add proper validation and error handling
 3. Include configuration schema validation
 4. Write tests for different configurations
-5. Update plugin documentation
+5. Update construct documentation
 
 ## Testing
 
@@ -412,7 +412,7 @@ bun run cli --debug your-command
 - [Getting Started](docs/getting-started.md)
 - [User Guide](docs/user-guide.md)
 - [API Reference](docs/api-reference.md)
-- [Plugin Development](docs/plugin-development.md)
+- [Construct Development](docs/construct-development.md)
 
 ### Community
 

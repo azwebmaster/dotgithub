@@ -5,6 +5,41 @@ import {
   logger,
 } from '@dotgithub/core';
 import * as path from 'path';
+import { spawn } from 'node:child_process';
+
+/** Directory containing the package.json with the build script (e.g. .github/src). */
+function resolveBuildDir(configPath: string): string {
+  return path.join(path.dirname(configPath), 'src');
+}
+
+function getNpmCommand(): string {
+  return process.platform === 'win32' ? 'npm.cmd' : 'npm';
+}
+
+async function runNpmBuild(configPath: string): Promise<void> {
+  const buildDir = resolveBuildDir(configPath);
+  logger.info('Running npm run build in .github/src');
+
+  await new Promise<void>((resolve, reject) => {
+    const child = spawn(getNpmCommand(), ['run', 'build'], {
+      cwd: buildDir,
+      stdio: 'inherit',
+    });
+
+    child.on('error', (error) => {
+      reject(error);
+    });
+
+    child.on('close', (code) => {
+      if (code === 0) {
+        resolve();
+        return;
+      }
+
+      reject(new Error(`npm run build failed with exit code ${code}`));
+    });
+  });
+}
 
 export function createSynthCommand(
   createContext: (options?: any) => DotGithubContext
@@ -13,9 +48,10 @@ export function createSynthCommand(
 
   synthCommand
     .description(
-      'Synthesize GitHub workflows from configured stacks and plugins'
+      'Synthesize GitHub workflows from configured stacks and constructs'
     )
     .option('--dry-run', 'preview files without writing them to disk', false)
+    .option('--no-build', 'skip running build in .github/src before synthesis')
     .option(
       '--output <dir>',
       'output directory (default: config outputDir relative to config file)'
@@ -25,6 +61,10 @@ export function createSynthCommand(
     .action(async (options) => {
       try {
         const context = createContext(options);
+
+        if (options.build !== false) {
+          await runNpmBuild(context.configPath);
+        }
 
         // Determine output path: use --output relative to cwd, or config.outputDir relative to config file if not specified
         const outputPath = options.output
@@ -65,18 +105,20 @@ export function createSynthCommand(
           for (const result of results.results) {
             logger.info(`🏗️  Stack: ${result.stackConfig.name}`);
             logger.debug(
-              `   Plugins: ${result.stackConfig.plugins.join(', ')}`
+              `   Constructs: ${result.stackConfig.constructs.join(', ')}`
             );
 
             if (options.verbose) {
-              logger.info('   Plugin execution results:');
-              for (const pluginResult of result.pluginResults) {
-                const status = pluginResult.success ? '✅' : '❌';
+              logger.info('   Construct execution results:');
+              for (const constructResult of result.constructResults) {
+                const status = constructResult.success ? '✅' : '❌';
                 logger.info(
-                  `     ${status} ${pluginResult.plugin.name} (${pluginResult.duration}ms)`
+                  `     ${status} ${constructResult.construct.name} (${constructResult.duration}ms)`
                 );
-                if (!pluginResult.success && pluginResult.error) {
-                  logger.error(`        Error: ${pluginResult.error.message}`);
+                if (!constructResult.success && constructResult.error) {
+                  logger.error(
+                    `        Error: ${constructResult.error.message}`
+                  );
                 }
               }
             }
@@ -123,15 +165,15 @@ export function createSynthCommand(
           for (const result of results.results) {
             logger.info(`🏗️  Stack: ${result.stackConfig.name}`);
             logger.debug(
-              `   Plugins: ${result.stackConfig.plugins.join(', ')}`
+              `   Constructs: ${result.stackConfig.constructs.join(', ')}`
             );
 
             if (options.verbose) {
-              logger.info('   Plugin execution results:');
-              for (const pluginResult of result.pluginResults) {
-                const status = pluginResult.success ? '✅' : '❌';
+              logger.info('   Construct execution results:');
+              for (const constructResult of result.constructResults) {
+                const status = constructResult.success ? '✅' : '❌';
                 logger.info(
-                  `     ${status} ${pluginResult.plugin.name} (${pluginResult.duration}ms)`
+                  `     ${status} ${constructResult.construct.name} (${constructResult.duration}ms)`
                 );
               }
             }

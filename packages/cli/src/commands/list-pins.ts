@@ -8,7 +8,7 @@ import {
 
 interface ListPinsCommandOptions {
   stack?: string;
-  plugin?: string;
+  construct?: string;
   all?: boolean;
 }
 
@@ -20,46 +20,45 @@ export function createListPinsCommand(
   command
     .description('List all pinned actions')
     .option('--stack <name>', 'List pins for specific stack')
-    .option('--plugin <name>', 'List pins for specific plugin')
+    .option('--construct <name>', 'List pins for specific construct')
     .option('--all', 'Show all pinned actions across all scopes')
     .action(async (options: ListPinsCommandOptions) => {
       try {
         const context = createContext();
 
         // Validate that only one option is specified
-        const optionCount = [options.stack, options.plugin, options.all].filter(
-          Boolean
-        ).length;
+        const optionCount = [
+          options.stack,
+          options.construct,
+          options.all,
+        ].filter(Boolean).length;
         if (optionCount > 1) {
           throw new Error(
-            'Cannot specify multiple options. Use --all, --stack, or --plugin'
+            'Cannot specify multiple options. Use --all, --stack, or --construct'
           );
         }
 
         if (options.all) {
-          // Show all pinned actions across all scopes
           const allPins = getAllPinnedActions(context);
 
           let hasAnyPins = false;
 
-          // Show plugin pins
-          if (Object.keys(allPins.plugins).length > 0) {
+          if (Object.keys(allPins.constructs).length > 0) {
             hasAnyPins = true;
-            logger.info('Plugin Overrides:');
-            for (const [pluginName, actions] of Object.entries(
-              allPins.plugins
+            logger.info('Construct Overrides:');
+            for (const [constructName, actions] of Object.entries(
+              allPins.constructs
             )) {
-              logger.info(`  ${pluginName}:`);
+              logger.info(`  ${constructName}:`);
               for (const [action, ref] of Object.entries(
                 actions as Record<string, string>
               )) {
                 logger.info(`    ${action}: ${ref}`);
               }
             }
-            logger.info(''); // Empty line for separation
+            logger.info('');
           }
 
-          // Show stack pins
           if (Object.keys(allPins.stacks).length > 0) {
             hasAnyPins = true;
             logger.info('Stack Overrides:');
@@ -76,25 +75,27 @@ export function createListPinsCommand(
           if (!hasAnyPins) {
             logger.info('No pinned actions found.');
           }
-        } else if (options.plugin) {
-          // Show pins for specific plugin
-          const plugin = context.config.plugins?.find(
-            (p) => p.name === options.plugin
+        } else if (options.construct) {
+          const construct = context.config.constructs?.find(
+            (c) => c.name === options.construct
           );
-          if (!plugin) {
-            throw new Error(`Plugin "${options.plugin}" not found`);
+          if (!construct) {
+            throw new Error(`Construct "${options.construct}" not found`);
           }
 
-          const pins = getPinnedActions({ plugin: options.plugin }, context);
+          const pins = getPinnedActions(
+            { construct: options.construct },
+            context
+          );
 
           if (Object.keys(pins).length > 0) {
-            logger.info(`Plugin Overrides (${options.plugin}):`);
+            logger.info(`Construct Overrides (${options.construct}):`);
             for (const [action, ref] of Object.entries(pins)) {
               logger.info(`  ${action}: ${ref}`);
             }
           } else {
             logger.info(
-              `No pinned actions found for plugin "${options.plugin}".`
+              `No pinned actions found for construct "${options.construct}".`
             );
           }
         } else if (options.stack) {
@@ -119,29 +120,26 @@ export function createListPinsCommand(
             );
           }
         } else {
-          // Default: show all pins
           const allPins = getAllPinnedActions(context);
 
           let hasAnyPins = false;
 
-          // Show plugin pins
-          if (Object.keys(allPins.plugins).length > 0) {
+          if (Object.keys(allPins.constructs).length > 0) {
             hasAnyPins = true;
-            logger.info('Plugin Overrides:');
-            for (const [pluginName, actions] of Object.entries(
-              allPins.plugins
+            logger.info('Construct Overrides:');
+            for (const [constructName, actions] of Object.entries(
+              allPins.constructs
             )) {
-              logger.info(`  ${pluginName}:`);
+              logger.info(`  ${constructName}:`);
               for (const [action, ref] of Object.entries(
                 actions as Record<string, string>
               )) {
                 logger.info(`    ${action}: ${ref}`);
               }
             }
-            logger.info(''); // Empty line for separation
+            logger.info('');
           }
 
-          // Show stack pins
           if (Object.keys(allPins.stacks).length > 0) {
             hasAnyPins = true;
             logger.info('Stack Overrides:');

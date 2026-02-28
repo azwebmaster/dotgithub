@@ -1,12 +1,12 @@
 import * as path from 'path';
 import * as fs from 'fs';
 import { GitHubStack } from './constructs/base.js';
-import { PluginManager } from './plugins/manager.js';
+import { ConstructManager } from './plugins/manager.js';
 // Removed import - using direct path resolution
 import type {
   StackConfig,
-  PluginConfig,
-  PluginExecutionResult,
+  ConstructConfig,
+  ConstructExecutionResult,
 } from './plugins/types.js';
 import type { DotGithubContext } from './context.js';
 
@@ -19,7 +19,7 @@ export interface StackSynthesizerOptions {
 export interface SynthesisResult {
   stack: GitHubStack;
   stackConfig: StackConfig;
-  pluginResults: PluginExecutionResult[];
+  constructResults: ConstructExecutionResult[];
   files: Record<string, string>;
   outputPath: string;
 }
@@ -34,14 +34,14 @@ export class StackSynthesizer {
   private readonly context: DotGithubContext;
   private readonly projectRoot: string;
   private readonly outputPath: string;
-  private readonly pluginManager: PluginManager;
+  private readonly constructManager: ConstructManager;
 
   constructor(options: StackSynthesizerOptions) {
     this.context = options.context;
     this.projectRoot = options.projectRoot || process.cwd();
     this.outputPath =
       options.outputPath || path.join(this.projectRoot, '.github');
-    this.pluginManager = new PluginManager({
+    this.constructManager = new ConstructManager({
       projectRoot: this.projectRoot,
       context: this.context,
     });
@@ -60,10 +60,10 @@ export class StackSynthesizer {
       };
     }
 
-    // Load all plugins first
-    const pluginConfigs = config.plugins || [];
+    // Load all constructs first
+    const constructConfigs = config.constructs || [];
     try {
-      await this.pluginManager.loadPlugins(pluginConfigs);
+      await this.constructManager.loadConstructs(constructConfigs);
     } catch (error) {
       errors.push(error instanceof Error ? error : new Error(String(error)));
       return {
@@ -76,7 +76,10 @@ export class StackSynthesizer {
     // Synthesize each stack
     for (const stackConfig of config.stacks) {
       try {
-        const result = await this.synthesizeStack(stackConfig, pluginConfigs);
+        const result = await this.synthesizeStack(
+          stackConfig,
+          constructConfigs
+        );
         results.push(result);
       } catch (error) {
         errors.push(error instanceof Error ? error : new Error(String(error)));
@@ -92,17 +95,18 @@ export class StackSynthesizer {
 
   async synthesizeStack(
     stackConfig: StackConfig,
-    pluginConfigs: PluginConfig[]
+    constructConfigs: ConstructConfig[]
   ): Promise<SynthesisResult> {
     // Create a new stack instance
     const stack = new GitHubStack(undefined, stackConfig.name);
 
-    // Execute plugins on the stack
-    const pluginResults = await this.pluginManager.executePluginsForStack(
-      stack,
-      stackConfig,
-      pluginConfigs
-    );
+    // Execute constructs on the stack
+    const constructResults =
+      await this.constructManager.executeConstructsForStack(
+        stack,
+        stackConfig,
+        constructConfigs
+      );
 
     // Generate files from the stack
     const files = stack.synth();
@@ -110,7 +114,7 @@ export class StackSynthesizer {
     return {
       stack,
       stackConfig,
-      pluginResults,
+      constructResults,
       files,
       outputPath: this.outputPath,
     };
@@ -157,8 +161,8 @@ export class StackSynthesizer {
     }
   }
 
-  getPluginManager(): PluginManager {
-    return this.pluginManager;
+  getConstructManager(): ConstructManager {
+    return this.constructManager;
   }
 
   getProjectRoot(): string {

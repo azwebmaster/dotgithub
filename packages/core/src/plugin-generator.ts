@@ -76,8 +76,8 @@ interface FunctionCallObject {
   [key: string]: any;
 }
 
-export interface GeneratePluginFromGitHubFilesOptions {
-  pluginName: string;
+export interface GenerateConstructFromGitHubFilesOptions {
+  constructName: string;
   source: string; // Local path, GitHub repo (org/repo@ref format), or GitHub URL to file
   description?: string;
   overwrite?: boolean;
@@ -86,23 +86,23 @@ export interface GeneratePluginFromGitHubFilesOptions {
   token?: string; // GitHub token for auto-adding actions
 }
 
-export interface GeneratePluginFromGitHubFilesResult {
-  pluginPath: string;
-  pluginName: string;
+export interface GenerateConstructFromGitHubFilesResult {
+  constructPath: string;
+  constructName: string;
   filesFound: string[];
   generatedContent: string;
-  generatedFiles: GeneratedPluginFile[];
+  generatedFiles: GeneratedConstructFile[];
 }
 
-export interface GeneratedPluginFile {
+export interface GeneratedConstructFile {
   path: string;
   content: string;
   type: 'main' | 'workflow' | 'resource';
   name: string;
 }
 
-export interface CreatePluginFromFilesOptions {
-  pluginName: string;
+export interface CreateConstructFromFilesOptions {
+  constructName: string;
   githubFilesPath: string;
   description?: string;
   outputDir?: string;
@@ -111,32 +111,32 @@ export interface CreatePluginFromFilesOptions {
   token?: string;
 }
 
-export interface CreatePluginFromFilesResult {
-  pluginContent: string;
+export interface CreateConstructFromFilesResult {
+  constructContent: string;
   filesFound: string[];
-  generatedFiles: GeneratedPluginFile[];
+  generatedFiles: GeneratedConstructFile[];
 }
 
 /**
- * Creates plugin content from .github files in a directory
+ * Creates construct content from .github files in a directory
  * @throws {Error} When path validation or file processing fails
  */
-export async function createPluginFromFiles(
-  options: CreatePluginFromFilesOptions
-): Promise<CreatePluginFromFilesResult> {
+export async function createConstructFromFiles(
+  options: CreateConstructFromFilesOptions
+): Promise<CreateConstructFromFilesResult> {
   const {
-    pluginName,
+    constructName,
     githubFilesPath,
-    description = `Plugin generated from .github files`,
+    description = `Construct generated from .github files`,
     outputDir,
     context,
     autoAddActions = false,
     token,
   } = options;
 
-  // Validate plugin name
-  if (!pluginName || pluginName.trim().length === 0) {
-    throw new Error('Plugin name is required and cannot be empty');
+  // Validate construct name
+  if (!constructName || constructName.trim().length === 0) {
+    throw new Error('Construct name is required and cannot be empty');
   }
 
   // Validate path exists and is accessible
@@ -177,7 +177,7 @@ export async function createPluginFromFiles(
     throw new Error(`No files found in: ${githubFilesPath}`);
   }
 
-  // Auto-add actions if requested (do this BEFORE plugin generation)
+  // Auto-add actions if requested (do this BEFORE construct generation)
   if (autoAddActions && files.length > 0) {
     console.log(`🔍 Scanning workflows for actions to auto-add...`);
 
@@ -223,9 +223,9 @@ export async function createPluginFromFiles(
     }
   }
 
-  // Generate plugin content (now with updated config that includes auto-added actions)
+  // Generate construct content (now with updated config that includes auto-added actions)
   // Filter actions to only include those with functionName for code generation
-  const configForPlugin: Config = {
+  const configForConstruct: Config = {
     actions: configToUse.actions
       .filter((action) => action.generateCode !== false && action.outputPath)
       .map((action) => {
@@ -246,39 +246,39 @@ export async function createPluginFromFiles(
     outputDir: configToUse.outputDir,
   };
 
-  let pluginResult: {
+  let constructResult: {
     mainContent: string;
-    generatedFiles: GeneratedPluginFile[];
+    generatedFiles: GeneratedConstructFile[];
   };
   try {
-    pluginResult = await generatePluginCode(
-      pluginName,
+    constructResult = await generateConstructCode(
+      constructName,
       description,
       files,
       outputDir,
-      configForPlugin
+      configForConstruct
     );
   } catch (error) {
     throw new Error(
-      `Failed to generate plugin code: ${error instanceof Error ? error.message : error}`
+      `Failed to generate construct code: ${error instanceof Error ? error.message : error}`
     );
   }
 
   return {
-    pluginContent: pluginResult.mainContent,
+    constructContent: constructResult.mainContent,
     filesFound,
-    generatedFiles: pluginResult.generatedFiles,
+    generatedFiles: constructResult.generatedFiles,
   };
 }
 
 /**
- * Generates a plugin from .github files (local path or GitHub repo)
+ * Generates a construct from .github files (local path or GitHub repo)
  */
-export async function generatePluginFromGitHubFiles(
-  options: GeneratePluginFromGitHubFilesOptions
-): Promise<GeneratePluginFromGitHubFilesResult> {
+export async function generateConstructFromGitHubFiles(
+  options: GenerateConstructFromGitHubFilesOptions
+): Promise<GenerateConstructFromGitHubFilesResult> {
   const {
-    pluginName,
+    constructName,
     source,
     description,
     overwrite = false,
@@ -288,17 +288,17 @@ export async function generatePluginFromGitHubFiles(
   } = options;
 
   // Use context to resolve path relative to configured output directory
-  const finalOutputDir = context.resolvePath('plugins');
+  const finalOutputDir = context.resolvePath('constructs');
 
   // Determine if source is a local path, GitHub repo, or GitHub file URL
-  let result: CreatePluginFromFilesResult;
+  let result: CreateConstructFromFilesResult;
   let tempDir: string | null = null;
 
   if (isGitHubFileUrl(source)) {
     // Handle GitHub file URL
     const { content, filename } = await downloadGitHubFile(source);
     // Filter actions to only include those with outputPath for code generation
-    const configForPlugin: Config = {
+    const configForConstruct: Config = {
       actions: context.config.actions
         .filter((action) => action.generateCode !== false && action.outputPath)
         .map((action) => {
@@ -318,13 +318,13 @@ export async function generatePluginFromGitHubFiles(
         }),
       outputDir: context.config.outputDir,
     };
-    result = await createPluginFromSingleFile(
-      pluginName,
+    result = await createConstructFromSingleFile(
+      constructName,
       filename,
       content,
       description,
       finalOutputDir,
-      configForPlugin
+      configForConstruct
     );
   } else if (isGitHubRepo(source)) {
     // Clone GitHub repo and extract .github files
@@ -345,7 +345,7 @@ export async function generatePluginFromGitHubFiles(
     }
 
     // Create temp directory and clone repo
-    tempDir = fs.mkdtempSync(path.join(process.cwd(), 'tmp-plugin-'));
+    tempDir = fs.mkdtempSync(path.join(process.cwd(), 'tmp-construct-'));
     const url = token
       ? `https://${token}:x-oauth-basic@github.com/${owner}/${repo}.git`
       : `https://github.com/${owner}/${repo}.git`;
@@ -362,9 +362,9 @@ export async function generatePluginFromGitHubFiles(
       );
     }
 
-    // Create plugin from files
-    result = await createPluginFromFiles({
-      pluginName,
+    // Create construct from files
+    result = await createConstructFromFiles({
+      constructName,
       githubFilesPath,
       description,
       outputDir: finalOutputDir,
@@ -381,9 +381,9 @@ export async function generatePluginFromGitHubFiles(
       githubFilesPath = path.join(githubFilesPath, '.github');
     }
 
-    // Create plugin from files
-    result = await createPluginFromFiles({
-      pluginName,
+    // Create construct from files
+    result = await createConstructFromFiles({
+      constructName,
       githubFilesPath,
       description,
       outputDir: finalOutputDir,
@@ -396,19 +396,19 @@ export async function generatePluginFromGitHubFiles(
   try {
     // Use the finalOutputDir that was already calculated
     const outputPath = path.resolve(finalOutputDir);
-    const pluginDir = path.join(
+    const constructDir = path.join(
       outputPath,
-      pluginName.replace(/[^a-zA-Z0-9-]/g, '-').toLowerCase()
+      constructName.replace(/[^a-zA-Z0-9-]/g, '-').toLowerCase()
     );
 
     try {
-      if (!fs.existsSync(pluginDir)) {
-        fs.mkdirSync(pluginDir, { recursive: true });
+      if (!fs.existsSync(constructDir)) {
+        fs.mkdirSync(constructDir, { recursive: true });
       }
 
       // Create subdirectories for workflows and resources
-      const workflowsDir = path.join(pluginDir, 'workflows');
-      const resourcesDir = path.join(pluginDir, 'resources');
+      const workflowsDir = path.join(constructDir, 'workflows');
+      const resourcesDir = path.join(constructDir, 'resources');
 
       if (!fs.existsSync(workflowsDir)) {
         fs.mkdirSync(workflowsDir, { recursive: true });
@@ -418,32 +418,32 @@ export async function generatePluginFromGitHubFiles(
       }
     } catch (error) {
       throw new Error(
-        `Failed to create output directory ${pluginDir}: ${error instanceof Error ? error.message : error}`
+        `Failed to create output directory ${constructDir}: ${error instanceof Error ? error.message : error}`
       );
     }
 
-    // Generate main plugin file path
+    // Generate main construct file path
     const fileName = 'index.ts';
-    const pluginPath = path.resolve(pluginDir, fileName);
+    const constructPath = path.resolve(constructDir, fileName);
 
-    // Check if main plugin file exists and handle overwrite
-    if (fs.existsSync(pluginPath) && !overwrite) {
+    // Check if main construct file exists and handle overwrite
+    if (fs.existsSync(constructPath) && !overwrite) {
       throw new Error(
-        `Plugin file already exists: ${pluginPath}. Use --overwrite to replace it.`
+        `Construct file already exists: ${constructPath}. Use --overwrite to replace it.`
       );
     }
 
-    // Write main plugin file with proper error handling
+    // Write main construct file with proper error handling
     try {
-      fs.writeFileSync(pluginPath, result.pluginContent, 'utf8');
+      fs.writeFileSync(constructPath, result.constructContent, 'utf8');
     } catch (error) {
       throw new Error(
-        `Failed to write plugin file ${pluginPath}: ${error instanceof Error ? error.message : error}`
+        `Failed to write construct file ${constructPath}: ${error instanceof Error ? error.message : error}`
       );
     }
 
     // Write individual workflow and resource files
-    const generatedFiles: GeneratedPluginFile[] = [];
+    const generatedFiles: GeneratedConstructFile[] = [];
     for (const file of result.generatedFiles) {
       try {
         // Ensure the directory exists
@@ -462,10 +462,10 @@ export async function generatePluginFromGitHubFiles(
     }
 
     return {
-      pluginPath,
-      pluginName,
+      constructPath,
+      constructName,
       filesFound: result.filesFound,
-      generatedContent: result.pluginContent,
+      generatedContent: result.constructContent,
       generatedFiles,
     };
   } catch (error) {
@@ -548,23 +548,23 @@ async function downloadGitHubFile(
 }
 
 /**
- * Creates plugin content from a single GitHub file
- * @param pluginName - Name of the plugin to generate
+ * Creates construct content from a single GitHub file
+ * @param constructName - Name of the construct to generate
  * @param filename - Name of the source file
  * @param content - Content of the source file
- * @param description - Optional description for the plugin
+ * @param description - Optional description for the construct
  * @param outputDir - Optional output directory for relative imports
  * @param config - Optional config for action replacement
- * @returns Plugin generation result with content and file list
+ * @returns Construct generation result with content and file list
  */
-async function createPluginFromSingleFile(
-  pluginName: string,
+async function createConstructFromSingleFile(
+  constructName: string,
   filename: string,
   content: string,
   description?: string,
   outputDir?: string,
   config: Config | null = null
-): Promise<CreatePluginFromFilesResult> {
+): Promise<CreateConstructFromFilesResult> {
   // Check if this is a workflow file (ends with .yaml or .yml)
   const isWorkflowFile =
     filename.endsWith('.yaml') || filename.endsWith('.yml');
@@ -578,18 +578,18 @@ async function createPluginFromSingleFile(
     content,
   };
 
-  const pluginResult = await generatePluginCode(
-    pluginName,
-    description || `Plugin generated from ${filename}`,
+  const constructResult = await generateConstructCode(
+    constructName,
+    description || `Construct generated from ${filename}`,
     [fileEntry],
     outputDir,
     config
   );
 
   return {
-    pluginContent: pluginResult.mainContent,
+    constructContent: constructResult.mainContent,
     filesFound: [relativePath],
-    generatedFiles: pluginResult.generatedFiles,
+    generatedFiles: constructResult.generatedFiles,
   };
 }
 
@@ -633,7 +633,7 @@ function collectFilesRecursively(dirPath: string, basePath = ''): FileEntry[] {
     }
 
     if (stats.isDirectory()) {
-      // Skip the 'src' directory to avoid including plugin source files
+      // Skip the 'src' directory to avoid including construct source files
       if (item === 'src') {
         continue;
       }
@@ -977,7 +977,7 @@ function generateWorkflowImports(
 
     if (outputDir) {
       // The action outputPath is relative to the config's output directory (e.g., "actions/owner/action-name.ts")
-      // The workflow will be in a workflows subdirectory (e.g., "plugins/plugin-name/workflows/workflow-name.ts")
+      // The workflow will be in a workflows subdirectory (e.g., "constructs/construct-name/workflows/workflow-name.ts")
       // So we need to go up three levels to get to src/, then into the actions directory
       importPath = '../../../' + actionImport.outputPath;
 
@@ -1010,11 +1010,11 @@ function generateWorkflowImports(
 }
 
 /**
- * Generates import statements for the plugin based on files and actions
- * @param hasWorkflows - Whether the plugin has workflow files
+ * Generates import statements for the construct based on files and actions
+ * @param hasWorkflows - Whether the construct has workflow files
  * @param actionImports - Set of action function names to import
  * @param coreFunctionUsage - Object tracking usage of core functions like createStep and run
- * @param outputDir - Directory where the plugin will be output
+ * @param outputDir - Directory where the construct will be output
  * @returns Import statements as a string
  */
 function generateImports(
@@ -1043,7 +1043,7 @@ function generateImports(
   // Add core imports
   sourceFile.addImportDeclaration({
     moduleSpecifier: '@dotgithub/core',
-    namedImports: ['DotGitHubPlugin', 'PluginContext'],
+    namedImports: ['GitHubConstruct', 'ConstructContext', 'GitHubStack'],
     isTypeOnly: true,
   });
 
@@ -1084,7 +1084,7 @@ function generateImports(
 
       if (outputDir) {
         // The action outputPath is relative to the config's output directory (e.g., "actions/owner/action-name.ts")
-        // The plugin will be in a plugins subdirectory (e.g., "plugins/plugin-name.ts")
+        // The construct will be in a constructs subdirectory (e.g., "constructs/construct-name.ts")
         // So we need to go up one level and then into the actions directory
         importPath = '../' + actionImport.outputPath;
 
@@ -1123,22 +1123,22 @@ function generateImports(
  * @param workflowFiles - Array of workflow files to process
  * @param config - Configuration object for action replacement
  * @param actionImports - Set to collect action function names for imports
- * @param pluginName - Name of the plugin
- * @param outputDir - Output directory for the plugin
+ * @param constructName - Name of the construct
+ * @param outputDir - Output directory for the construct
  * @returns Array of generated workflow files
  */
 async function generateWorkflowFiles(
   workflowFiles: FileEntry[],
   config: Config | null,
   actionImports: Set<ActionImport>,
-  pluginName: string,
+  constructName: string,
   outputDir: string
 ): Promise<{
-  generatedFiles: GeneratedPluginFile[];
+  generatedFiles: GeneratedConstructFile[];
   allActionImports: Set<ActionImport>;
   coreFunctionUsage: CoreFunctionUsage;
 }> {
-  const generatedFiles: GeneratedPluginFile[] = [];
+  const generatedFiles: GeneratedConstructFile[] = [];
   const allActionImports: Set<ActionImport> = new Set();
   const coreFunctionUsage: CoreFunctionUsage = {
     createStep: false,
@@ -1190,13 +1190,13 @@ async function generateWorkflowFiles(
       );
 
       const rawContent = `${workflowImports}import { run } from '@dotgithub/core';
-import type { PluginContext } from '@dotgithub/core';
+import type { ConstructContext } from '@dotgithub/core';
 
 /**
  * ${workflowName} workflow handler
  * Generated from: ${file.relativePath}
  */
-export async function ${toCamelCase(workflowName)}Handler(context: PluginContext): Promise<void> {
+export async function ${toCamelCase(workflowName)}Handler(context: ConstructContext): Promise<void> {
   const { stack } = context;
   
   stack.addWorkflow('${workflowName}', ${workflowCode});
@@ -1221,13 +1221,13 @@ export async function ${toCamelCase(workflowName)}Handler(context: PluginContext
       // Generate imports for this workflow file (even for fallback case)
       const workflowImports = generateWorkflowImports(actionImports, outputDir);
 
-      const rawContent = `${workflowImports}import type { GitHubWorkflow, PluginContext } from '@dotgithub/core';
+      const rawContent = `${workflowImports}import type { GitHubWorkflow, ConstructContext } from '@dotgithub/core';
 
 /**
  * ${workflowName} workflow handler
  * Generated from: ${file.relativePath}
  */
-export async function ${toCamelCase(workflowName)}Handler(context: PluginContext): Promise<void> {
+export async function ${toCamelCase(workflowName)}Handler(context: ConstructContext): Promise<void> {
   const { stack } = context;
   
   stack.addWorkflow('${workflowName}', ${escapedContent});
@@ -1251,16 +1251,16 @@ export async function ${toCamelCase(workflowName)}Handler(context: PluginContext
 /**
  * Generates individual resource files
  * @param otherFiles - Array of non-workflow files to process
- * @param pluginName - Name of the plugin
- * @param outputDir - Output directory for the plugin
+ * @param constructName - Name of the construct
+ * @param outputDir - Output directory for the construct
  * @returns Array of generated resource files
  */
 async function generateResourceFiles(
   otherFiles: FileEntry[],
-  pluginName: string,
+  constructName: string,
   outputDir: string
-): Promise<GeneratedPluginFile[]> {
-  const generatedFiles: GeneratedPluginFile[] = [];
+): Promise<GeneratedConstructFile[]> {
+  const generatedFiles: GeneratedConstructFile[] = [];
 
   for (const file of otherFiles) {
     const resourceName = path.basename(
@@ -1292,13 +1292,13 @@ async function generateResourceFiles(
       resourceCode = JSON.stringify(file.content);
     }
 
-    const rawContent = `import type { PluginContext } from '@dotgithub/core';
+    const rawContent = `import type { ConstructContext } from '@dotgithub/core';
 
 /**
  * ${resourceName} resource handler
  * Generated from: ${file.relativePath}
  */
-export async function ${toCamelCase(resourceName)}Handler(context: PluginContext): Promise<void> {
+export async function ${toCamelCase(resourceName)}Handler(context: ConstructContext): Promise<void> {
   const { stack } = context;
   
   stack.addResource('${escapedPath}', { content: ${resourceCode} });
@@ -1319,7 +1319,7 @@ export async function ${toCamelCase(resourceName)}Handler(context: PluginContext
 }
 
 /**
- * Generates workflow-related methods for the plugin class
+ * Generates workflow-related methods for the construct class
  * @param workflowFiles - Array of workflow files to process
  * @param config - Configuration object for action replacement
  * @param actionImports - Set to collect action function names for imports
@@ -1335,7 +1335,7 @@ function generateWorkflowMethods(
   // Generate applyWorkflows method
   let applyWorkflowsMethod: string;
   if (hasWorkflows) {
-    applyWorkflowsMethod = `  async applyWorkflows(context: PluginContext): Promise<void> {
+    applyWorkflowsMethod = `  async applyWorkflows(context: ConstructContext): Promise<void> {
     ${workflowFiles
       .map((file) => {
         const workflowName = path.basename(
@@ -1348,8 +1348,8 @@ function generateWorkflowMethods(
       .join('\n    ')}
   }`;
   } else {
-    applyWorkflowsMethod = `  async applyWorkflows(_context: PluginContext): Promise<void> {
-    // This plugin doesn't define any workflows
+    applyWorkflowsMethod = `  async applyWorkflows(_context: ConstructContext): Promise<void> {
+    // This construct doesn't define any workflows
   }`;
   }
 
@@ -1357,7 +1357,7 @@ function generateWorkflowMethods(
 }
 
 /**
- * Generates resource-related methods for the plugin class
+ * Generates resource-related methods for the construct class
  * @param otherFiles - Array of non-workflow files to process
  * @returns Object containing applyResources method
  */
@@ -1369,7 +1369,7 @@ function generateResourceMethods(otherFiles: FileEntry[]): {
   // Generate applyResources method
   let applyResourcesMethod: string;
   if (hasOtherFiles) {
-    applyResourcesMethod = `  async applyResources(context: PluginContext): Promise<void> {
+    applyResourcesMethod = `  async applyResources(context: ConstructContext): Promise<void> {
     ${otherFiles
       .map((file) => {
         const resourceName = path.basename(
@@ -1382,8 +1382,8 @@ function generateResourceMethods(otherFiles: FileEntry[]): {
       .join('\n    ')}
   }`;
   } else {
-    applyResourcesMethod = `  async applyResources(_context: PluginContext): Promise<void> {
-    // This plugin doesn't define any resources
+    applyResourcesMethod = `  async applyResources(_context: ConstructContext): Promise<void> {
+    // This construct doesn't define any resources
   }`;
   }
 
@@ -1391,10 +1391,10 @@ function generateResourceMethods(otherFiles: FileEntry[]): {
 }
 
 /**
- * Generates the main class definition for the plugin
- * @param pluginName - Name of the plugin
- * @param description - Description of the plugin
- * @param files - Array of all files included in the plugin
+ * Generates the main class definition for the construct
+ * @param constructName - Name of the construct
+ * @param description - Description of the construct
+ * @param files - Array of all files included in the construct
  * @param className - PascalCase class name
  * @param imports - Import statements string
  * @param applyWorkflowsMethod - Apply workflows method code
@@ -1403,14 +1403,14 @@ function generateResourceMethods(otherFiles: FileEntry[]): {
  * @returns Complete class definition as string
  */
 async function generateClassDefinition(
-  pluginName: string,
+  constructName: string,
   description: string,
   files: FileEntry[],
   className: string,
   imports: string,
   applyWorkflowsMethod: string,
   applyResourcesMethod: string,
-  generatedFiles: GeneratedPluginFile[]
+  generatedFiles: GeneratedConstructFile[]
 ): Promise<string> {
   const escapedDescription = description.replace(/'/g, "\\'");
 
@@ -1433,7 +1433,17 @@ async function generateClassDefinition(
   }
 
   // Generate main synthesize method that calls the other two
-  const synthesizeMethod = `  async synthesize(context: PluginContext): Promise<void> {
+  // Note: synthesize accepts GitHubStack to match the base class interface,
+  // but creates a ConstructContext internally for applyWorkflows and applyResources
+  const synthesizeMethod = `  async synthesize(stack: GitHubStack): Promise<void> {
+    const context: ConstructContext = {
+      stack,
+      config: stack.config || {},
+      stackConfig: stack.stackConfig || { name: '', constructs: [] },
+      projectRoot: stack.projectRoot || '',
+      actions: stack.actions!,
+      sharedWorkflows: stack.sharedWorkflows!,
+    };
     await this.applyWorkflows(context);
     await this.applyResources(context);
   }`;
@@ -1447,11 +1457,11 @@ ${resourceImports.join('\n')}
 /**
  * ${escapedDescription}
  * 
- * This plugin was auto-generated from .github files.
+ * This construct was auto-generated from .github files.
  * Files included: ${files.map((f) => f.relativePath).join(', ')}
  */
-export class ${className} implements DotGitHubPlugin {
-  readonly name = '${pluginName}';
+export class ${className} implements GitHubConstruct {
+  readonly name = '${constructName}';
   readonly version = '1.0.0';
   readonly description = '${escapedDescription}';
 
@@ -1470,22 +1480,22 @@ export default new ${className}();
 }
 
 /**
- * Generates plugin code from a set of .github files
- * @param pluginName - Name of the plugin to generate
- * @param description - Description of the plugin
+ * Generates construct code from a set of .github files
+ * @param constructName - Name of the construct to generate
+ * @param description - Description of the construct
  * @param files - Array of file entries containing .github files
  * @param outputDir - Optional output directory for import path calculation
  * @param config - Optional config for action replacement, or null to skip replacement
- * @returns Generated TypeScript plugin code and individual files
+ * @returns Generated TypeScript construct code and individual files
  */
-async function generatePluginCode(
-  pluginName: string,
+async function generateConstructCode(
+  constructName: string,
   description: string,
   files: FileEntry[],
   outputDir?: string,
   config: Config | null = null
-): Promise<{ mainContent: string; generatedFiles: GeneratedPluginFile[] }> {
-  const className = toPascalCase(pluginName) + 'Plugin';
+): Promise<{ mainContent: string; generatedFiles: GeneratedConstructFile[] }> {
+  const className = toPascalCase(constructName) + 'Construct';
 
   // Separate workflow files from other files
   const { workflowFiles, otherFiles } = separateWorkflowFromOtherFiles(files);
@@ -1494,12 +1504,12 @@ async function generatePluginCode(
   const actionImports: Set<ActionImport> = new Set();
 
   // Generate individual workflow and resource files
-  // Note: outputDir here should be the plugin directory, not the parent directory
+  // Note: outputDir here should be the construct directory, not the parent directory
   const resolvedOutputDir = outputDir ? path.resolve(outputDir) : '';
-  const pluginDir = resolvedOutputDir
+  const constructDir = resolvedOutputDir
     ? path.join(
         resolvedOutputDir,
-        pluginName.replace(/[^a-zA-Z0-9-]/g, '-').toLowerCase()
+        constructName.replace(/[^a-zA-Z0-9-]/g, '-').toLowerCase()
       )
     : '';
 
@@ -1511,26 +1521,26 @@ async function generatePluginCode(
     workflowFiles,
     config,
     actionImports,
-    pluginName,
-    pluginDir
+    constructName,
+    constructDir
   );
   const resourceFiles_generated = await generateResourceFiles(
     otherFiles,
-    pluginName,
-    pluginDir
+    constructName,
+    constructDir
   );
 
-  // Generate workflow methods for the main plugin file using all collected actions
+  // Generate workflow methods for the main construct file using all collected actions
   const { applyWorkflowsMethod } = generateWorkflowMethods(
     workflowFiles,
     config,
     allActionImports
   );
 
-  // Generate resource methods for the main plugin file
+  // Generate resource methods for the main construct file
   const { applyResourcesMethod } = generateResourceMethods(otherFiles);
 
-  // Generate imports for the main plugin file using all collected actions
+  // Generate imports for the main construct file using all collected actions
   const hasWorkflows = workflowFiles.length > 0;
   const hasOtherFiles = otherFiles.length > 0;
   const imports = generateImports(
@@ -1542,7 +1552,7 @@ async function generatePluginCode(
 
   // Generate complete class definition
   const mainContent = await generateClassDefinition(
-    pluginName,
+    constructName,
     description,
     files,
     className,

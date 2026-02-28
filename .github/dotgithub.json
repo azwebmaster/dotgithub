@@ -1,0 +1,40 @@
+{
+  "version": "1.0.0",
+  "rootDir": "src",
+  "outputDir": ".",
+  "actions": [
+    {
+      "orgRepo": "actions/checkout",
+      "ref": "de0fac2e4500dabe0009e67214ff5f5447ce83dd",
+      "versionRef": "v6",
+      "actionName": "checkout",
+      "outputPath": "actions/actions/checkout.ts"
+    }
+  ],
+  "constructs": [
+    {
+      "name": "local",
+      "package": "./",
+      "config": {
+        "environment": "production",
+        "timeout": 10
+      },
+      "enabled": true
+    }
+  ],
+  "stacks": [
+    {
+      "name": "default",
+      "constructs": [
+        "local"
+      ],
+      "config": {}
+    }
+  ],
+  "options": {
+    "tokenSource": "env",
+    "formatting": {
+      "prettier": true
+    }
+  }
+}

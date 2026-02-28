@@ -8,7 +8,7 @@ import { createListCommand } from './commands/list.js';
 import { createInitCommand } from './commands/init.js';
 import { createUpdateCommand } from './commands/update.js';
 import { createSynthCommand } from './commands/synth.js';
-import { createPluginCommand } from './commands/plugin.js';
+import { createConstructCommand } from './commands/construct.js';
 import { createPinCommand } from './commands/pin.js';
 import { createUnpinCommand } from './commands/unpin.js';
 import { createListPinsCommand } from './commands/list-pins.js';
@@ -85,7 +85,7 @@ program.addCommand(
 );
 program.addCommand(createListCommand(createContextForCommandWithProgram()));
 program.addCommand(createSynthCommand(createContextForCommandWithProgram()));
-program.addCommand(createPluginCommand(createContextForCommandWithProgram()));
+program.addCommand(createConstructCommand(createContextForCommandWithProgram()));
 program.addCommand(createPinCommand(createContextForCommandWithProgram()));
 program.addCommand(createUnpinCommand(createContextForCommandWithProgram()));
 program.addCommand(createListPinsCommand(createContextForCommandWithProgram()));

@@ -3,7 +3,7 @@ import { DotGithubContext, setPinnedAction, logger } from '@dotgithub/core';
 
 interface PinCommandOptions {
   stack?: string;
-  plugin?: string;
+  construct?: string;
 }
 
 export function createPinCommand(
@@ -12,11 +12,11 @@ export function createPinCommand(
   const command = new Command('pin');
 
   command
-    .description('Pin an action to a specific version for a plugin or stack')
+    .description('Pin an action to a specific version for a construct or stack')
     .argument('<action>', 'Action to pin (e.g., actions/checkout)')
     .argument('<ref>', 'Version reference to pin to (e.g., v4, v5.1.0)')
     .option('--stack <name>', 'Pin for specific stack')
-    .option('--plugin <name>', 'Pin for specific plugin')
+    .option('--construct <name>', 'Pin for specific construct')
     .action(async (action: string, ref: string, options: PinCommandOptions) => {
       try {
         // Validate action format
@@ -27,23 +27,23 @@ export function createPinCommand(
         }
 
         // Validate that exactly one scope is specified
-        if (!options.stack && !options.plugin) {
-          throw new Error('Must specify either --stack or --plugin');
+        if (!options.stack && !options.construct) {
+          throw new Error('Must specify either --stack or --construct');
         }
 
-        if (options.stack && options.plugin) {
-          throw new Error('Cannot specify both --stack and --plugin');
+        if (options.stack && options.construct) {
+          throw new Error('Cannot specify both --stack and --construct');
         }
 
         const context = createContext();
 
-        // Validate that the specified plugin/stack exists
-        if (options.plugin) {
-          const plugin = context.config.plugins?.find(
-            (p) => p.name === options.plugin
+        // Validate that the specified construct/stack exists
+        if (options.construct) {
+          const construct = context.config.constructs?.find(
+            (c) => c.name === options.construct
           );
-          if (!plugin) {
-            throw new Error(`Plugin "${options.plugin}" not found`);
+          if (!construct) {
+            throw new Error(`Construct "${options.construct}" not found`);
           }
         }
 
@@ -60,8 +60,8 @@ export function createPinCommand(
         setPinnedAction(action, ref, options, context);
 
         // Show confirmation message
-        const scope = options.plugin
-          ? `plugin "${options.plugin}"`
+        const scope = options.construct
+          ? `construct "${options.construct}"`
           : `stack "${options.stack}"`;
         logger.info(`✅ Pinned ${action} to ${ref} for ${scope}`);
       } catch (error) {

@@ -13,6 +13,7 @@ import {
   generateTypesFromActionYmlAtPath,
 } from './types-generator.js';
 import { generateActionsConstructClass } from './typegen.js';
+import { updateIndexFilesAfterRemoval } from './file-utils.js';
 import { cloneRepo } from './git.js';
 import { addActionToConfig, writeConfig } from './config.js';
 import type { DotGithubAction } from './config.js';
@@ -20,12 +21,11 @@ import {
   formatWithPrettier,
   updateOrgIndexFile,
   updateRootIndexFile,
-  updateIndexFilesAfterRemoval,
   addImportsToGeneratedTypes,
 } from './file-utils.js';
 import { logger } from './logger.js';
 import { Project, SourceFile, SyntaxKind } from 'ts-morph';
-import { toProperCase } from './utils.js';
+import { toProperCase, generateFunctionName } from './utils.js';
 import type { DotGithubContext } from './context.js';
 
 export interface GenerateActionFilesOptions {
@@ -380,7 +380,7 @@ export async function generateActionFiles(
     await updateRootIndexFile(rootActionDir, owner);
 
     // Check if we need to update a shared actions directory index file
-    await updateSharedActionsIndexFile(rootActionDir, generatedActions);
+    // await updateSharedActionsIndexFile(rootActionDir, generatedActions);
 
     // Generate ActionsConstruct class for this organization
     await generateActionsConstructForOrg(
@@ -435,11 +435,14 @@ export async function removeActionFiles(
     };
   }
 
-  // Remove files if not keeping them
+  // Remove files if not keeping them.
+  // Use same base as add: actions live under rootDir/actions (e.g. src/actions).
+  const rootActionDir = context.resolvePath('actions');
+
   if (!options.keepFiles) {
-    const rootActionDir = context.resolvePath('');
     const repoDir = path.join(rootActionDir, owner, repo);
     const singleActionFile = path.join(rootActionDir, owner, `${repo}.ts`);
+    const orgDir = path.join(rootActionDir, owner);
 
     // Remove all action files
     for (const action of actionsToRemove) {
@@ -462,18 +465,16 @@ export async function removeActionFiles(
     try {
       if (fs.existsSync(repoDir)) {
         fs.rmSync(repoDir, { recursive: true, force: true });
+        removedFiles.push(repoDir);
         logger.debug(`Removed repository directory: ${repoDir}`);
       }
 
       // Remove single action file if it exists (single root action case)
       if (fs.existsSync(singleActionFile)) {
         fs.unlinkSync(singleActionFile);
+        removedFiles.push(singleActionFile);
         logger.debug(`Removed single action file: ${singleActionFile}`);
       }
-
-      // Update index files
-      const orgDir = path.join(rootActionDir, owner);
-      await updateIndexFilesAfterRemoval(rootActionDir, owner);
 
       // Remove org directory if empty
       if (fs.existsSync(orgDir) && fs.readdirSync(orgDir).length === 1) {
@@ -481,6 +482,7 @@ export async function removeActionFiles(
         const indexPath = path.join(orgDir, 'index.ts');
         if (fs.existsSync(indexPath)) {
           fs.unlinkSync(indexPath);
+          removedFiles.push(indexPath);
         }
         if (fs.readdirSync(orgDir).length === 0) {
           fs.rmdirSync(orgDir);
@@ -501,10 +503,12 @@ export async function removeActionFiles(
   // Save updated config
   writeConfig(context.config);
 
+  // Update index files after config is updated
+  await updateIndexFilesAfterRemoval(rootActionDir, owner, context);
+
   const actionNames = actionsToRemove
     .map((a) => {
       if (a.actionName) {
-        const { generateFunctionName } = require('./utils');
         return generateFunctionName(a.actionName);
       }
       return a.orgRepo;
@@ -854,7 +858,7 @@ async function updateSharedActionsIndexFile(
 /**
  * Generates an ActionsConstruct class for an organization based on generated actions
  */
-async function generateActionsConstructForOrg(
+export async function generateActionsConstructForOrg(
   context: DotGithubContext,
   orgName: string,
   generatedActions: GeneratedAction[],

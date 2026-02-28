@@ -1,0 +1,49 @@
+---
+globs: packages/core/src/config.ts,*.json
+---
+
+# Configuration Management Patterns
+
+## Configuration Structure
+
+The main configuration is managed through [packages/core/src/config.ts](mdc:packages/core/src/config.ts):
+
+- Use `DotGithubConfig` interface for type safety
+- Support both JSON and programmatic configuration
+- Validate configuration on load
+- Provide helpful error messages for invalid config
+
+## Configuration Loading
+
+- Use `readConfig()` to load configuration from file
+- Support multiple configuration file formats
+- Handle missing configuration gracefully
+- Provide configuration validation and fixing
+
+## Action Management
+
+- Use `addActionToConfig()` for adding actions
+- Use `removeActionFromConfig()` for removing actions
+- Use `getActionsFromConfig()` for retrieving actions
+- Support action pinning and version management
+
+## Construct Configuration
+
+- Use `getConstructsFromConfig()` for construct configuration
+- Support construct-specific configuration sections
+- Validate construct configuration schemas
+- Handle construct loading errors
+
+## Stack Configuration
+
+- Use `getStacksFromConfig()` for stack definitions
+- Support multiple stacks per configuration
+- Validate stack configuration
+- Handle stack synthesis errors
+
+## Configuration Validation
+
+- Use Zod schemas for runtime validation
+- Provide detailed error messages
+- Support configuration migration
+- Handle backward compatibility

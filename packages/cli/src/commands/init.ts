@@ -24,8 +24,8 @@ export function createInitCommand(
     .option('--force', 'Overwrite existing files if they exist', false)
     .option(
       '--output <dir>',
-      'Output directory for the workspace (default: src)',
-      'src'
+      'Output directory for the workspace (default: .github)',
+      '.github'
     )
     .action(async (options: InitCommandOptions) => {
       try {
@@ -45,7 +45,7 @@ async function initializeWorkspace(
   createContext: (options?: any) => DotGithubContext
 ): Promise<void> {
   // Step 1: Create the output directory
-  const outputDir = options.output || 'src';
+  const outputDir = options.output || '.github';
   const outputDirPath = path.resolve(outputDir);
 
   // Create output directory if it doesn't exist
@@ -66,6 +66,29 @@ async function initializeWorkspace(
   // Create default config with workspace output directory
   const defaultConfig = createDefaultConfig();
   defaultConfig.rootDir = 'src'; // This will be the workspace directory inside the output directory
+  defaultConfig.outputDir = '.'; // Set output directory to current directory
+  
+  // Add a local construct definition
+  defaultConfig.constructs = [
+    {
+      name: 'local',
+      package: './index.ts',
+      config: {
+        environment: 'production',
+        timeout: 10,
+      },
+      enabled: true,
+    },
+  ];
+
+  // Add a default stack that uses the local construct
+  defaultConfig.stacks = [
+    {
+      name: 'default',
+      constructs: ['local'],
+      config: {},
+    },
+  ];
 
   // Write the config file to the output directory
   fs.writeFileSync(configPath, JSON.stringify(defaultConfig, null, 2) + '\n');
@@ -176,6 +199,97 @@ function generateTsConfig(): object {
 
 function generateIndexFile(): string {
   return `// GitHub Actions workspace entry point
-import { App } from '@dotgithub/core';
+import {
+  GitHubConstruct,
+  GitHubStack,
+  JobConstruct,
+  WorkflowConstruct,
+  ActionsHelper,
+} from '@dotgithub/core';
+import type {
+  ConstructDescription,
+  GitHubWorkflowInput,
+} from '@dotgithub/core';
+import { z } from 'zod';
+
+export type MyConstructInputs = {
+  /**
+   * Environment to deploy to
+   */
+  environment: GitHubWorkflowInput;
+};
+
+export class MyConstruct extends GitHubConstruct {
+  readonly name = 'my-construct';
+  readonly version = '1.0.0';
+  readonly description = 'My custom GitHub Actions construct';
+
+  private readonly configSchema = z.object({
+    environment: z
+      .string()
+      .min(1, 'Environment is required')
+      .describe('The environment to deploy to (e.g., production, staging)'),
+    timeout: z
+      .number()
+      .min(1, 'Timeout must be at least 1 minute')
+      .max(60, 'Timeout cannot exceed 60 minutes')
+      .optional()
+      .default(10)
+      .describe('Job timeout in minutes'),
+  });
+
+  validate(stack: GitHubStack): void {
+    this.configSchema.parse(stack.config);
+  }
+
+  describe(): ConstructDescription {
+    return {
+      name: this.name,
+      version: this.version,
+      description: this.description,
+      author: 'Your Name',
+      repository: 'https://github.com/your-org/your-repo',
+      license: 'MIT',
+      keywords: ['ci', 'github-actions'],
+      category: 'ci',
+      configSchema: this.configSchema,
+      tags: ['ci', 'automation'],
+      minDotGithubVersion: '2.0.0',
+    };
+  }
+
+  async synthesize(stack: GitHubStack): Promise<void> {
+    const { config } = stack;
+
+    // Parse and validate config using the schema
+    const validatedConfig = this.configSchema.parse(config);
+
+    const { run } = new ActionsHelper(stack);
+
+    // Create a workflow
+    const workflow = new WorkflowConstruct(stack, 'ci', {
+      name: 'CI Workflow',
+      on: {
+        push: {
+          branches: ['main'],
+        },
+        pull_request: {},
+      },
+      jobs: {},
+    });
+
+    // Create a job
+    const job = new JobConstruct(workflow, 'test', {
+      name: 'Test',
+      'runs-on': 'ubuntu-latest',
+      steps: [
+        run('Hello World', 'echo "Hello from my construct!"').toStep(),
+        run('Show Environment', \`echo "Environment: \${validatedConfig.environment}"\`).toStep(),
+      ],
+    });
+  }
+}
+
+export default new MyConstruct();
 `;
 }

@@ -2,7 +2,7 @@
 import {
   ActionInvocationResult,
   createStep,
-  DotGitHubPlugin,
+  GitHubConstruct,
   GitHubStack,
   JobConstruct,
   RunStep,
@@ -14,7 +14,7 @@ import {
 } from '@dotgithub/core';
 import type {
   GitHubJob,
-  PluginDescription,
+  ConstructDescription,
   GitHubWorkflowInput,
   GitHubWorkflowInputs,
   GitHubStepAny,
@@ -22,6 +22,8 @@ import type {
 } from '@dotgithub/core';
 import { z } from 'zod';
 import { Actions } from './actions/index.js';
+import { Checkout } from './actions/actions/checkout.js';
+import { SetupNode } from './actions/actions/setup-node.js';
 export type TestInputs = {
   /**
    * Test input
@@ -29,11 +31,11 @@ export type TestInputs = {
   testInput: GitHubWorkflowInput;
 };
 
-export class ExamplePlugin implements DotGitHubPlugin {
+export class ExamplePlugin extends GitHubConstruct {
   readonly name = 'example';
   readonly version = '1.0.0';
   readonly description =
-    'Example plugin for demonstrating plugin functionality';
+    'Example construct for demonstrating construct functionality';
 
   private readonly configSchema = z.object({
     environment: z
@@ -59,7 +61,7 @@ export class ExamplePlugin implements DotGitHubPlugin {
     this.configSchema.parse(stack.config);
   }
 
-  describe(): PluginDescription {
+  describe(): ConstructDescription {
     return {
       name: this.name,
       version: this.version,
@@ -90,7 +92,7 @@ export class ExamplePlugin implements DotGitHubPlugin {
       mergeBuildArtifacts,
     } = new Actions(stack, 'actions');
 
-    const { invokeAction, run } = new ActionsHelper(stack);
+    const { run, invokeAction } = new ActionsHelper(stack);
 
     const wf = new WorkflowConstruct(stack, 'ci', {
       name: 'CI Workflow',
@@ -123,8 +125,18 @@ export class ExamplePlugin implements DotGitHubPlugin {
       name: 'Test2',
       'runs-on': 'ubuntu-latest',
       steps: [
-        checkout('Checkout', {
-          'fetch-depth': 1,
+        ...new Checkout(stack, 'checkout-id', {
+          inputs: {
+            'fetch-depth': 1,
+          }
+        }).then(outputs => 
+          run('Echo Current Ref', `Current ref: ${outputs.ref.toExpr()}`).toStep()
+        ).toSteps(),
+        new SetupNode(stack, 'setup-node', {
+          inputs: {
+            'node-version': validatedConfig.nodeVersion,
+          },
+          stepOptions: { name: 'Setup Node' },
         }).toStep(),
       ],
     });

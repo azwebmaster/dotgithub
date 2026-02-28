@@ -1,0 +1,39 @@
+---
+alwaysApply: true
+---
+
+# DotGitHub Project Structure
+
+This is a TypeScript monorepo for managing GitHub Actions workflows and configurations. The project uses a CDK-style approach for generating GitHub Actions.
+
+## Core Architecture
+
+- **Monorepo Structure**: Uses Bun workspaces with packages in `packages/` and examples in `examples/`
+- **Main Packages**: 
+  - `@dotgithub/core` - Core functionality and constructs
+  - `@dotgithub/cli` - Command-line interface
+- **Entry Points**: 
+  - CLI: [packages/cli/src/index.ts](mdc:packages/cli/src/index.ts)
+  - Core: [packages/core/src/index.ts](mdc:packages/core/src/index.ts)
+
+## Key Directories
+
+- `packages/core/src/constructs/` - CDK-style constructs for building workflows
+- `packages/core/src/plugins/` - Construct system for extending functionality
+- `packages/core/src/types/` - TypeScript type definitions
+- `packages/cli/src/commands/` - CLI command implementations
+- `examples/` - Example projects showing usage patterns
+
+## Configuration
+
+- Main config: [package.json](mdc:package.json) (root)
+- TypeScript: [tsconfig.json](mdc:tsconfig.json) (root)
+- Core package: [packages/core/package.json](mdc:packages/core/package.json)
+- CLI package: [packages/cli/package.json](mdc:packages/cli/package.json)
+
+## Build System
+
+- Uses Bun as package manager and runtime
+- TypeScript compilation with strict settings
+- Vitest for testing
+- Changesets for version management

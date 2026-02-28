@@ -159,10 +159,10 @@ export class TypeScriptGenerator {
   }
 
   /**
-   * Generate a plugin class using ts-morph
+   * Generate a construct class using ts-morph
    */
-  generatePluginClass(
-    pluginName: string,
+  generateConstructClass(
+    constructName: string,
     workflows: Record<string, any>
   ): string {
     const fileName = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.ts`;
@@ -171,21 +171,21 @@ export class TypeScriptGenerator {
     // Add imports
     sourceFile.addImportDeclaration({
       moduleSpecifier: '@dotgithub/core',
-      namedImports: ['DotGitHubPlugin', 'PluginContext'],
+      namedImports: ['GitHubConstruct', 'ConstructContext'],
     });
 
-    const className = `${this.toPascalCase(pluginName)}Plugin`;
+    const className = `${this.toPascalCase(constructName)}Construct`;
 
     // Generate class
     const classDeclaration = sourceFile.addClass({
       name: className,
       isExported: true,
-      implements: ['DotGitHubPlugin'],
+      implements: ['GitHubConstruct'],
       properties: [
         {
           name: 'name',
           type: 'string',
-          initializer: `'${pluginName}'`,
+          initializer: `'${constructName}'`,
           isReadonly: true,
         },
         {
@@ -197,7 +197,7 @@ export class TypeScriptGenerator {
         {
           name: 'description',
           type: 'string',
-          initializer: `'Plugin for ${pluginName}'`,
+          initializer: `'Construct for ${constructName}'`,
           isReadonly: true,
         },
       ],
@@ -208,20 +208,20 @@ export class TypeScriptGenerator {
           parameters: [
             {
               name: 'context',
-              type: 'PluginContext',
+              type: 'ConstructContext',
             },
           ],
           returnType: 'Promise<void>',
           statements: [
-            '// Plugin implementation',
-            'console.log(`Applying ${this.name} plugin`);',
+            '// Construct implementation',
+            'console.log(`Applying ${this.name} construct`);',
           ],
         },
       ],
     });
 
     classDeclaration.addJsDoc({
-      description: `Plugin for ${pluginName} functionality`,
+      description: `Construct for ${constructName} functionality`,
     });
 
     return sourceFile.getFullText();
@@ -292,8 +292,8 @@ export function createExampleActionModule(): string {
   return generator.generateActionModule('actions/checkout', actionInputs);
 }
 
-// Example plugin generation
-export function createExamplePlugin(): string {
+// Example construct generation
+export function createExampleConstruct(): string {
   const generator = new TypeScriptGenerator();
 
   const workflows = {
@@ -312,5 +312,5 @@ export function createExamplePlugin(): string {
     },
   };
 
-  return generator.generatePluginClass('example', workflows);
+  return generator.generateConstructClass('example', workflows);
 }

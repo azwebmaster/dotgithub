@@ -1,0 +1,56 @@
+---
+globs: packages/cli/src/commands/*.ts
+---
+
+# CLI Command Patterns
+
+## Command Structure
+
+All CLI commands should follow the pattern established in [packages/cli/src/index.ts](mdc:packages/cli/src/index.ts):
+
+- Export a `create*Command` function that takes a context factory
+- Use Commander.js for argument parsing
+- Implement proper error handling and logging
+- Use the global options pattern
+
+## Context Usage
+
+Commands receive a `DotGithubContext` factory function:
+
+```typescript
+export function createMyCommand(
+  createContext: () => DotGithubContext
+): Command {
+  const command = new Command('my-command');
+  
+  command.action(async (options) => {
+    const context = createContext();
+    // Use context for operations
+  });
+  
+  return command;
+}
+```
+
+## Error Handling
+
+- Use the logger from `@dotgithub/core` for consistent output
+- Handle configuration errors gracefully
+- Provide helpful error messages with suggestions
+- Use appropriate exit codes
+
+## Global Options
+
+Commands inherit these global options:
+- `--config, -c` - Path to config file
+- `--verbose, -v` - Verbose logging
+- `--debug` - Debug logging  
+- `--quiet` - Suppress output except errors
+- `--token, -t` - GitHub token override
+
+## Testing Commands
+
+- Use Vitest for command testing
+- Mock external dependencies (GitHub API, file system)
+- Test both success and error cases
+- Verify proper logging output
