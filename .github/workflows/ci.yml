@@ -82,6 +82,14 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: bunx changeset version --snapshot pr-${{ github.event.pull_request.number }}
 
+      - name: Configure npm auth for GitHub Packages
+        if: steps.changesets.outputs.count != '0'
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "@dotgithub:registry=https://npm.pkg.github.com" >> ~/.npmrc
+          echo "//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}" >> ~/.npmrc
+
       - name: Publish snapshot tag
         if: steps.changesets.outputs.count != '0'
         env:
