@@ -46,15 +46,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: bun run changeset:version
 
-      - name: Commit version updates to main
-        if: steps.changesets.outputs.count != '0'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -m "chore(release): version packages [skip ci]" || exit 0
-          git push
-
       - name: Configure npm auth for npmjs
         if: steps.changesets.outputs.count != '0'
         env:
@@ -69,3 +60,12 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
         run: bun run changeset:publish
+
+      - name: Commit version updates to main
+        if: steps.changesets.outputs.count != '0'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "chore(release): version packages [skip ci]" || exit 0
+          git push
