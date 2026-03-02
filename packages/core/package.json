@@ -33,5 +33,14 @@
         "prettier"
       ]
     }
+  },
+  "homepage": "https://github.com/azwebmaster/dotgithub#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/azwebmaster/dotgithub.git",
+    "directory": "packages/core"
+  },
+  "bugs": {
+    "url": "https://github.com/azwebmaster/dotgithub/issues"
   }
 }
