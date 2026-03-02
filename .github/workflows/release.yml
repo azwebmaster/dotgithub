@@ -43,6 +43,8 @@ jobs:
 
       - name: Version packages from changesets
         if: steps.changesets.outputs.count != '0'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: bun run changeset:version
 
       - name: Commit version updates to main
@@ -53,6 +55,14 @@ jobs:
           git add -A
           git commit -m "chore(release): version packages [skip ci]" || exit 0
           git push
+
+      - name: Configure npm auth for GitHub Packages
+        if: steps.changesets.outputs.count != '0'
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "@dotgithub:registry=https://npm.pkg.github.com" >> ~/.npmrc
+          echo "//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}" >> ~/.npmrc
 
       - name: Publish packages
         if: steps.changesets.outputs.count != '0'
