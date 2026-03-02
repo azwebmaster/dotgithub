@@ -19,7 +19,7 @@
     "test:packages": "bun run --filter './packages/*' test",
     "changeset": "changeset",
     "changeset:version": "changeset version",
-    "changeset:publish": "changeset publish --registry https://npm.pkg.github.com",
+    "changeset:publish": "changeset publish --registry https://registry.npmjs.org",
     "changeset:status": "changeset status --verbose"
   },
   "devDependencies": {

@@ -50,7 +50,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write
 
     steps:
       - name: Checkout PR head
@@ -81,20 +80,20 @@ jobs:
       - name: Version snapshot from changesets
         if: steps.changesets.outputs.count != '0'
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: bunx changeset version --snapshot pr-${{ github.event.pull_request.number }}
 
-      - name: Configure npm auth for GitHub Packages
+      - name: Configure npm auth for npmjs
         if: steps.changesets.outputs.count != '0'
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
         run: |
-          echo "@dotgithub:registry=https://npm.pkg.github.com" >> ~/.npmrc
-          echo "//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}" >> ~/.npmrc
+          echo "registry=https://registry.npmjs.org" >> ~/.npmrc
+          echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" >> ~/.npmrc
 
       - name: Publish snapshot tag
         if: steps.changesets.outputs.count != '0'
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}
-          NODE_AUTH_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}
-        run: bunx changeset publish --tag pr-${{ github.event.pull_request.number }} --registry https://npm.pkg.github.com
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
+        run: bunx changeset publish --tag pr-${{ github.event.pull_request.number }} --registry https://registry.npmjs.org
