@@ -30,7 +30,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          registry-url: 'https://registry.npmjs.org'
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -58,7 +57,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_CONFIG_PROVENANCE: true
-        run: bun run changeset:publish
+          NODE_AUTH_TOKEN: ''
+        run: |
+          rm -f ~/.npmrc
+          bun run changeset:publish
 
       - name: Commit version updates to main
         if: steps.changesets.outputs.count != '0'
