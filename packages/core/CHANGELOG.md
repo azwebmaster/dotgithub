@@ -1,5 +1,11 @@
 # @dotgithub/core
 
+## 0.1.2
+
+### Patch Changes
+
+- [`6e8e8d9`](https://github.com/azwebmaster/dotgithub/commit/6e8e8d929ff2bab9aa436690e24d8de8972c0b02) - preview
+
 ## 0.1.1
 
 ### Patch Changes
