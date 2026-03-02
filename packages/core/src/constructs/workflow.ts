@@ -12,7 +12,9 @@ export class WorkflowConstruct extends Construct {
 
     this._workflow = workflow;
 
-    scope.addWorkflow(id, this._workflow);
+    if (typeof (scope as any).addWorkflow === 'function') {
+      (scope as any).addWorkflow(id, this._workflow);
+    }
   }
 
   addJob(id: string, jobConstruct: JobConstruct): JobConstruct {

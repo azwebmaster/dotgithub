@@ -11,11 +11,14 @@ export class DotGithubContext {
   config: DotGithubConfig;
   configPath: string;
   rootPath: string;
+  outputPath: string;
 
   constructor({ config, configPath }: DotGithubContextOptions) {
     this.config = config;
     this.configPath = configPath;
-    this.rootPath = path.join(path.dirname(configPath), this.config.rootDir);
+    const rootDir = this.config.rootDir ?? this.config.outputDir ?? 'src';
+    this.rootPath = path.join(path.dirname(configPath), rootDir);
+    this.outputPath = this.rootPath;
   }
 
   resolvePath(relativePath: string): string {

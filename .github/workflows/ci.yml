@@ -38,5 +38,5 @@ jobs:
       - name: Lint
         run: bun run lint
 
-      - name: Contract tests (workflow generator)
-        run: bun run test -- packages/core/src/workflow-generator.test.ts
+      - name: Core contract tests
+        run: bun run test -- packages/core/src/workflow-generator.test.ts packages/core/src/context.test.ts packages/core/src/config.test.ts
