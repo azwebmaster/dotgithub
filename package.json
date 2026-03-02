@@ -4,7 +4,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "build": "bun run --filter './packages/*' build",
+    "build": "bun run --filter @dotgithub/core build && bun run --filter @dotgithub/cli build",
     "typecheck": "bun run build",
     "lint": "echo 'lint rules pending (tracked in backlog)'",
     "format:check": "bunx prettier --check .",
