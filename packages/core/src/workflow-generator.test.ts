@@ -185,6 +185,41 @@ describe('workflow-generator', () => {
       expect(yaml).toContain('continue-on-error: true');
       expect(yaml).toContain('working-directory: ./src');
     });
+
+    it('should keep workflow/job/step key ordering stable', () => {
+      const workflow: GitHubWorkflow = {
+        name: 'Ordered Workflow',
+        on: {
+          push: { branches: ['main'] },
+        },
+        permissions: {
+          contents: 'read',
+          actions: 'read',
+        },
+        env: {
+          CI: 'true',
+        },
+        concurrency: {
+          group: '${{ github.workflow }}-${{ github.ref }}',
+          'cancel-in-progress': true,
+        },
+        jobs: {
+          test: {
+            name: 'Test Job',
+            permissions: { contents: 'read' },
+            'runs-on': 'ubuntu-latest',
+            steps: [
+              {
+                name: 'Run tests',
+                run: 'bun test',
+              },
+            ],
+          },
+        },
+      };
+
+      expect(generateWorkflowYaml(workflow)).toMatchSnapshot();
+    });
   });
 
   describe('createWorkflow', () => {

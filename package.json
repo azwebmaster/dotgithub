@@ -4,7 +4,10 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "build": "bun run --filter './packages/*' build",
+    "build": "bun run --filter @dotgithub/core build && bun run --filter @dotgithub/cli build",
+    "typecheck": "bun run build",
+    "lint": "echo 'lint rules pending (tracked in backlog)'",
+    "format:check": "bunx prettier --check .",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
@@ -32,7 +35,7 @@
   "peerDependencies": {
     "typescript": "^5"
   },
-  "packageManager": "bun@1.1.40",
+  "packageManager": "bun@1.2.22",
   "dependencies": {
     "@changesets/cli": "^2.29.5",
     "axios": "^1.7.0",

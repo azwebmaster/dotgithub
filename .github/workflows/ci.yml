@@ -1,17 +1,42 @@
-name: CI Workflow
+name: CI
+
 on:
   push:
-    branches:
-      - main
-  pull_request: {}
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
 jobs:
-  test:
-    name: Test
+  quality:
+    name: Quality checks
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
-      - name: Hello World
-        run: echo "Hello from my construct!"
-      - name: Show Environment
-        run: 'echo "Environment: production"'
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.22
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build
+        run: bun run build
+
+      - name: Typecheck
+        run: bun run typecheck
+
+      - name: Lint
+        run: bun run lint
+
+      - name: Contract tests (workflow generator)
+        run: bun run test -- packages/core/src/workflow-generator.test.ts
