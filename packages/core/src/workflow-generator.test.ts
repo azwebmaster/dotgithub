@@ -220,6 +220,28 @@ describe('workflow-generator', () => {
 
       expect(generateWorkflowYaml(workflow)).toMatchSnapshot();
     });
+
+    it('should render reusable workflow call job deterministically', () => {
+      const workflow: GitHubWorkflow = {
+        name: 'Reusable Caller',
+        on: {
+          pull_request: {
+            branches: ['main'],
+          },
+        },
+        jobs: {
+          lint: {
+            uses: './.github/workflows/lint.yml',
+            with: {
+              node: '22',
+            },
+            secrets: 'inherit',
+          } as unknown as GitHubJob,
+        },
+      };
+
+      expect(generateWorkflowYaml(workflow)).toMatchSnapshot();
+    });
   });
 
   describe('createWorkflow', () => {
