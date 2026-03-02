@@ -40,3 +40,49 @@ jobs:
 
       - name: Core contract tests
         run: bun run test -- packages/core/src/workflow-generator.test.ts packages/core/src/context.test.ts packages/core/src/config.test.ts packages/core/src/plugins/shared-workflow-helper.test.ts
+
+  snapshot-publish:
+    name: Snapshot publish (PR marker)
+    if: github.event_name == 'pull_request' && contains(github.event.pull_request.body || '', '#snapshot') && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    needs: quality
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.22
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build
+        run: bun run build
+
+      - name: Detect pending changesets
+        id: changesets
+        run: |
+          COUNT=$(find .changeset -maxdepth 1 -name '*.md' ! -name 'README.md' | wc -l | tr -d ' ')
+          echo "count=$COUNT" >> "$GITHUB_OUTPUT"
+          if [ "$COUNT" -eq 0 ]; then
+            echo "No pending changesets found. Skipping snapshot publish."
+          fi
+
+      - name: Version snapshot from changesets
+        if: steps.changesets.outputs.count != '0'
+        run: bunx changeset version --snapshot pr-${{ github.event.pull_request.number }}
+
+      - name: Publish snapshot tag
+        if: steps.changesets.outputs.count != '0'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bunx changeset publish --tag pr-${{ github.event.pull_request.number }} --registry https://npm.pkg.github.com
