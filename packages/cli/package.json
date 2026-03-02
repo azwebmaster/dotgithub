@@ -17,7 +17,7 @@
   },
   "devDependencies": {},
   "engines": {
-    "bun": ">=1.2.19"
+    "bun": ">=1.2.22"
   },
   "publishConfig": {
     "registry": "https://npm.pkg.github.com",
