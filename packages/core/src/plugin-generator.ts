@@ -13,6 +13,7 @@ import {
   PropertyDeclaration,
 } from 'ts-morph';
 import { generateActionFiles } from './actions-manager.js';
+import { generateFunctionName } from './utils.js';
 
 // Enhanced TypeScript interfaces for better type safety
 interface WorkflowSchema {
@@ -207,7 +208,7 @@ export async function createConstructFromFiles(
   }
 
   // Check if there's a local dotgithub.json config in the source directory
-  let configToUse = context.config;
+  let configToUse: any = context.config || {};
   const localConfigPath = path.join(githubFilesPath, 'dotgithub.json');
   if (fs.existsSync(localConfigPath)) {
     try {
@@ -226,13 +227,10 @@ export async function createConstructFromFiles(
   // Generate construct content (now with updated config that includes auto-added actions)
   // Filter actions to only include those with functionName for code generation
   const configForConstruct: Config = {
-    actions: configToUse.actions
-      .filter((action) => action.generateCode !== false && action.outputPath)
-      .map((action) => {
-        const { generateFunctionName } = require('./utils');
-        const functionName = action.actionName
-          ? generateFunctionName(action.actionName)
-          : action.orgRepo;
+    actions: (configToUse.actions || [])
+      .filter((action: any) => action.generateCode !== false && action.outputPath)
+      .map((action: any) => {
+        const functionName = generateFunctionName(action.actionName || action.orgRepo);
         return {
           orgRepo: action.orgRepo,
           ref: action.ref,
@@ -299,13 +297,13 @@ export async function generateConstructFromGitHubFiles(
     const { content, filename } = await downloadGitHubFile(source);
     // Filter actions to only include those with outputPath for code generation
     const configForConstruct: Config = {
-      actions: context.config.actions
-        .filter((action) => action.generateCode !== false && action.outputPath)
-        .map((action) => {
+      actions: (context.config.actions || [])
+        .filter((action: any) => action.generateCode !== false && action.outputPath)
+        .map((action: any) => {
           const { generateFunctionName } = require('./utils');
           const functionName = action.actionName
             ? generateFunctionName(action.actionName)
-            : action.orgRepo;
+            : generateFunctionName(action.actionName || action.orgRepo);
           return {
             orgRepo: action.orgRepo,
             ref: action.ref,

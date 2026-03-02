@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as yaml from 'yaml';
 import type { ConstructConfig, StackConfig } from './plugins/types.js';
-import type { DotGithubContext } from './context.js';
+import { DotGithubContext } from './context.js';
 
 export interface DotGithubAction {
   /** GitHub repository in org/repo format */
@@ -11,6 +11,8 @@ export interface DotGithubAction {
   ref: string;
   /** Original version reference that was requested (e.g., v4, main) */
   versionRef: string;
+  /** Legacy function name (backward-compat) */
+  functionName?: string;
   /** Action name for type names and function names (overrides default from YAML) */
   actionName?: string;
   /** Output file path where the TypeScript was generated - required when generateCode is true */
@@ -138,9 +140,12 @@ module.exports = ${JSON.stringify(config, null, 2)};
 /**
  * Sets a custom config file path to override the default discovery
  */
+let customConfigPathOverride: string | undefined;
+
 export function setConfigPath(configPath: string): void {
-  // This function is kept for compatibility but doesn't need to do anything
-  // since we're using DotGithubContext now
+  customConfigPathOverride = configPath
+    ? path.resolve(configPath)
+    : undefined;
 }
 
 /**
@@ -188,6 +193,25 @@ export function getConfigPath(): string {
     'dotgithub.yaml',
     'dotgithub.yml',
   ];
+
+  if (customConfigPathOverride) {
+    const stat = fs.existsSync(customConfigPathOverride)
+      ? fs.statSync(customConfigPathOverride)
+      : undefined;
+
+    if (stat?.isDirectory()) {
+      const githubDir = path.join(customConfigPathOverride, '.github');
+      for (const fileName of CONFIG_FILE_NAMES) {
+        const configPath = path.join(githubDir, fileName);
+        if (fs.existsSync(configPath)) {
+          return configPath;
+        }
+      }
+      return path.join(githubDir, CONFIG_FILE_NAMES[0]!);
+    }
+
+    return customConfigPathOverride;
+  }
 
   let currentDir = process.cwd();
 
@@ -310,8 +334,23 @@ export function writeConfig(
  */
 export function addActionToConfig(
   actionInfo: DotGithubAction,
-  context: DotGithubContext
+  contextOrRootDir: DotGithubContext | string
 ): void {
+  const context: DotGithubContext =
+    typeof contextOrRootDir === 'string'
+      ? new DotGithubContext({
+          config: { ...readConfig(), rootDir: contextOrRootDir },
+          configPath: getConfigPath(),
+        })
+      : contextOrRootDir;
+
+  if (!context.config) {
+    context.config = createDefaultConfig();
+  }
+  if (!context.config.actions) {
+    context.config.actions = [];
+  }
+
   // Check if action already exists (check orgRepo AND actionPath for uniqueness)
   const existingIndex = context.config.actions.findIndex(
     (action) =>
@@ -322,6 +361,10 @@ export function addActionToConfig(
   const actionWithRelativePath: DotGithubAction = {
     ...actionInfo,
   };
+
+  if (actionWithRelativePath.outputPath && path.isAbsolute(actionWithRelativePath.outputPath)) {
+    actionWithRelativePath.outputPath = context.relativePath(actionWithRelativePath.outputPath);
+  }
 
   if (existingIndex >= 0) {
     // Update existing action
