@@ -78,6 +78,8 @@ jobs:
 
       - name: Version snapshot from changesets
         if: steps.changesets.outputs.count != '0'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: bunx changeset version --snapshot pr-${{ github.event.pull_request.number }}
 
       - name: Publish snapshot tag
