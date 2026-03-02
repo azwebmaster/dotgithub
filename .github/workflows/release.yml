@@ -10,7 +10,6 @@ concurrency:
 
 permissions:
   contents: write
-  pull-requests: write
   packages: write
 
 jobs:
@@ -19,6 +18,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -31,11 +32,31 @@ jobs:
       - name: Build
         run: bun run build
 
-      - name: Create release PR or publish
-        uses: changesets/action@v1
-        with:
-          version: bun run changeset:version
-          publish: bun run changeset:publish
+      - name: Detect pending changesets
+        id: changesets
+        run: |
+          COUNT=$(find .changeset -maxdepth 1 -name '*.md' ! -name 'README.md' | wc -l | tr -d ' ')
+          echo "count=$COUNT" >> "$GITHUB_OUTPUT"
+          if [ "$COUNT" -eq 0 ]; then
+            echo "No pending changesets found. Skipping publish."
+          fi
+
+      - name: Version packages from changesets
+        if: steps.changesets.outputs.count != '0'
+        run: bun run changeset:version
+
+      - name: Commit version updates to main
+        if: steps.changesets.outputs.count != '0'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "chore(release): version packages [skip ci]" || exit 0
+          git push
+
+      - name: Publish packages
+        if: steps.changesets.outputs.count != '0'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bun run changeset:publish
