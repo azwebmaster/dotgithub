@@ -5,8 +5,11 @@
   "private": true,
   "scripts": {
     "build": "bun run --filter @dotgithub/core build && bun run --filter @dotgithub/cli build",
-    "typecheck": "bun run build",
-    "lint": "echo 'lint rules pending (tracked in backlog)'",
+    "typecheck:core": "bunx tsc -p packages/core/tsconfig.json --noEmit",
+    "typecheck:cli": "bunx tsc -p packages/cli/tsconfig.json --noEmit",
+    "typecheck": "bun run typecheck:core && bun run typecheck:cli",
+    "lint:yaml": "bunx prettier --check .github/workflows/*.yml",
+    "lint": "bun run lint:yaml",
     "format:check": "bunx prettier --check .",
     "test": "vitest run",
     "test:watch": "vitest",
