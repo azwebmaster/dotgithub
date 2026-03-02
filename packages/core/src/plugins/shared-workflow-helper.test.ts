@@ -1,24 +1,13 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { GitHubStack } from '../constructs/base';
 import { SharedWorkflowHelper } from './shared-workflow-helper.js';
-import type { ConstructContext } from './types.js';
-
 describe('SharedWorkflowHelper', () => {
   let stack: GitHubStack;
-  let context: ConstructContext;
   let helper: SharedWorkflowHelper;
 
   beforeEach(() => {
     stack = new GitHubStack();
-    context = {
-      stack,
-      config: {},
-      stackConfig: { name: 'test', constructs: [] },
-      projectRoot: '/test',
-      actions: {} as any,
-      sharedWorkflows: {} as any,
-    };
-    helper = new SharedWorkflowHelper(context);
+    helper = new SharedWorkflowHelper(stack);
   });
 
   describe('create', () => {
@@ -56,8 +45,9 @@ describe('SharedWorkflowHelper', () => {
 
       expect(sharedWorkflow).toBeDefined();
       expect(sharedWorkflow.workflow.name).toBe('Test Workflow');
-      expect(sharedWorkflow.workflow.on).toBe('workflow_call');
-      expect(sharedWorkflow.inputs).toEqual(inputs);
+      expect(sharedWorkflow.workflow.on).toEqual({
+        workflow_call: { inputs },
+      });
     });
 
     it('should create a job that calls the shared workflow', () => {
@@ -81,18 +71,18 @@ describe('SharedWorkflowHelper', () => {
       };
 
       const sharedWorkflow = helper.create('test-workflow', inputs, workflow);
-      const job = sharedWorkflow.createJob(
+      const job = sharedWorkflow.call(
         {
           nodeVersion: '18',
         },
         {
-          'runs-on': 'ubuntu-latest',
+          name: 'Call shared workflow',
         }
       );
 
       expect(job.uses).toBe('.github/workflows/test-workflow.yml');
       expect(job.with).toEqual({ nodeVersion: '18' });
-      expect(job['runs-on']).toBe('ubuntu-latest');
+      expect(job.name).toBe('Call shared workflow');
     });
   });
 
