@@ -24,7 +24,7 @@
     "bun": ">=1.2.22"
   },
   "publishConfig": {
-    "registry": "https://npm.pkg.github.com",
+    "registry": "https://registry.npmjs.org",
     "access": "public"
   },
   "devoptimizer": {

@@ -10,7 +10,6 @@ concurrency:
 
 permissions:
   contents: write
-  packages: write
 
 jobs:
   release:
@@ -44,7 +43,7 @@ jobs:
       - name: Version packages from changesets
         if: steps.changesets.outputs.count != '0'
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: bun run changeset:version
 
       - name: Commit version updates to main
@@ -56,17 +55,17 @@ jobs:
           git commit -m "chore(release): version packages [skip ci]" || exit 0
           git push
 
-      - name: Configure npm auth for GitHub Packages
+      - name: Configure npm auth for npmjs
         if: steps.changesets.outputs.count != '0'
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
         run: |
-          echo "@dotgithub:registry=https://npm.pkg.github.com" >> ~/.npmrc
-          echo "//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}" >> ~/.npmrc
+          echo "registry=https://registry.npmjs.org" >> ~/.npmrc
+          echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" >> ~/.npmrc
 
       - name: Publish packages
         if: steps.changesets.outputs.count != '0'
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}
-          NODE_AUTH_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
         run: bun run changeset:publish
