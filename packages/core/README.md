@@ -1,6 +1,6 @@
 # @dotgithub/core
 
-Type-safe core library for generating GitHub Actions workflows with DotGitHub constructs.
+Type-safe TypeScript library for defining and generating GitHub Actions workflows using DotGitHub constructs.
 
 ## What this package is
 
@@ -10,7 +10,7 @@ Type-safe core library for generating GitHub Actions workflows with DotGitHub co
 - construct primitives for jobs/workflows/shared workflows
 - generation/synthesis helpers for writing `.github/workflows/*.yml`
 
-If you want to build reusable workflow logic in code, this is the package you use.
+If you want to author reusable CI/CD logic in TypeScript (instead of hand-writing YAML), this is the package you use.
 
 ## Install
 

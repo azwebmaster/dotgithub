@@ -1,6 +1,6 @@
 # @dotgithub/cli
 
-CLI for scaffolding, managing, and synthesizing DotGitHub workflows.
+CLI for scaffolding, managing, and synthesizing DotGitHub workflows from TypeScript definitions.
 
 ## Install
 
@@ -34,12 +34,12 @@ dgh --help
 dotgithub --help
 ```
 
-## Typical flow
+## Typical TypeScript workflow
 
 1. `dotgithub init`
 2. `dotgithub add <org/repo@version>`
-3. author/update your workflow constructs/config
-4. `dotgithub synth`
+3. author/update your workflow constructs in **TypeScript**
+4. `dotgithub synth` to generate YAML
 5. commit generated workflow files
 
 ## Docs
