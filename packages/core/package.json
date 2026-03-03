@@ -1,6 +1,6 @@
 {
   "name": "@dotgithub/core",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "type": "module",
   "description": "Core package for @dotgithub monorepo.",
   "main": "dist/index.js",

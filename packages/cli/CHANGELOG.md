@@ -1,5 +1,14 @@
 # @dotgithub/cli
 
+## 0.1.5
+
+### Patch Changes
+
+- [#22](https://github.com/azwebmaster/dotgithub/pull/22) [`e7810e8`](https://github.com/azwebmaster/dotgithub/commit/e7810e82892171041a81938b3d4d2dc7b21dbfab) Thanks [@danbot315](https://github.com/danbot315)! - Improve npm package documentation for both core and CLI with clearer usage examples, command flows, and direct documentation links.
+
+- Updated dependencies [[`e7810e8`](https://github.com/azwebmaster/dotgithub/commit/e7810e82892171041a81938b3d4d2dc7b21dbfab)]:
+  - @dotgithub/core@0.1.5
+
 ## 0.1.4
 
 ### Patch Changes
