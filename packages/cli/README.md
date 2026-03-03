@@ -20,7 +20,7 @@ npx @dotgithub/cli --help
 # Initialize DotGitHub config/files
 dotgithub init
 
-# Add pinned GitHub Actions to your config
+# Add action and generate TypeScript wrapper/types for it
 dotgithub add actions/checkout@v4
 
 # Generate workflow files
@@ -37,7 +37,7 @@ dotgithub --help
 ## Typical TypeScript workflow
 
 1. `dotgithub init`
-2. `dotgithub add <org/repo@version>`
+2. `dotgithub add <org/repo@version>` (downloads metadata and generates TypeScript action wrappers)
 3. author/update your workflow constructs in **TypeScript**
 4. `dotgithub synth` to generate YAML
 5. commit generated workflow files
