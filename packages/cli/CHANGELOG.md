@@ -1,5 +1,16 @@
 # @dotgithub/cli
 
+## 0.1.4
+
+### Patch Changes
+
+- [#19](https://github.com/azwebmaster/dotgithub/pull/19) [`89c96f3`](https://github.com/azwebmaster/dotgithub/commit/89c96f335f823f27bd19fd891764fdcc14acb5dd) Thanks [@danbot315](https://github.com/danbot315)! - Add package-level README files and npm metadata links (homepage/repository/bugs) so published packages point back to project documentation.
+
+- [`b90f4b9`](https://github.com/azwebmaster/dotgithub/commit/b90f4b933845ad44a75da218e1829ba6c1868431) - Adjust release workflow to commit version changes only after successful npm publish.
+
+- Updated dependencies [[`89c96f3`](https://github.com/azwebmaster/dotgithub/commit/89c96f335f823f27bd19fd891764fdcc14acb5dd), [`b90f4b9`](https://github.com/azwebmaster/dotgithub/commit/b90f4b933845ad44a75da218e1829ba6c1868431)]:
+  - @dotgithub/core@0.1.4
+
 ## 0.1.3
 
 ### Patch Changes
