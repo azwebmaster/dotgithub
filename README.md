@@ -33,13 +33,13 @@ dotgithub init
 dotgithub init --output ./my-workflows
 ```
 
-### Add GitHub Actions
+### Add GitHub Actions (and generate TypeScript wrappers)
 
 ```bash
-# Add a specific action
+# Add a specific action and generate its TypeScript wrapper/types
 dotgithub add actions/checkout@v4
 
-# Add multiple actions
+# Add multiple actions and generate wrappers for each
 dotgithub add actions/setup-node@v4 actions/setup-python@v5
 ```
 
@@ -53,7 +53,7 @@ dotgithub synth
 ## Basic Usage
 
 1. **Initialize** your project with `dotgithub init`
-2. **Configure** actions in `dotgithub.json`
+2. **Add actions** with `dotgithub add ...` (this generates TypeScript action wrappers and updates config)
 3. **Write** your workflow logic in TypeScript
 4. **Synthesize** workflows with `dotgithub synth`
 
