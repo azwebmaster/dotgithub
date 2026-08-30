@@ -1,5 +1,11 @@
 # @dotgithub/cli
 
+## 0.1.6
+
+### Patch Changes
+
+- [#32](https://github.com/azwebmaster/dotgithub/pull/32) [`ef1168c`](https://github.com/azwebmaster/dotgithub/commit/ef1168cf7ea065c7c861d943dfb633e07ac7de42) Thanks [@danbot315](https://github.com/danbot315)! - Add starter template support to `dotgithub init` (`node-library`, `bun-app`, `monorepo`) and update init command docs.
+
 ## 0.1.5
 
 ### Patch Changes
