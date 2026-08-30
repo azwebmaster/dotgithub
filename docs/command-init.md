@@ -15,7 +15,8 @@ The `init` command sets up a new DotGitHub project by creating the necessary dir
 ## Options
 
 - `--force` - Overwrite existing files if they exist
-- `--output <dir>` - Output directory for the workspace (default: `src`)
+- `--output <dir>` - Output directory for the workspace (default: `.github`)
+- `--template <name>` - Starter template (`node-library`, `bun-app`, `monorepo`)
 
 ## What it creates
 
@@ -35,7 +36,7 @@ The `init` command creates the following files and directories:
 dotgithub init
 ```
 
-This creates a `src/` directory with all necessary files.
+This creates a `.github/` workspace with all necessary files.
 
 ### Custom output directory
 
@@ -43,7 +44,19 @@ This creates a `src/` directory with all necessary files.
 dotgithub init --output ./my-workflows
 ```
 
-This creates a `my-workflows/` directory instead of `src/`.
+This creates a `my-workflows/` directory instead of `.github/`.
+
+### Choose a starter template
+
+```bash
+dotgithub init --template bun-app
+```
+
+Available templates:
+
+- `node-library` (default)
+- `bun-app`
+- `monorepo`
 
 ### Force overwrite existing files
 
@@ -89,7 +102,7 @@ A basic entry point that imports the DotGitHub core library.
 
 After running `init`, you typically:
 
-1. Navigate to the workspace directory: `cd src`
+1. Navigate to the workspace directory: `cd .github/src`
 2. Install dependencies: `npm install`
 3. Add GitHub Actions: `dotgithub add actions/checkout@v4`
 4. Write your workflow logic in TypeScript

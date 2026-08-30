@@ -2,16 +2,18 @@ import { Command } from 'commander';
 import * as fs from 'fs';
 import * as path from 'path';
 import {
-  createConfigFile,
-  writeConfig,
   createDefaultConfig,
   type DotGithubContext,
   logger,
 } from '@dotgithub/core';
 
+const SUPPORTED_TEMPLATES = ['node-library', 'bun-app', 'monorepo'] as const;
+type StarterTemplate = (typeof SUPPORTED_TEMPLATES)[number];
+
 export interface InitCommandOptions {
   force?: boolean;
   output?: string;
+  template?: StarterTemplate;
 }
 
 export function createInitCommand(
@@ -19,13 +21,18 @@ export function createInitCommand(
 ): Command {
   return new Command('init')
     .description(
-      'Initialize a new GitHub Actions workspace with TypeScript and ESM support'
+      'Initialize a new GitHub Actions TypeScript workspace with synth-ready starter templates'
     )
     .option('--force', 'Overwrite existing files if they exist', false)
     .option(
       '--output <dir>',
       'Output directory for the workspace (default: .github)',
       '.github'
+    )
+    .option(
+      '--template <name>',
+      `Starter template: ${SUPPORTED_TEMPLATES.join(', ')}`,
+      'node-library'
     )
     .action(async (options: InitCommandOptions) => {
       try {
@@ -48,6 +55,8 @@ async function initializeWorkspace(
   const outputDir = options.output || '.github';
   const outputDirPath = path.resolve(outputDir);
 
+  const template = normalizeTemplate(options.template);
+
   // Create output directory if it doesn't exist
   if (!fs.existsSync(outputDirPath)) {
     fs.mkdirSync(outputDirPath, { recursive: true });
@@ -65,9 +74,9 @@ async function initializeWorkspace(
 
   // Create default config with workspace output directory
   const defaultConfig = createDefaultConfig();
-  defaultConfig.rootDir = 'src'; // This will be the workspace directory inside the output directory
-  defaultConfig.outputDir = '.'; // Set output directory to current directory
-  
+  defaultConfig.rootDir = 'src'; // Workspace directory inside the output directory
+  defaultConfig.outputDir = '.';
+
   // Add a local construct definition
   defaultConfig.constructs = [
     {
@@ -113,7 +122,7 @@ async function initializeWorkspace(
   }
 
   // Generate package.json
-  const packageJson = generatePackageJson();
+  const packageJson = generatePackageJson(template);
   fs.writeFileSync(
     packageJsonPath,
     JSON.stringify(packageJson, null, 2) + '\n'
@@ -124,17 +133,18 @@ async function initializeWorkspace(
   if (fs.existsSync(tsconfigPath) && !options.force) {
     logger.info('✓ tsconfig.json already exists, skipping');
   } else {
-    const tsconfig = generateTsConfig();
+    const tsconfig = generateTsConfig(template);
     fs.writeFileSync(tsconfigPath, JSON.stringify(tsconfig, null, 2) + '\n');
   }
 
   // Create basic index.ts file
   const indexPath = path.join(workspaceDir, 'index.ts');
   if (!fs.existsSync(indexPath) || options.force) {
-    const indexContent = generateIndexFile();
+    const indexContent = generateIndexFile(template);
     fs.writeFileSync(indexPath, indexContent);
   }
 
+  logger.info(`Template: ${template}`);
   logger.info('Generated files:');
   logger.debug(`  ${outputDir}/dotgithub.json`);
   logger.debug(`  ${workspaceDir}/package.json`);
@@ -145,11 +155,74 @@ async function initializeWorkspace(
   logger.info('  npm install');
 }
 
-function generatePackageJson(): object {
+function normalizeTemplate(value?: string): StarterTemplate {
+  const candidate = (value || 'node-library') as StarterTemplate;
+  if (SUPPORTED_TEMPLATES.includes(candidate)) {
+    return candidate;
+  }
+  throw new Error(
+    `Unsupported template "${value}". Valid templates: ${SUPPORTED_TEMPLATES.join(', ')}`
+  );
+}
+
+function generatePackageJson(template: StarterTemplate): object {
+  if (template === 'bun-app') {
+    return {
+      name: 'github-actions-bun-workspace',
+      version: '1.0.0',
+      description: 'DotGitHub Bun app workspace with TypeScript support',
+      type: 'module',
+      main: 'dist/index.js',
+      scripts: {
+        build: 'tsc',
+        dev: 'bun --watch src/index.ts',
+        clean: 'rm -rf dist',
+      },
+      dependencies: {
+        '@dotgithub/core': '*',
+        '@dotgithub/cli': '*',
+      },
+      devDependencies: {
+        '@types/node': '^20.0.0',
+        typescript: '^5.0.0',
+      },
+      engines: {
+        bun: '>=1.2.22',
+      },
+      packageManager: 'bun@1.2.22',
+    };
+  }
+
+  if (template === 'monorepo') {
+    return {
+      name: 'github-actions-monorepo-workspace',
+      version: '1.0.0',
+      private: true,
+      description: 'DotGitHub monorepo starter with TypeScript support',
+      type: 'module',
+      scripts: {
+        build: 'tsc',
+        clean: 'rm -rf dist',
+      },
+      workspaces: ['packages/*'],
+      dependencies: {
+        '@dotgithub/core': '*',
+        '@dotgithub/cli': '*',
+      },
+      devDependencies: {
+        '@types/node': '^20.0.0',
+        typescript: '^5.0.0',
+      },
+      engines: {
+        node: '>=18.0.0',
+      },
+    };
+  }
+
   return {
     name: 'github-actions-workspace',
     version: '1.0.0',
-    description: 'GitHub Actions workspace with TypeScript support',
+    description: 'DotGitHub Node library workspace with TypeScript support',
     type: 'module',
     main: 'dist/index.js',
     module: 'dist/index.js',
@@ -173,12 +246,13 @@ function generatePackageJson(): object {
   };
 }
 
-function generateTsConfig(): object {
+function generateTsConfig(template: StarterTemplate): object {
+  const moduleResolution = template === 'bun-app' ? 'bundler' : 'bundler';
   return {
     compilerOptions: {
       target: 'ES2022',
       module: 'ESNext',
-      moduleResolution: 'bundler',
+      moduleResolution,
       allowSyntheticDefaultImports: true,
       esModuleInterop: true,
       forceConsistentCasingInFileNames: true,
@@ -197,9 +271,20 @@ function generateTsConfig(): object {
   };
 }
 
-function generateIndexFile(): string {
-  return `// GitHub Actions workspace entry point
-import {
+function generateIndexFile(template: StarterTemplate): string {
+  if (template === 'bun-app') {
+    return `// Bun-oriented DotGitHub starter entry point\n// Use this to author CI/CD workflow constructs in TypeScript and synthesize YAML.\n\n${baseIndexContent()}`;
+  }
+
+  if (template === 'monorepo') {
+    return `// Monorepo-oriented DotGitHub starter entry point\n// Tip: split constructs by package and export a composed default construct.\n\n${baseIndexContent()}`;
+  }
+
+  return `// Node library-oriented DotGitHub starter entry point\n// Author workflow logic in TypeScript and synthesize to GitHub Actions YAML.\n\n${baseIndexContent()}`;
+}
+
+function baseIndexContent(): string {
+  return `import {
   GitHubConstruct,
   GitHubStack,
   JobConstruct,
@@ -279,7 +364,7 @@ export class MyConstruct extends GitHubConstruct {
     });
 
     // Create a job
-    const job = new JobConstruct(workflow, 'test', {
+    new JobConstruct(workflow, 'test', {
       name: 'Test',
       'runs-on': 'ubuntu-latest',
       steps: [
